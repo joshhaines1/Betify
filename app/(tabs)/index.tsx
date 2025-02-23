@@ -16,16 +16,20 @@ interface Group {
   creator: string;
   visibility: string;
   startingCurrency: number;
+  password: string;
   admins: string[];
   creationDate: Date;
 }
 
 export default function GroupsScreen() {
-  const [modalVisible, setModalVisible] = useState(false);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
   const [view, setView] = useState("join");
+ 
   
   // Define state to hold fetched groups
   const [groups, setGroups] = useState<Group[]>([]);
+
+  
 
   const fetchGroups = async () => {
     try {
@@ -43,6 +47,7 @@ export default function GroupsScreen() {
           startingCurrency: groupData.startingCurrency,
           admins: groupData.admins,
           creationDate: groupData.creationDate,
+          password: groupData.password,
         });
       });
       setGroups(groupsList);
@@ -77,13 +82,17 @@ export default function GroupsScreen() {
           groups
             .filter((group) => !group.members?.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
               .map((group) => (
-                <GroupCard
-                  key={group.id}
-                  name={group.name}
-                  members={group.members}
-                  adminName={group.creator}
-                  visibility={group.visibility}
-                />
+                
+                  <GroupCard
+                    key={group.id}
+                    name={group.name}
+                    members={group.members}
+                    adminName={group.creator}
+                    visibility={group.visibility}
+                    password={group.password}
+                    startingCurrency={group.startingCurrency}
+                    fetchGroups={fetchGroups}
+                    />
       ))
         ) : (
 
@@ -91,24 +100,28 @@ export default function GroupsScreen() {
           groups
             .filter((group) => group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
               .map((group) => (
-                <GroupCard
-                  key={group.id}
-                  name={group.name}
-                  members={group.members}
-                  adminName={group.creator}
-                  visibility={group.visibility}
-                />
+                    <GroupCard
+                      key={group.id}
+                      name={group.name}
+                      members={group.members}
+                      adminName={group.creator}
+                      visibility={group.visibility}
+                      password={group.password}
+                      startingCurrency={group.startingCurrency}
+                      fetchGroups={fetchGroups}
+                    />
       ))
         )}
       </ScrollView>
 
-      <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreateModalVisible(true)}>
         <Text style={styles.plusButtonText}>+</Text>
       </TouchableOpacity>
 
-      <Modal animationType="fade" transparent={true} visible={modalVisible}>
-        <JoinGroupView fetchGroups={fetchGroups} setModalVisible={setModalVisible}></JoinGroupView>
+      <Modal animationType="fade" transparent={true} visible={createModalVisible}>
+        <CreateGroupView fetchGroups={fetchGroups} setModalVisible={setCreateModalVisible}></CreateGroupView>
       </Modal>
+  
     </View>
   );
 }
@@ -118,6 +131,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "white",
     padding: 10,
+    paddingTop: 0,
   },
   header: {
     fontSize: 24,

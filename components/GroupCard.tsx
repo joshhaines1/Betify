@@ -1,17 +1,19 @@
-import React from 'react';
-import { StyleSheet, Image, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Image, TouchableOpacity, Modal } from 'react-native';
 import { Text, View } from 'react-native';
 import { Link } from 'expo-router';
+import { JoinGroupView } from './JoinGroupView';
 
-interface GroupCardProps {
-  name: string;
-  members: string[];
-  adminName: string;
-  visibility: string;
-}
 
-export function GroupCard({ name, members, adminName, visibility }: GroupCardProps) {
+export function GroupCard({ name, members, adminName, visibility, password, startingCurrency, fetchGroups}) {
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
+
+  const handlePress = () => {
+    setJoinModalVisible(true);
+  };
+
   return (
+    <>
     <TouchableOpacity style={styles.container} onPress={handlePress}>
       <Image
         source={{
@@ -31,12 +33,15 @@ export function GroupCard({ name, members, adminName, visibility }: GroupCardPro
         </Text>
       </View>
     </TouchableOpacity>
+
+    <Modal animationType="fade" transparent={true} visible={joinModalVisible}>
+            <JoinGroupView fetchGroups={fetchGroups} setModalVisible={setJoinModalVisible} name={name} visibility={visibility} correctPassword={password} members={members} startingCurrency={startingCurrency} ></JoinGroupView>
+    </Modal>
+    </>
   );
 }
 
-const handlePress = () => {
-  console.log('Clicked');
-};
+
 
 const styles = StyleSheet.create({
   container: {

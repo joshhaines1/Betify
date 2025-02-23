@@ -17,14 +17,14 @@ export default function TabLayout() {
 
   return (
     <>
-    <SafeAreaView style={styles.headerContainer}>
+    <SafeAreaView edges={['top']} style={styles.headerContainer}>
 
     <View style={styles.titleContainer}>
-      <Text style={styles.headerTitle}>BETIFY</Text>
+      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.headerTitle}>BETIFY</Text>
     </View>
 
     <View style={styles.usernameContainer}>
-      <Text style={styles.userName}>{user ? user.displayName : "LOGIN" }</Text>
+      <Text numberOfLines={1} ellipsizeMode='tail' style={styles.userName}>itzjoshzx</Text>
     </View>
 
     </SafeAreaView>
@@ -89,24 +89,23 @@ const styles = StyleSheet.create({
     fontSize: 50,
     fontWeight: 'bold',
     color: '#ff496b', 
-    marginLeft: 25,
-    marginTop: 10,
   },
 
   headerContainer: {
     backgroundColor: "white",
     alignItems: 'center',
-    justifyContent: 'flex-start',
     flexDirection: 'row',
-    marginBottom: -45,
-    
+    padding: 20, 
+    paddingTop: 7,
+    paddingBottom: 7,
   },
 
   titleContainer: {
     backgroundColor: "white",
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'flex-start',
     flex: 1,
+    
     
   },
 
@@ -115,7 +114,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     flexDirection: 'row',
-    marginRight: 30,
     flex: 1, 
     
   },
@@ -124,8 +122,6 @@ const styles = StyleSheet.create({
     
     fontSize: 20,
     color: 'black', 
-    marginLeft: 20,
-    marginTop: 10,
     textTransform: 'uppercase',
     fontWeight: 'bold',
 

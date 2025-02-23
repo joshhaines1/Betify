@@ -1,11 +1,11 @@
-import { FIREBASE_AUTH, FIRESTORE } from '@/FirebaseConfig';
+import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Text, View } from 'react-native';
 
 
-export function JoinGroupView({setModalVisible, fetchGroups}) {
+export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency}) {
   
     const [password, setPassword] = useState("");
     
@@ -42,12 +42,12 @@ export function JoinGroupView({setModalVisible, fetchGroups}) {
     
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Create a Group</Text>
+                <Text style={styles.modalTitle}>Join a Group</Text>
                 <Text style={styles.label}>Name:</Text>
-                <Text>WLC Betting</Text>
+                <View style={styles.infoContainer}><Text>{name}</Text></View>
                 <Text style={styles.label}>Visibility:</Text>
-                <Text>Private</Text>
-                {"Private" === "Private" && (
+                <View style={styles.infoContainer}><Text>{visibility}</Text></View>
+                {visibility === "Private" && (
                   <>
                   <Text style={styles.label}>Password:</Text>
                   <TextInput
@@ -58,10 +58,10 @@ export function JoinGroupView({setModalVisible, fetchGroups}) {
                   />
                   </>
                 )}
-                <Text style={styles.label}>Max Members:</Text>
-                <Text>30</Text>
+                <Text style={styles.label}>Current Members:</Text>
+                <View style={styles.infoContainer}><Text>{members.length}</Text></View>
                 <Text style={styles.label}>Starting Currency:</Text>
-                <Text>1000</Text>
+                <View style={styles.infoContainer}><Text>{startingCurrency}</Text></View>
                 <View style={styles.buttonRow}>
                   <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => joinGroup()}>
                     <Text style={styles.buttonText}>JOIN</Text>
@@ -82,6 +82,15 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "white",
         padding: 10,
+      },
+      infoContainer: {
+        borderColor: '#bdbdbd',
+        borderWidth: 1, 
+        borderRadius: 4, 
+        padding: 6,
+        marginTop: 5,
+        marginBottom: 5,
+
       },
       header: {
         fontSize: 24,
@@ -129,7 +138,7 @@ const styles = StyleSheet.create({
       modalTitle: {
         fontSize: 20,
         fontWeight: "bold",
-        marginBottom: 15,
+        marginBottom: 5,
         textAlign: "center",
       },
       input: {

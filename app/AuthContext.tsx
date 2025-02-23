@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { FIREBASE_AUTH } from "@/FirebaseConfig";
+import { FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { View, ActivityIndicator } from "react-native";
 
