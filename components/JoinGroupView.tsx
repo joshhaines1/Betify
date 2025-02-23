@@ -1,37 +1,61 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { arrayUnion, collection, doc, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 
 
-export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency}) {
-  
+export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId}) {
+  const groupDocRef = doc(FIRESTORE, "groups", groupId);
+
+
+
     const [password, setPassword] = useState("");
-    
+
+    const addMemberToGroup = async () => {
+      
+      await updateDoc(groupDocRef, {
+        members: arrayUnion(FIREBASE_AUTH.currentUser?.uid)
+      });
+      
+      //Add a new member to the members subcollection
+      const membersCollectionRef = collection(groupDocRef, "members");
+      const memberDocRef = doc(membersCollectionRef, FIREBASE_AUTH.currentUser?.uid);
+      await setDoc(memberDocRef, {
+        id: FIREBASE_AUTH.currentUser?.uid,
+        displayName: FIREBASE_AUTH.currentUser?.displayName,
+        joinedAt: new Date(),
+        currency: startingCurrency,
+      });
+
+    }
+  
     const joinGroup = async () => {
         try {
-    
-          setModalVisible(false);
-          
-          // Step 1: Create the group document
-         
-      
-          // Step 2: Add members as a subcollection
-          
-          
+
+          if(visibility == "Private")
+          {
+            if(password == correctPassword)
+            {
+              //setModalVisible(false);
+              addMemberToGroup();
+
+            } else {
+
+              Alert.alert("Incorrect Password")
+            }
+
+          } else {
+            //setModalVisible(false);
+            addMemberToGroup()
+          }
       
           
         } catch (error) {
-          console.error("Error creating group:", error);
+          console.error("Error joining group:", error);
         }
     
-        
         fetchGroups();
-      };
-    
-      const resetFields = () => {
-        
       };
     
       const cancelGroupJoin = () => {
