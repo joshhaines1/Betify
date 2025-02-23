@@ -91,7 +91,9 @@ export default function GroupsScreen() {
                     visibility={group.visibility}
                     password={group.password}
                     startingCurrency={group.startingCurrency}
+                    groupId={group.id}
                     fetchGroups={fetchGroups}
+                    joined={false}
                     />
       ))
         ) : (
@@ -108,7 +110,9 @@ export default function GroupsScreen() {
                       visibility={group.visibility}
                       password={group.password}
                       startingCurrency={group.startingCurrency}
+                      groupId={group.id}
                       fetchGroups={fetchGroups}
+                      joined={true}
                     />
       ))
         )}

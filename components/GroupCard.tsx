@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 
 
-export function GroupCard({ name, members, adminName, visibility, password, startingCurrency, fetchGroups}) {
+export function GroupCard({ name, members, adminName, visibility, password, startingCurrency, groupId, fetchGroups, joined}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
 
   const handlePress = () => {
-    setJoinModalVisible(true);
+    if(joined){
+      Alert.alert("You are already in this group!")
+    } else {
+      setJoinModalVisible(true);
+    }
+    
   };
 
   return (
@@ -35,7 +40,7 @@ export function GroupCard({ name, members, adminName, visibility, password, star
     </TouchableOpacity>
 
     <Modal animationType="fade" transparent={true} visible={joinModalVisible}>
-            <JoinGroupView fetchGroups={fetchGroups} setModalVisible={setJoinModalVisible} name={name} visibility={visibility} correctPassword={password} members={members} startingCurrency={startingCurrency} ></JoinGroupView>
+      <JoinGroupView fetchGroups={fetchGroups} setModalVisible={setJoinModalVisible} name={name} visibility={visibility} correctPassword={password} members={members} startingCurrency={startingCurrency} groupId={groupId} ></JoinGroupView>
     </Modal>
     </>
   );

@@ -24,7 +24,7 @@ export default function TabLayout() {
     </View>
 
     <View style={styles.usernameContainer}>
-      <Text numberOfLines={1} ellipsizeMode='tail' style={styles.userName}>itzjoshzx</Text>
+      <Text numberOfLines={1} ellipsizeMode='tail' style={styles.userName}>{user?.displayName}</Text>
     </View>
 
     </SafeAreaView>
