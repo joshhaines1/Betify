@@ -3,7 +3,7 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Text, View } from 'react-native';
-
+import * as Haptics from 'expo-haptics';
 
 export function CreateGroupView({setModalVisible, fetchGroups}) {
   
@@ -66,6 +66,12 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
         resetFields();
       };
 
+      const handleVisiblityButton = (visibility) => {
+
+        setVisibility(visibility);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+
     return (
     
             <View style={styles.modalContainer}>
@@ -79,10 +85,10 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
                 />
                 <Text style={styles.label}>Visibility:</Text>
                 <View style={styles.visibilityRow}>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Public" && styles.selectedVisibilityButton]} onPress={() => setVisibility("Public")}>
+                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Public" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Public")}>
                     <Text style={styles.visibilityButtonText}>PUBLIC</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Private" && styles.selectedVisibilityButton]} onPress={() => setVisibility("Private")}>
+                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Private" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Private")}>
                     <Text style={styles.visibilityButtonText}>PRIVATE</Text>
                   </TouchableOpacity>
                 </View>

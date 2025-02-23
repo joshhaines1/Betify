@@ -6,7 +6,7 @@ import { GroupCard } from "@/components/GroupCard";
 import { addDoc, setDoc, doc, getDocs, collection } from "firebase/firestore";
 import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
-import { JoinGroupView } from "@/components/JoinGroupView";
+import * as Haptics from 'expo-haptics';
 
 // Define the type for Group
 interface Group {

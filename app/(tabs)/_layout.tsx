@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuth } from "firebase/auth";
 import { useAuth } from '../AuthContext';
+import * as Haptics from 'expo-haptics';
 
 export default function TabLayout() {
   const { user } = useAuth();
@@ -33,24 +34,29 @@ export default function TabLayout() {
 
     <Tabs
         screenOptions={{
-        tabBarActiveTintColor: '#ff496b',
-        headerStyle: {
-        backgroundColor: '#ffffff',  
-        },
-        headerShadowVisible: false,
-        headerShown: false,
-        headerTintColor: '#fff',
-        tabBarStyle: {
-        backgroundColor: '#ffffff',
-        },
-        
-        
-  }}
->
+          tabBarActiveTintColor: '#ff496b',
+          headerStyle: {
+          backgroundColor: '#ffffff',  
+          },
+          headerShadowVisible: false,
+          headerShown: false,
+          headerTintColor: '#fff',
+          tabBarStyle: {
+          backgroundColor: '#ffffff',
+              }, 
+        }}
+        screenListeners={{
+          tabPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }
+  
+        }}
+        >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Groups',
+          
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home-sharp' : 'home-outline'} color={color} size={24} />
           ),
