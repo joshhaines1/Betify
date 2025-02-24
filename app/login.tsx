@@ -88,7 +88,7 @@ const Login = () => {
             </Text>
           </TouchableOpacity>
 
-          <Text style={{ margin: 2 }}>User ID: {uid ? uid : "Not Logged In"}</Text>
+          <Text style={{ margin: 2 }}>CREATED BY JOSH HAINES</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -98,7 +98,7 @@ const Login = () => {
 export default Login;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center" },
+  container: { flex: 1, justifyContent: "center", backgroundColor: 'white'},
 
   title: { fontSize: 70, fontWeight: 'bold', margin: 8, color: '#ff496b' },
 

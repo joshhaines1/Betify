@@ -1,6 +1,6 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
 import { collection, doc, setDoc } from 'firebase/firestore';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -12,6 +12,11 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
     const [maxMembers, setMaxMembers] = useState("10");
     const [password, setPassword] = useState("");
     const [startingCurrency, setStartingCurrency] = useState("1000");
+
+    useEffect(() => {
+        resetFields();
+        console.log("Reset fields");
+      }, []);
     
     const createGroup = async () => {
         try {
@@ -50,7 +55,7 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
           console.error("Error creating group:", error);
         }
     
-        resetFields();
+        
         fetchGroups();
       };
     
@@ -63,7 +68,6 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
     
       const cancelGroupCreation = () => {
         setModalVisible(false);
-        resetFields();
       };
 
       const handleVisiblityButton = (visibility) => {

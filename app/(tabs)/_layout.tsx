@@ -7,6 +7,7 @@ import { getAuth } from "firebase/auth";
 import { useAuth } from '../AuthContext';
 import * as Haptics from 'expo-haptics';
 
+
 export default function TabLayout() {
   const { user } = useAuth();
   
@@ -48,6 +49,7 @@ export default function TabLayout() {
         screenListeners={{
           tabPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
           }
   
         }}
@@ -66,9 +68,9 @@ export default function TabLayout() {
       
 
       <Tabs.Screen
-        name="entries"
+        name="explore"
         options={{
-          title: 'Entries',
+          title: 'Explore',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'albums' : 'albums-outline'} color={color} size={24}/>
           ),

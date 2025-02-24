@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 
 
@@ -10,7 +10,13 @@ export function GroupCard({ name, members, adminName, visibility, password, star
 
   const handlePress = () => {
     if(joined){
-      Alert.alert("You are already in this group!")
+      router.navigate({
+        pathname: "/group",
+        params: { 
+          name, 
+          groupId, 
+        },
+      });
     } else {
       setJoinModalVisible(true);
     }

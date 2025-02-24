@@ -22,15 +22,15 @@ interface Group {
   creationDate: Date;
 }
 
-export default function GroupsScreen() {
+export default function Explore() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [view, setView] = useState("joined");
+  const [view, setView] = useState("join");
  
   useFocusEffect(
-    useCallback(() => {
-      fetchGroups();
-       console.log("Refreshed");
-    }, []));
+      useCallback(() => {
+        fetchGroups();
+         console.log("Refreshed");
+      }, []));
   // Define state to hold fetched groups
   const [groups, setGroups] = useState<Group[]>([]);
 
@@ -70,9 +70,9 @@ export default function GroupsScreen() {
     <View style={styles.container}>
       <View style={styles.switchContainer}>
         <TouchableOpacity 
-          style={[styles.switchButton, view === "joined" && styles.activeSwitchButton]} 
-          onPress={() => setView("joined")}>
-          <Text style={styles.switchText}>My Groups</Text>
+          style={[styles.switchButton, view === "join" && styles.activeSwitchButton]} 
+          onPress={() => setView("join")}>
+          <Text style={styles.switchText}>Explore Groups</Text>
         </TouchableOpacity>
       </View>
 

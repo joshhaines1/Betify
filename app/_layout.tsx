@@ -10,7 +10,17 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" options={{headerShown: false}} />
         <Stack.Screen name="index" options={{headerShown: false}} />
         <Stack.Screen name="login" options={{animation: "fade", headerShown: false}} />
-      </Stack>
+        <Stack.Screen 
+        name="group" 
+        options={{ 
+          animation: "flip", 
+          headerShown: true, 
+          headerBackButtonDisplayMode: "minimal",
+          headerTitle: "",
+          headerTintColor: "#ff496b", // Back arrow color
+          headerShadowVisible: false, 
+        }} 
+      /></Stack>
 
     </AuthProvider>
     
