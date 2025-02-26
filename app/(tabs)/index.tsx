@@ -8,6 +8,7 @@ import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from "expo-router";
+import { EventCard } from "@/components/EventCard";
 
 // Define the type for Group
 interface Group {
@@ -95,7 +96,9 @@ export default function GroupsScreen() {
                     fetchGroups={fetchGroups}
                     joined={false}
                     />
-      ))
+      )
+    
+    )
         ) : (
 
           //Shows all groups that the current user IS currently in using filter
@@ -114,6 +117,8 @@ export default function GroupsScreen() {
                       fetchGroups={fetchGroups}
                       joined={true}
                     />
+                    
+                    
       ))
         )}
       </ScrollView>
@@ -136,6 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     padding: 10,
     paddingTop: 0,
+    
   },
   header: {
     fontSize: 24,
@@ -275,7 +281,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-start",
     marginBottom: 10,
-    backgroundColor: 'white',
+  
   },
   switchButton: {
     padding: 10,

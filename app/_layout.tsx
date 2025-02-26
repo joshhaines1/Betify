@@ -16,8 +16,7 @@ export default function RootLayout() {
           animation: "flip", 
           headerShown: true, 
           headerBackButtonDisplayMode: "minimal",
-          headerTitle: "",
-          headerTintColor: "#ff496b", // Back arrow color
+          headerTintColor: "black", // Back arrow color
           headerShadowVisible: false, 
         }} 
       /></Stack>
