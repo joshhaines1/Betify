@@ -5,7 +5,7 @@ import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 
 
-export function GroupCard({ name, members, adminName, visibility, password, startingCurrency, groupId, fetchGroups, joined}) {
+export function GroupCard({ name, members, adminName, admins, visibility, password, startingCurrency, groupId, fetchGroups, joined}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
 
   const handlePress = () => {
@@ -15,6 +15,7 @@ export function GroupCard({ name, members, adminName, visibility, password, star
         params: { 
           name, 
           groupId, 
+          admins, 
         },
       });
     } else {
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
   },
   groupName: {
     fontSize: 25,
-    color: '#ff496b', // Colors.light.tint is undefined, replaced with 'blue'
+    color: 'black', // Colors.light.tint is undefined, replaced with 'blue'
     fontWeight: '500',
   },
   adminName: {
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
   },
   memberCountText: {
     fontWeight: 'bold',
-    color: 'black',
+    color: '#ff496b',
     fontSize: 25,
     textAlign: 'center',
   },

@@ -1,12 +1,14 @@
 
 import { useEffect, useLayoutEffect, useState } from "react";
 import { getAuth, updateProfile } from "firebase/auth";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { EventCard } from "@/components/EventCard";
 import { collection, getDocs } from "firebase/firestore";
-import { FIRESTORE } from "@/.FirebaseConfig";
+import { FIREBASE_AUTH, FIRESTORE } from "@/.FirebaseConfig";
 import { useNavigation } from '@react-navigation/native';
+import { PropCard } from "@/components/PropCard";
+import { CreatePropView } from "@/components/CreatePropView";
 
 
 interface Event {
@@ -25,45 +27,91 @@ interface Event {
   overOdds: string;
   underOdds: string;
   date: string;
+  status: string;
+  results: string[];
+
+}
+
+interface Prop {
+
+  id: string; 
+  groupId: string;
+  name: string;
+  description: string;
+  overOdds: string;
+  underOdds: string;
+  overUnder: string;
+  date: string;
+  groupName: string;
+  result: string; 
+  status: string;
+
 
 }
 
 export default function Group() {
-    const { name, groupId } = useLocalSearchParams();
-    const [view, setView] = useState("events");
+    const { name, groupId, admins} = useLocalSearchParams();
+    const [view, setView] = useState("props");
     const [events, setEvents] = useState<Event[]>([]);
+    const [props, setProps] = useState<Prop[]>([]);
     const navigation = useNavigation(); 
+    const [createModalVisible, setCreateModalVisible] = useState(false);
 
     const fetchEvents = async () => {
         try {
           const querySnapshot = await getDocs(collection(FIRESTORE, "events"));
           const eventsList: Event[] = [];
-          console.log("Fetching events...");
+          const propsList: Prop[] = [];
           querySnapshot.forEach((doc) => {
             const eventData = doc.data();
-            
             if(groupId == eventData.groupId)
             {
-              eventsList.push({
-                id: doc.id,
-                groupId: eventData.groupId,
-                groupName: eventData.groupName,
-                type: eventData.type, 
-                team1: eventData.team1,
-                team2: eventData.team2,
-                moneylineOdds1: eventData.moneylineOdds1,
-                moneylineOdds2: eventData.moneylineOdds2,
-                spread: eventData.spread,
-                spreadOdds1: eventData.spreadOdds1,
-                spreadOdds2: eventData.spreadOdds2,
-                overUnder: eventData.overUnder,
-                overOdds: eventData.overOdds,
-                underOdds: eventData.underOdds,
-                date: eventData.date,
-              });
-          }
+              if(eventData.type == "MSO")
+              {
+                eventsList.push({
+                  id: doc.id,
+                  groupId: eventData.groupId,
+                  groupName: eventData.groupName,
+                  type: eventData.type, 
+                  team1: eventData.team1,
+                  team2: eventData.team2,
+                  moneylineOdds1: eventData.moneylineOdds1,
+                  moneylineOdds2: eventData.moneylineOdds2,
+                  spread: eventData.spread,
+                  spreadOdds1: eventData.spreadOdds1,
+                  spreadOdds2: eventData.spreadOdds2,
+                  overUnder: eventData.overUnder,
+                  overOdds: eventData.overOdds,
+                  underOdds: eventData.underOdds,
+                  date: eventData.date,
+                  status: eventData.status,
+                  results: eventData.results,
+                });
+
+              } else if(eventData.type == "prop")
+              {
+                propsList.push({
+
+                  id: doc.id,
+                  groupId: eventData.groupId,
+                  name: eventData.name,
+                  description: eventData.description,
+                  overOdds: eventData.overOdds,
+                  underOdds: eventData.underOdds,
+                  overUnder: eventData.overUnder,
+                  date: eventData.date,
+                  groupName: eventData.groupName,
+                  result: eventData.result,
+                  status: eventData.status,
+
+                });
+              }
+              
+            }
+            
           });
           setEvents(eventsList);
+          setProps(propsList);
         } catch (error) {
           console.error("Error fetching events:", error);
         }
@@ -74,7 +122,7 @@ export default function Group() {
            }, []);
 
       useLayoutEffect(() => {
-        navigation.setOptions({ title: `${name}'s Events` });
+        navigation.setOptions({ title: `${name}` });
       }, [navigation, name]);
 
   return (
@@ -83,8 +131,7 @@ export default function Group() {
                   {view === "events" ? (
                     // Shows all groups that the currect user is NOT currently in using filter
                     events
-                      .filter((event) => (event.groupId == groupId))
-                        .filter((event) => (event.type == "MSO")) //Stands for Moneyline, Spread, Over/Under
+                          .filter((event) => (event.status == "open"))
                           .map((event) => (
                           
                             <EventCard 
@@ -103,19 +150,40 @@ export default function Group() {
                               date={event.date} 
                               fetchGroups={fetchEvents}>
                             </EventCard>   
-                ))
+                      ))
                   ) : (
           
-                    //Shows all groups that the current user IS currently in using filter
-                    events
-                      .filter((event) => (event.groupId == groupId))
-                        .map((event) => (
-                              
-                          <Text></Text>
-                ))
+                    props 
+                          .filter((prop) => (prop.status == "open"))
+                          .map((prop) => (
+                          
+                            <PropCard 
+                              key={prop.id} 
+                              groupName={prop.groupName} 
+                              description={prop.description}
+                              name={prop.name} 
+                              overUnder={prop.overUnder}
+                              overOdds={prop.overOdds}
+                              underOdds={prop.underOdds}
+                              eventId={prop.id} 
+                              date={prop.date} 
+                              fetchGroups={fetchEvents}>
+                            </PropCard>   
+                      ))
                   )}
                 </ScrollView>
+
+                <Modal animationType="fade" transparent={true} visible={createModalVisible}>
+                    <CreatePropView fetchGroups={fetchEvents} setModalVisible={setCreateModalVisible} groupId={groupId} groupName={name}></CreatePropView>
+                </Modal>
     
+          {admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && (
+
+          <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateModalVisible(true)}}>
+            <Text style={styles.plusButtonText}>+</Text>
+          </TouchableOpacity>
+
+          )}
           
       
         </View>
@@ -240,7 +308,7 @@ const styles = StyleSheet.create({
   },
   plusButtonStyle: {
     position: "absolute",
-    bottom: 30,
+    bottom: 110,
     right: 30,
     borderRadius: 25,
     alignItems: "center",

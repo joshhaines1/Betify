@@ -30,7 +30,7 @@ export default function GroupsScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchGroups();
-       console.log("Refreshed");
+       
     }, []));
   // Define state to hold fetched groups
   const [groups, setGroups] = useState<Group[]>([]);
@@ -89,6 +89,7 @@ export default function GroupsScreen() {
                     name={group.name}
                     members={group.members}
                     adminName={group.creator}
+                    admins={group.admins}
                     visibility={group.visibility}
                     password={group.password}
                     startingCurrency={group.startingCurrency}
@@ -110,6 +111,7 @@ export default function GroupsScreen() {
                       name={group.name}
                       members={group.members}
                       adminName={group.creator}
+                      admins={group.admins}
                       visibility={group.visibility}
                       password={group.password}
                       startingCurrency={group.startingCurrency}

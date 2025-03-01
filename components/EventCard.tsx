@@ -223,7 +223,8 @@ const styles = StyleSheet.create({
   },
   eventTitle: {
     fontSize: 16,
-    color: '#ff496b', // Colors.light.tint is undefined, replaced with 'blue'
+    //color: '#ff496b',
+    color: 'black',
     fontWeight: '500',
   },
   

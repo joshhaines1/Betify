@@ -5,49 +5,41 @@ import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-nat
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-export function CreateGroupView({setModalVisible, fetchGroups}) {
+export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId}) {
   
-    const [groupName, setGroupName] = useState("");
-    const [visibility, setVisibility] = useState("Public");
-    const [maxMembers, setMaxMembers] = useState("10");
-    const [password, setPassword] = useState("");
-    const [startingCurrency, setStartingCurrency] = useState("1000");
+    const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
+    const [line, setLine] = useState("");
+    const [overOdds, setOverOdds] = useState("");
+    const [underOdds, setUnderOdds] = useState("");
+    const [type, setType] = useState("prop");
 
     useEffect(() => {
         resetFields();
         
       }, []);
     
-    const createGroup = async () => {
+    const createEvent = async () => {
         try {
     
           setModalVisible(false);
-          const groupRef = doc(collection(FIRESTORE, "groups")); // Create a new group doc reference
-          const groupId = groupRef.id; // Get the auto-generated ID
-      
+          const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
+          const eventId = eventRef.id; // Get the auto-generated ID
+            const date = new Date();
           // Step 1: Create the group document
-          await setDoc(groupRef, {
-            name: groupName,
-            creator: FIREBASE_AUTH.currentUser?.displayName,
-            visibility: visibility,
-            admins: [FIREBASE_AUTH.currentUser?.uid],
-            members: [FIREBASE_AUTH.currentUser?.uid],
-            startingCurrency: startingCurrency,
-            password: password, // Example field
-            creationDate: new Date(),
+          await setDoc(eventRef, {
+            name: name,
+            description: description,
+            groupId: groupId,
+            groupName: groupName,
+            type: type,
+            underOdds: underOdds,
+            overOdds: overOdds,
+            overUnder: line,
+            result: "",
+            status: "open", // Example field
+            date: date.toDateString(),
           });
-      
-          // Step 2: Add members as a subcollection
-          const membersCollectionRef = collection(groupRef, "members");
-      
-          
-            const memberDocRef = doc(membersCollectionRef, FIREBASE_AUTH.currentUser?.uid);
-            await setDoc(memberDocRef, {
-              id: FIREBASE_AUTH.currentUser?.uid,
-              displayName: FIREBASE_AUTH.currentUser?.displayName,
-              joinedAt: new Date(),
-              currency: startingCurrency,
-            });
           
       
           
@@ -60,75 +52,81 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
       };
     
       const resetFields = () => {
-        setGroupName(""); 
-        setVisibility("Public");
-        setMaxMembers("10");
-        setStartingCurrency("1000");
+        setName(""); 
+        setDescription("");
+        setLine("");
+        setOverOdds("");
+        setUnderOdds("");
       };
     
       const cancelGroupCreation = () => {
         setModalVisible(false);
       };
 
-      const handleVisiblityButton = (visibility) => {
-
-        setVisibility(visibility);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
 
     return (
     
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Create a Group</Text>
+                <Text style={styles.modalTitle}>Create a Prop</Text>
+                <Text style={styles.label}>Name:</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Group Name"
-                  value={groupName}
-                  onChangeText={setGroupName}
+                  placeholder="Johnny Appleseed"
+                  value={name}
+                  onChangeText={setName}
                 />
-                <Text style={styles.label}>Visibility:</Text>
+                <Text style={styles.label}>Description:</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Burgers Eaten"
+                  value={description}
+                  onChangeText={setDescription}
+                />
+                <Text style={styles.label}>Over / Under Line:</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="5.5"
+                  value={line}
+                  onChangeText={setLine}
+                />
                 <View style={styles.visibilityRow}>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Public" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Public")}>
-                    <Text style={styles.visibilityButtonText}>PUBLIC</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Private" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Private")}>
-                    <Text style={styles.visibilityButtonText}>PRIVATE</Text>
-                  </TouchableOpacity>
+
+                    <View style={styles.oddsContainer}>
+
+                        <Text style={styles.label}>Over Odds:</Text>
+                        <TextInput
+                        style={styles.input}
+                        placeholder="-135"
+                        value={overOdds}
+                        onChangeText={setOverOdds}
+                        />
+
+                    </View>
+
+                    <View style={styles.oddsContainer}>
+
+                        <Text style={styles.label}>Under Odds:</Text>
+                        <TextInput
+                        style={styles.input}
+                        placeholder="+130"
+                        value={underOdds}
+                        onChangeText={setUnderOdds}
+                        />
+                        
+                    </View>
+                    
                 </View>
-                {visibility === "Private" && (
-                  <>
-                  <Text style={styles.label}>Password:</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder=""
-                    value={password}
-                    onChangeText={setPassword}
-                  />
-                  </>
-                )}
-                <Text style={styles.label}>Max Members:</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={maxMembers}
-                  onChangeText={setMaxMembers}
-                />
-                <Text style={styles.label}>Starting Currency:</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={startingCurrency}
-                  onChangeText={setStartingCurrency}
-                />
+                
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createGroup()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createEvent()}>
                     <Text style={styles.buttonText}>CREATE</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>
                   </TouchableOpacity>
                 </View>
+
               </View>
             </View>
           
@@ -141,6 +139,11 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "white",
         padding: 10,
+      },
+      oddsContainer: {
+
+        marginRight: 20,
+
       },
       header: {
         fontSize: 24,
