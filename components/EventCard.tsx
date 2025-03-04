@@ -1,22 +1,45 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 import * as Haptics from 'expo-haptics';
+import Colors from '@/assets/styles/colors';
 
 
-export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdds2, spread, spreadOdds1, spreadOdds2, overUnder, overOdds, underOdds, fetchGroups, date, eventId}) {
+export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdds2, spread, spreadOdds1, spreadOdds2, overUnder, overOdds, underOdds, fetchGroups, date, eventId, setBetSlip, setBetSlipOdds, betSlip}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
-  const handlePress = (type: string) => {
-    if(bet == type){
-      selectBet("");
-    } else {
-      selectBet(type);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-    
+  const handlePress = (type: string, odds: string,) => {
+  
+      if(bet == type){
+        selectBet("");
+        
+      } else {
+        selectBet(type);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+  
+      setBetSlip((prev) => {
+          const newBetSlip = new Map(prev);
+          if (newBetSlip.get(eventId) === type) {
+              newBetSlip.delete(eventId);
+          } else {
+              newBetSlip.set(eventId, type);
+          }
+          return newBetSlip;
+      });
+  
+      setBetSlipOdds((prev) => {
+          const newBetSlipOdds = new Map(prev);
+          if (newBetSlipOdds.get(eventId) === odds) {
+              newBetSlipOdds.delete(eventId);
+          } else {
+              newBetSlipOdds.set(eventId, odds);
+          }
+          return newBetSlipOdds;
+      });
+  
   };
 
 
@@ -29,6 +52,14 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
       return "+" + spread; 
     }
   }
+
+  useEffect(() => {
+    // Reset selection when betSlip is cleared
+    if (!betSlip.has(eventId)) {
+      selectBet("");
+    }
+  }, [betSlip]);
+  
   return (
     <>
     <View style={styles.container}>
@@ -53,9 +84,7 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
       <View style={styles.eventOptionsContainer}>
       <View style={styles.logoContainer}>
             <Image
-                    source={{
-                    uri: 'https://static.vecteezy.com/system/resources/previews/000/550/535/non_2x/user-icon-vector.jpg',
-                    }}
+                    source={require('@/assets/images/groupIcon.png')}
                     style={styles.logo}
                     resizeMode="contain"
                 />
@@ -63,14 +92,14 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
         <View style={styles.eventOptionsTitleContainer}>
             <Text style={styles.eventTitle}>{team1}</Text>
         </View>
-        <TouchableOpacity onPress={() => handlePress('moneyline1')} style={[styles.optionButton, bet === "moneyline1" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('moneyline1', moneylineOdds1)} style={[styles.optionButton, bet === "moneyline1" && styles.selectedOptionButton]}>
             <Text style={[styles.oddsText, bet === "moneyline1" && styles.selectedOddsText]}>{moneylineOdds1}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('spread1')} style={[styles.optionButton, bet === "spread1" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('spread1', spreadOdds1)} style={[styles.optionButton, bet === "spread1" && styles.selectedOptionButton]}>
             <Text style={[styles.linesText, styles.oddsText, bet === "spread1" && styles.selectedOddsText, styles.linesText]}>{calculateSpread(moneylineOdds1, moneylineOdds2)}</Text>
             <Text style={[styles.oddsText, bet === "spread1" && styles.selectedOddsText]}>{spreadOdds1}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('over')} style={[styles.optionButton, bet === "over" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('over', overOdds)} style={[styles.optionButton, bet === "over" && styles.selectedOptionButton]}>
             <Text style={[styles.linesText, styles.oddsText, bet === "over" && styles.selectedOddsText, styles.linesText]}>O {overUnder}</Text>
             <Text style={[styles.oddsText, bet === "over" && styles.selectedOddsText]}>{overOdds}</Text>
         </TouchableOpacity>
@@ -79,9 +108,7 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
       <View style={styles.eventOptionsContainer}>
         <View style={styles.logoContainer}>
             <Image
-                    source={{
-                    uri: 'https://static.vecteezy.com/system/resources/previews/000/550/535/non_2x/user-icon-vector.jpg',
-                    }}
+                    source={require('@/assets/images/groupIcon.png')}
                     style={styles.logo}
                     resizeMode="contain"
                 />
@@ -89,14 +116,14 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
         <View style={styles.eventOptionsTitleContainer}>
             <Text style={styles.eventTitle}>{team2}</Text>
         </View>
-        <TouchableOpacity onPress={() => handlePress('moneyline2')} style={[styles.optionButton, bet === "moneyline2" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('moneyline2', moneylineOdds2)} style={[styles.optionButton, bet === "moneyline2" && styles.selectedOptionButton]}>
             <Text style={[styles.oddsText, bet === "moneyline2" && styles.selectedOddsText]}>{moneylineOdds2}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('spread2')} style={[styles.optionButton, bet === "spread2" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('spread2', spreadOdds2)} style={[styles.optionButton, bet === "spread2" && styles.selectedOptionButton]}>
             <Text style={[styles.linesText, styles.oddsText, bet === "spread2" && styles.selectedOddsText, styles.linesText]}>{calculateSpread(moneylineOdds2, moneylineOdds1)}</Text>
             <Text style={[styles.oddsText, bet === "spread2" && styles.selectedOddsText]}>{spreadOdds2}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('under')} style={[styles.optionButton, bet === "under" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('under', underOdds)} style={[styles.optionButton, bet === "under" && styles.selectedOptionButton]}>
             <Text style={[styles.linesText, styles.oddsText, bet === "under" && styles.selectedOddsText, styles.linesText]}>U {overUnder}</Text>
             <Text style={[styles.oddsText, bet === "under" && styles.selectedOddsText]}>{underOdds}</Text>
         </TouchableOpacity>
@@ -119,15 +146,16 @@ const styles = StyleSheet.create({
     height: 150,
     borderWidth: 2,
     borderRadius: 20,
-    borderColor: '#e8e8e8',
+    borderColor: Colors.border,
     flexDirection: 'column',
     padding: 8,
     marginBottom: 8,
+    backgroundColor: Colors.cardBackground,
   },
   eventInfoContainer: {
     height: '10%',
     width: '100%',
-    backgroundColor: 'white',
+    backgroundColor: '',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
     paddingLeft: 8,
@@ -136,12 +164,12 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: '100%',
-    height: '100%',
-    
+    height: '80%',
+    tintColor: Colors.textColor,
   },
   logoContainer: {
 
-    backgroundColor: 'white',
+    backgroundColor: '',
     width: '13%',
     objectFit: 'cover',
     marginRight: 5,
@@ -157,10 +185,11 @@ const styles = StyleSheet.create({
 
   optionHeaderText: {
     fontSize: 10,
+    color: Colors.textColor,
 
   },
   optionButton: {
-    backgroundColor: 'white',
+    backgroundColor: Colors.cardBackground,
     width: '15.5%',
     height: '100%',
     marginRight: 5,
@@ -183,7 +212,7 @@ const styles = StyleSheet.create({
   },
   oddsText: {
     fontWeight: '400',
-    color: 'black',
+    color: Colors.textColor,
   }, 
   selectedOddsText: {
     fontWeight: '700',
@@ -191,10 +220,11 @@ const styles = StyleSheet.create({
   },
   linesText: {
     fontSize: 10,
+    color: Colors.textColor,
 
   },
   optionHeaderContainer: {
-    backgroundColor: 'white',
+    backgroundColor: Colors.cardBackground,
     width: '15.5%',
     height: '100%',
     marginRight: 5,
@@ -211,7 +241,7 @@ const styles = StyleSheet.create({
   },
   eventInfoText: {
     fontSize: 10,
-    color: '#ccc',
+    color: Colors.textColor,
   },
   eventOptionsContainer: {
     height: '40%',
@@ -224,7 +254,7 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 16,
     //color: '#ff496b',
-    color: 'black',
+    color: Colors.textColor,
     fontWeight: '500',
   },
   

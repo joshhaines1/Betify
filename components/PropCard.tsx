@@ -1,23 +1,53 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 import * as Haptics from 'expo-haptics';
+import Colors from '@/assets/styles/colors';
 
 
-export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, date, groupName, eventId}) {
+export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
-  const handlePress = (type: string) => {
+  const handlePress = (type: string, odds: string,) => {
+
     if(bet == type){
       selectBet("");
+      
     } else {
       selectBet(type);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    
-  };
+
+    setBetSlip((prev) => {
+        const newBetSlip = new Map(prev);
+        if (newBetSlip.get(eventId) === type) {
+            newBetSlip.delete(eventId);
+        } else {
+            newBetSlip.set(eventId, type);
+        }
+        return newBetSlip;
+    });
+
+    setBetSlipOdds((prev) => {
+        const newBetSlipOdds = new Map(prev);
+        if (newBetSlipOdds.get(eventId) === odds) {
+            newBetSlipOdds.delete(eventId);
+        } else {
+            newBetSlipOdds.set(eventId, odds);
+        }
+        return newBetSlipOdds;
+    });
+
+};
+
+useEffect(() => {
+  // Reset selection when betSlip is cleared
+  if (!betSlip.has(eventId)) {
+    selectBet("");
+  }
+}, [betSlip]);
 
   return (
     <>
@@ -50,10 +80,10 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
 
         </View>
         
-        <TouchableOpacity onPress={() => handlePress('over')} style={[styles.optionButton, bet === "over" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('over', overOdds)} style={[styles.optionButton, bet === "over" && styles.selectedOptionButton]}>
             <Text style={[styles.oddsText, bet === "over" && styles.selectedOddsText]}>{overOdds}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('under')} style={[styles.optionButton, bet === "under" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('under', underOdds)} style={[styles.optionButton, bet === "under" && styles.selectedOptionButton]}>
             <Text style={[styles.oddsText, bet === "under" && styles.selectedOddsText]}>{underOdds}</Text>
         </TouchableOpacity>
       </View>
@@ -77,10 +107,11 @@ const styles = StyleSheet.create({
     height: 100,
     borderWidth: 2,
     borderRadius: 20,
-    borderColor: '#e8e8e8',
+    borderColor: Colors.border,
     flexDirection: 'column',
     padding: 8,
     marginBottom: 8,
+    backgroundColor: Colors.cardBackground,
     
   },
   nameAndDescriptionContainer: {
@@ -134,10 +165,11 @@ const styles = StyleSheet.create({
 
   optionHeaderText: {
     fontSize: 10,
+    color: Colors.textColor,
 
   },
   optionButton: {
-    backgroundColor: 'white',
+    backgroundColor: Colors.cardBackground,
     width: '24%',
     height: '100%',
     marginRight: 5,
@@ -145,10 +177,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderRadius: 7,
-    borderColor: '#ccc',
+    borderColor: Colors.border,
   },
   selectedOptionButton: {
-    backgroundColor: '#ff496b',
+    backgroundColor: Colors.primary,
     width: '24%',
     height: '100%',
     marginRight: 5,
@@ -160,7 +192,7 @@ const styles = StyleSheet.create({
   },
   oddsText: {
     fontWeight: '400',
-    color: 'black',
+    color: Colors.textColor,
   }, 
   selectedOddsText: {
     fontWeight: '700',
@@ -204,15 +236,16 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 16,
     //color: '#ff496b',
-    color: 'black',
+    color: Colors.textColor,
     fontWeight: '500',
     textAlign: 'center',
   },
   descriptionText: {
     textAlign: 'center',
     fontSize: 11,
-    color: 'black',
+    color: Colors.propTextColor,
     fontStyle: 'italic',
+    fontWeight: '600',
     marginTop: 2,
 
   },

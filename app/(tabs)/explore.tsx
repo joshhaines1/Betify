@@ -8,6 +8,7 @@ import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from "expo-router";
+import Colors from "@/assets/styles/colors";
 
 // Define the type for Group
 interface Group {
@@ -24,12 +25,11 @@ interface Group {
 
 export default function Explore() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [view, setView] = useState("join");
+  const [view, setView] = useState("active");
  
   useFocusEffect(
       useCallback(() => {
         fetchGroups();
-         console.log("Refreshed");
       }, []));
   // Define state to hold fetched groups
   const [groups, setGroups] = useState<Group[]>([]);
@@ -70,14 +70,19 @@ export default function Explore() {
     <View style={styles.container}>
       <View style={styles.switchContainer}>
         <TouchableOpacity 
-          style={[styles.switchButton, view === "join" && styles.activeSwitchButton]} 
-          onPress={() => setView("join")}>
-          <Text style={styles.switchText}>Explore Groups</Text>
+          style={[styles.switchButton, view === "active" && styles.activeSwitchButton]} 
+          onPress={() => setView("active")}>
+          <Text style={styles.switchText}>Active</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.switchButton, view === "settled" && styles.activeSwitchButton]} 
+          onPress={() => setView("settled")}>
+          <Text style={styles.switchText}>Settled</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
-        {view === "join" ? (
+        {view === "active" ? (
           // Shows all groups that the currect user is NOT currently in using filter
           groups
             .filter((group) => !group.members?.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
@@ -94,6 +99,7 @@ export default function Explore() {
                     groupId={group.id}
                     fetchGroups={fetchGroups}
                     joined={false}
+                    admins={group.admins}
                     />
       ))
         ) : (
@@ -113,6 +119,7 @@ export default function Explore() {
                       groupId={group.id}
                       fetchGroups={fetchGroups}
                       joined={true}
+                      admins={group.admins}
                     />
       ))
         )}
@@ -133,7 +140,7 @@ export default function Explore() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: Colors.background,
     padding: 10,
     paddingTop: 0,
   },
@@ -275,7 +282,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-start",
     marginBottom: 10,
-    backgroundColor: 'white',
+    backgroundColor: '',
   },
   switchButton: {
     padding: 10,
@@ -288,7 +295,7 @@ const styles = StyleSheet.create({
   },
   switchText: {
     fontSize: 16,
-    color: 'black',
+    color: Colors.textColor,
     fontWeight: "bold",
   },
   scrollContainer: {

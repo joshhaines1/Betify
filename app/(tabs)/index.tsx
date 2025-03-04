@@ -9,6 +9,7 @@ import { CreateGroupView } from "@/components/CreateGroupView";
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from "expo-router";
 import { EventCard } from "@/components/EventCard";
+import Colors from "@/assets/styles/colors";
 
 // Define the type for Group
 interface Group {
@@ -75,10 +76,15 @@ export default function GroupsScreen() {
           onPress={() => setView("joined")}>
           <Text style={styles.switchText}>My Groups</Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.switchButton, view === "explore" && styles.activeSwitchButton]} 
+          onPress={() => setView("explore")}>
+          <Text style={styles.switchText}>Explore Groups</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
-        {view === "join" ? (
+        {view === "explore" ? (
           // Shows all groups that the currect user is NOT currently in using filter
           groups
             .filter((group) => !group.members?.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
@@ -140,7 +146,7 @@ export default function GroupsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: Colors.background,
     padding: 10,
     paddingTop: 0,
     
@@ -296,7 +302,7 @@ const styles = StyleSheet.create({
   },
   switchText: {
     fontSize: 16,
-    color: 'black',
+    color: Colors.textColor,
     fontWeight: "bold",
   },
   scrollContainer: {

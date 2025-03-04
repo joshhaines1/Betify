@@ -4,11 +4,12 @@ import { getAuth, updateProfile } from "firebase/auth";
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { EventCard } from "@/components/EventCard";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { FIREBASE_AUTH, FIRESTORE } from "@/.FirebaseConfig";
 import { useNavigation } from '@react-navigation/native';
 import { PropCard } from "@/components/PropCard";
 import { CreatePropView } from "@/components/CreatePropView";
+import Colors from "@/assets/styles/colors";
 
 
 interface Event {
@@ -49,14 +50,99 @@ interface Prop {
 
 }
 
+interface Bet {
+
+  amount: number;
+  groupId: string;
+  odds: string;
+  picks: Map<string, string>,
+  status: string;
+  userId: string;
+
+}
+
 export default function Group() {
     const { name, groupId, admins} = useLocalSearchParams();
-    const [view, setView] = useState("props");
+    const [view, setView] = useState("events");
     const [events, setEvents] = useState<Event[]>([]);
     const [props, setProps] = useState<Prop[]>([]);
     const navigation = useNavigation(); 
     const [createModalVisible, setCreateModalVisible] = useState(false);
+    const [betSlipOdds, setBetSlipOdds] = useState(new Map<string, string>());
+    const [betSlip, setBetSlip] = useState(new Map<string, string>());
+    const [createButtonBottomMargin, setCreateButtonBottomMargin] = useState(50);
+    const [liveSlipOdds, setLiveSlipOdds] = useState("");
+    const [wager, setWager] = useState(100);
+    
+    useEffect(() => {
+      if (betSlip.size > 0) {
+        setCreateButtonBottomMargin(0); // Push above bet slip button
+        calculateOdds();
+      } else {
+        setCreateButtonBottomMargin(50); // Default position
+      }
+    }, [betSlip]);
 
+    const calculateOdds = async () => {
+
+      let decimalOdds: number[] = [];
+      for(const odds_string of betSlipOdds.values()){
+
+        let americanOdds = +(odds_string);
+        if(americanOdds < 0){
+
+          decimalOdds.push((100 / Math.abs(americanOdds)) + 1);
+
+        } else {
+
+          decimalOdds.push((americanOdds / 100) + 1);
+
+        }
+        
+      }
+
+      let parlayDecimalOdds = decimalOdds[0];
+      for(let i = decimalOdds.length - 1; i > 0; i--){
+
+        parlayDecimalOdds *= decimalOdds[i];
+
+      }
+
+      if(parlayDecimalOdds >= 2){
+
+        setLiveSlipOdds("+" +(Math.round((parlayDecimalOdds - 1) * 100)).toString());
+
+      } else {
+
+        setLiveSlipOdds(Math.round((-100 / (parlayDecimalOdds - 1))).toString());
+
+      }
+
+    }
+
+    const placeBets = async () => {
+
+      console.log("Placed bets");
+      try {
+        const wagersRef = doc(collection(FIRESTORE, "wagers")); // Create a new group doc reference
+        const wagerId = wagersRef.id; // Get the auto-generated ID
+        const betSlipObject = Object.fromEntries(betSlip);
+
+        await setDoc(wagersRef, {
+          amount: wager,
+          groupId: groupId,
+          odds: liveSlipOdds,
+          picks: betSlipObject,
+          status: 'open',
+          userId: FIREBASE_AUTH.currentUser?.uid,
+        });
+      } catch (error) {
+        console.error("Error placing bet:", error);
+      }
+      setBetSlip(new Map<string, string>());
+      setBetSlipOdds(new Map<string, string>());
+
+    }
     const fetchEvents = async () => {
         try {
           const querySnapshot = await getDocs(collection(FIRESTORE, "events"));
@@ -148,7 +234,12 @@ export default function Group() {
                               underOdds={event.underOdds}
                               eventId={event.id} 
                               date={event.date} 
-                              fetchGroups={fetchEvents}>
+                              fetchGroups={fetchEvents}
+                              setBetSlip={setBetSlip}
+                              setBetSlipOdds={setBetSlipOdds}
+                              betSlip={betSlip}
+                              >
+                              
                             </EventCard>   
                       ))
                   ) : (
@@ -167,7 +258,11 @@ export default function Group() {
                               underOdds={prop.underOdds}
                               eventId={prop.id} 
                               date={prop.date} 
-                              fetchGroups={fetchEvents}>
+                              fetchGroups={fetchEvents}
+                              setBetSlip={setBetSlip}
+                              setBetSlipOdds={setBetSlipOdds}
+                              betSlip={betSlip}
+                              >
                             </PropCard>   
                       ))
                   )}
@@ -176,14 +271,31 @@ export default function Group() {
                 <Modal animationType="fade" transparent={true} visible={createModalVisible}>
                     <CreatePropView fetchGroups={fetchEvents} setModalVisible={setCreateModalVisible} groupId={groupId} groupName={name}></CreatePropView>
                 </Modal>
+
+                <View style={styles.betSlipAndCreateButton}>
     
-          {admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && (
+                  {admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && (
 
-          <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateModalVisible(true)}}>
-            <Text style={styles.plusButtonText}>+</Text>
-          </TouchableOpacity>
+                  <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateModalVisible(true)}}>
+                    <Text style={styles.plusButtonText}>+</Text>
+                  </TouchableOpacity>
 
-          )}
+                  )}
+
+                  {betSlip.size > 0 && (
+
+                    <View style={styles.betSlipButtonContainer}>
+                      <TouchableOpacity onPress={() => {placeBets()}}>
+                      <Text style={styles.betSlipButtonText}>OPEN BET SLIP ({liveSlipOdds})</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                  )}
+
+                </View>
+        
+
+          
           
       
         </View>
@@ -193,7 +305,7 @@ export default function Group() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: Colors.background,
     padding: 10,
     paddingTop: 0,
   },
@@ -204,6 +316,32 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 15,
   },
+  betSlipButtonContainer: {
+
+    width: "100%",
+    borderRadius: 25,
+    alignSelf: "center",
+    justifyContent: "center",
+    height: 55,
+    backgroundColor: "#ff496b",
+    
+
+  },
+  betSlipAndCreateButton: {
+
+    margin: 25,
+    marginBottom: 35,
+
+  },
+  
+  betSlipButtonText: {
+
+    textAlign: 'center',
+    fontSize: 30,
+    color: 'white',
+    fontWeight: '700',
+
+  },
   buttonStyle: {
     paddingVertical: 12,
     borderRadius: 5,
@@ -213,7 +351,7 @@ const styles = StyleSheet.create({
     height: 50,
   },
   createButton: {
-    backgroundColor: "#ff496b",
+    backgroundColor: Colors.primary,
   },
   cancelButton: {
     backgroundColor: "#ccc",
@@ -307,15 +445,15 @@ const styles = StyleSheet.create({
     lineHeight: 52.5,
   },
   plusButtonStyle: {
-    position: "absolute",
-    bottom: 110,
-    right: 30,
     borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
     width: 55,
     height: 55,
     backgroundColor: "#ff496b",
+    alignSelf: 'flex-end',
+    marginBottom: 15,
+    
   },
 
   scrollView: {

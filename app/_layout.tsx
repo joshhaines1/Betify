@@ -1,4 +1,5 @@
 import { AuthProvider } from '@/app/AuthContext';
+import Colors from '@/assets/styles/colors';
 import { Stack } from 'expo-router';
 
 export default function RootLayout() {
@@ -16,8 +17,11 @@ export default function RootLayout() {
           animation: "flip", 
           headerShown: true, 
           headerBackButtonDisplayMode: "minimal",
-          headerTintColor: "black", // Back arrow color
+          headerTintColor: Colors.textColor, // Back arrow color
           headerShadowVisible: false, 
+          headerStyle: { backgroundColor: Colors.background },
+          
+          
         }} 
       /></Stack>
 

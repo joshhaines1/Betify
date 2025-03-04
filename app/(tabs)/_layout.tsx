@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuth } from "firebase/auth";
 import { useAuth } from '../AuthContext';
 import * as Haptics from 'expo-haptics';
+import Colors from '@/assets/styles/colors';
 
 
 export default function TabLayout() {
@@ -37,13 +38,18 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: '#ff496b',
           headerStyle: {
-          backgroundColor: '#ffffff',  
+          backgroundColor: '#ffffff', 
+          elevation: 0, 
+          
           },
           headerShadowVisible: false,
           headerShown: false,
           headerTintColor: '#fff',
           tabBarStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: Colors.background,
+          borderWidth: 0,
+          borderTopWidth: 0,
+          
               }, 
         }}
         screenListeners={{
@@ -57,8 +63,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Groups',
-          
+          title: 'Home',
+          lazy: true,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home-sharp' : 'home-outline'} color={color} size={24} />
           ),
@@ -70,7 +76,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
+          title: 'My Bets',
+          lazy: true,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'albums' : 'albums-outline'} color={color} size={24}/>
           ),
@@ -81,6 +88,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
+          lazy: true,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={24}/>
           ),
@@ -100,7 +108,7 @@ const styles = StyleSheet.create({
   },
 
   headerContainer: {
-    backgroundColor: "white",
+    backgroundColor: Colors.background,
     alignItems: 'center',
     flexDirection: 'row',
     padding: 20, 
@@ -109,7 +117,7 @@ const styles = StyleSheet.create({
   },
 
   titleContainer: {
-    backgroundColor: "white",
+    backgroundColor: "",
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
     flex: 1,
@@ -118,7 +126,7 @@ const styles = StyleSheet.create({
   },
 
   usernameContainer: {
-    backgroundColor: "white",
+    backgroundColor: "",
     alignItems: 'center',
     justifyContent: 'flex-end',
     flexDirection: 'row',
@@ -129,7 +137,7 @@ const styles = StyleSheet.create({
   userName: {
     
     fontSize: 20,
-    color: 'black', 
+    color: Colors.textColor, 
     textTransform: 'uppercase',
     fontWeight: 'bold',
 
