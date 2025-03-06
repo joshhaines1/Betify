@@ -8,7 +8,9 @@ import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from "expo-router";
+import { EventCard } from "@/components/EventCard";
 import Colors from "@/assets/styles/colors";
+import { BetCard } from "@/components/BetCard";
 
 // Define the type for Group
 interface Group {
@@ -23,14 +25,15 @@ interface Group {
   creationDate: Date;
 }
 
-export default function Explore() {
+export default function GroupsScreen() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [view, setView] = useState("active");
  
   useFocusEffect(
-      useCallback(() => {
-        fetchGroups();
-      }, []));
+    useCallback(() => {
+      fetchGroups();
+       
+    }, []));
   // Define state to hold fetched groups
   const [groups, setGroups] = useState<Group[]>([]);
 
@@ -84,45 +87,23 @@ export default function Explore() {
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
         {view === "active" ? (
           // Shows all groups that the currect user is NOT currently in using filter
-          groups
-            .filter((group) => !group.members?.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
-              .map((group) => (
-                
-                  <GroupCard
-                    key={group.id}
-                    name={group.name}
-                    members={group.members}
-                    adminName={group.creator}
-                    visibility={group.visibility}
-                    password={group.password}
-                    startingCurrency={group.startingCurrency}
-                    groupId={group.id}
-                    fetchGroups={fetchGroups}
-                    joined={false}
-                    admins={group.admins}
-                    />
-      ))
-        ) : (
+          <BetCard
+            date="29 February 2025"
+            status="open"
+            risk="1000"
+            payout="1500"
+            pickId="askdhf;asidnbf;oas"
+            userId={FIREBASE_AUTH.currentUser?.uid}
+          ></BetCard>
+      )
+    
+    
+         : (
 
-          //Shows all groups that the current user IS currently in using filter
-          groups
-            .filter((group) => group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
-              .map((group) => (
-                    <GroupCard
-                      key={group.id}
-                      name={group.name}
-                      members={group.members}
-                      adminName={group.creator}
-                      visibility={group.visibility}
-                      password={group.password}
-                      startingCurrency={group.startingCurrency}
-                      groupId={group.id}
-                      fetchGroups={fetchGroups}
-                      joined={true}
-                      admins={group.admins}
-                    />
-      ))
-        )}
+          <></>
+                    
+      )
+        }
       </ScrollView>
 
       <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreateModalVisible(true)}>
@@ -143,6 +124,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     padding: 10,
     paddingTop: 0,
+    
   },
   header: {
     fontSize: 24,
@@ -282,7 +264,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-start",
     marginBottom: 10,
-    backgroundColor: '',
+  
   },
   switchButton: {
     padding: 10,
