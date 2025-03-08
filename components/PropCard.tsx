@@ -10,27 +10,58 @@ import Colors from '@/assets/styles/colors';
 export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
-  const handlePress = (type: string, odds: string,) => {
-
-    if(bet == type){
-      selectBet("");
-      
-    } else {
-      selectBet(type);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-
-    setBetSlip((prev) => {
-        const newBetSlip = new Map(prev);
-        if (newBetSlip.get(eventId) === type) {
-            newBetSlip.delete(eventId);
+  const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
+      if (bet === type) {
+        selectBet("");
+      } else {
+        selectBet(type);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    
+      setBetSlip((prev: Map<string, string>[]) => {
+        // Find existing bet for this event
+        if (!Array.isArray(prev)) {
+          return [];
+      }
+        const existingBetIndex = prev.findIndex((betMap) => betMap.has(eventId));
+        console.log(existingBetIndex);
+        let newBetSlip = [...prev];
+    
+        if (existingBetIndex != -1) {
+          // If event exists, update it
+          if(newBetSlip[existingBetIndex].get(eventId) != type)
+          {
+            newBetSlip.splice(existingBetIndex, 1);
+            // Otherwise, add a new Map with the eventId
+            const newBetMap = new Map<string, string>();
+            newBetMap.set(eventId, type);
+            newBetMap.set("header", header);
+            newBetMap.set("lineAndProp", lineAndProp);
+            newBetMap.set("name", name);
+            newBetMap.set("odds", odds);
+            newBetSlip.push(newBetMap);
+  
+          } else {
+  
+            newBetSlip.splice(existingBetIndex, 1);
+          }
+          
         } else {
-            newBetSlip.set(eventId, type);
+          // Otherwise, add a new Map with the eventId
+          const newBetMap = new Map<string, string>();
+          newBetMap.set(eventId, type);
+          newBetMap.set("header", header);
+          newBetMap.set("lineAndProp", lineAndProp);
+          newBetMap.set("name", name);
+          newBetMap.set("odds", odds);
+          newBetSlip.push(newBetMap);
+          
         }
+    
         return newBetSlip;
-    });
-
-    setBetSlipOdds((prev) => {
+      });
+    
+      setBetSlipOdds((prev) => {
         const newBetSlipOdds = new Map(prev);
         if (newBetSlipOdds.get(eventId) === odds) {
             newBetSlipOdds.delete(eventId);
@@ -39,15 +70,16 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
         }
         return newBetSlipOdds;
     });
+  
+    };
 
-};
-
-useEffect(() => {
-  // Reset selection when betSlip is cleared
-  if (!betSlip.has(eventId)) {
-    selectBet("");
-  }
-}, [betSlip]);
+ useEffect(() => {
+    // Reset selection when betSlip is cleared
+    const isBetPlaced = betSlip.some((betMap) => betMap.has(eventId));
+    if (!isBetPlaced) {
+        selectBet("");
+    }
+}, [betSlip, eventId]);
 
   return (
     <>
@@ -80,10 +112,10 @@ useEffect(() => {
 
         </View>
         
-        <TouchableOpacity onPress={() => handlePress('over', overOdds)} style={[styles.optionButton, bet === "over" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('over', overOdds, name, "Over " + overUnder + " - " + description, groupName)} style={[styles.optionButton, bet === "over" && styles.selectedOptionButton]}>
             <Text style={[styles.oddsText, bet === "over" && styles.selectedOddsText]}>{overOdds}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('under', underOdds)} style={[styles.optionButton, bet === "under" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('under', underOdds, name, "Under " + overUnder + " - " + description, groupName)} style={[styles.optionButton, bet === "under" && styles.selectedOptionButton]}>
             <Text style={[styles.oddsText, bet === "under" && styles.selectedOddsText]}>{underOdds}</Text>
         </TouchableOpacity>
       </View>

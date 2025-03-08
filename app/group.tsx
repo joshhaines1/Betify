@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { PropCard } from "@/components/PropCard";
 import { CreatePropView } from "@/components/CreatePropView";
 import Colors from "@/assets/styles/colors";
+import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 
 
 interface Event {
@@ -69,13 +70,14 @@ export default function Group() {
     const navigation = useNavigation(); 
     const [createModalVisible, setCreateModalVisible] = useState(false);
     const [betSlipOdds, setBetSlipOdds] = useState(new Map<string, string>());
-    const [betSlip, setBetSlip] = useState(new Map<string, string>());
+    const [betSlip, setBetSlip] = useState<Map<string, string>[]>([]);
     const [createButtonBottomMargin, setCreateButtonBottomMargin] = useState(50);
     const [liveSlipOdds, setLiveSlipOdds] = useState("");
     const [wager, setWager] = useState(100);
+    const [totalDecimalOdds, setTotalDecimalOdds] = useState(1.0);
     
     useEffect(() => {
-      if (betSlip.size > 0) {
+      if (betSlip.length > 0) {
         setCreateButtonBottomMargin(0); // Push above bet slip button
         calculateOdds();
       } else {
@@ -101,10 +103,10 @@ export default function Group() {
         
       }
 
-      let parlayDecimalOdds = decimalOdds[0];
+      let parlayDecimalOdds = (decimalOdds[0]);
       for(let i = decimalOdds.length - 1; i > 0; i--){
 
-        parlayDecimalOdds *= decimalOdds[i];
+        parlayDecimalOdds += decimalOdds[i];
 
       }
 
@@ -118,6 +120,8 @@ export default function Group() {
 
       }
 
+      setTotalDecimalOdds(parlayDecimalOdds);
+
     }
 
     const placeBets = async () => {
@@ -126,20 +130,22 @@ export default function Group() {
       try {
         const wagersRef = doc(collection(FIRESTORE, "wagers")); // Create a new group doc reference
         const wagerId = wagersRef.id; // Get the auto-generated ID
-        const betSlipObject = Object.fromEntries(betSlip);
+        const betSlipObjectArray = betSlip.map((betMap) => Object.fromEntries(betMap));
 
         await setDoc(wagersRef, {
-          amount: wager,
           groupId: groupId,
           odds: liveSlipOdds,
-          picks: betSlipObject,
+          risk: wager, 
+          payout: Math.round(wager * totalDecimalOdds),
+          date: new Date().toLocaleDateString(),
+          picks: betSlipObjectArray,
           status: 'open',
           userId: FIREBASE_AUTH.currentUser?.uid,
         });
       } catch (error) {
         console.error("Error placing bet:", error);
       }
-      setBetSlip(new Map<string, string>());
+      setBetSlip([]);
       setBetSlipOdds(new Map<string, string>());
 
     }
@@ -282,7 +288,7 @@ export default function Group() {
 
                   )}
 
-                  {betSlip.size > 0 && (
+                  {betSlip.length > 0 && (
 
                     <View style={styles.betSlipButtonContainer}>
                       <TouchableOpacity onPress={() => {placeBets()}}>
@@ -329,7 +335,7 @@ const styles = StyleSheet.create({
   },
   betSlipAndCreateButton: {
 
-    margin: 25,
+    marginHorizontal: 10,
     marginBottom: 35,
 
   },

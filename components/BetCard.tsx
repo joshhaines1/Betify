@@ -4,14 +4,16 @@ import { Text, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 import Colors from '@/assets/styles/colors';
+import { BetPropCard } from './BetPropCard';
 
 
-export function BetCard({date, status, risk, payout, pickId, userId}) {
+export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}) {
 
   return (
     <>
     <View style={styles.container}>
         {/*  Row 1  */}
+      
       <View style={styles.row1}>
 
         <View style={styles.dateContainer}>
@@ -24,9 +26,30 @@ export function BetCard({date, status, risk, payout, pickId, userId}) {
             <Text style={styles.statusText}>{status}</Text>
         </View>
       </View>
+    {bets.length > 1 && (
+
+      <View style={styles.parlayRow}>
+      <View style={styles.parlayLegContainer}>
+            <Text style={styles.parlayLegText}>{bets.length} Leg Parlay</Text>
+        </View>
+        <View style={styles.parlayOddsContainer}>
+            <Text style={styles.parlayOddsText}>{odds}</Text>
+        </View>
+      </View>
+
+    )}
+      
       {/*  Row 2  */}
       <View style={styles.row2}>
-        
+        {bets.map((pick, index) => (
+        <BetPropCard 
+          key={`${bets.id}-${index}`}  // Unique key for each pick
+          name={pick.name}
+          lineAndProp={pick.lineAndProp}
+          header={pick.header}
+          odds={pick.odds}
+        />
+      ))}
       </View>
       {/*  Row 3  */}
         <View style={styles.row3}>
@@ -65,6 +88,42 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 8,
     backgroundColor: Colors.cardBackground,
+  },
+  parlayLegContainer: {
+
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  parlayLegText: {
+
+    color: Colors.textColor,
+    fontSize: 16,
+    fontWeight: 800,
+  },
+  parlayOddsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+
+
+  },
+  parlayOddsText: {
+    color: Colors.textColor,
+    textAlign: 'left',
+    fontSize: 16,
+    fontWeight: 'bold',
+
+  },
+  parlayRow: {
+
+    flexDirection: 'row',
+    width: '100%',
+    backgroundColor: '',
+    height: 25,
+    marginBottom: 5,
+    flex: 1,
+    marginLeft: 3,
+    marginTop: 3,
   },
   row1: {
     flexDirection: 'row',
@@ -123,7 +182,8 @@ const styles = StyleSheet.create({
   statusText: {
     color: Colors.textColor,
     textAlign: 'right',
-    fontSize: 15
+    fontSize: 15,
+    textTransform: 'uppercase',
 
   },
   watermarkText: {
@@ -174,5 +234,48 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     justifyContent: 'flex-start',
     tintColor: Colors.textColor,
+  },
+  bet: {
+    height: 80,
+    backgroundColor: '',
+    padding: 10,
+    paddingVertical: 5,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  propAndOddsContainer: {
+
+    flexDirection: 'row',
+    flex: 1,
+    marginBottom: 2,
+  },
+  groupNameText: {
+    flex: 1,
+    marginTop: 5,
+    color: Colors.textColor,
+  },
+  lineText: {
+    flex: 1,
+    textAlign: 'left',
+    fontSize: 16,
+    color: Colors.textColor,
+    fontWeight: 500,
+  },
+  oddsText: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 16,
+    fontWeight: 500,
+    color: Colors.textColor,
+  },
+  propText: {
+    flex: 1,
+    marginBottom: 2,
+    color: Colors.textColor,
+  },
+  headerText: {
+    flex: 1,
+    marginBottom: 0,
+    color: Colors.textColor,
   },
 });

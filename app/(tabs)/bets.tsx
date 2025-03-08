@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, ScrollView,
 } from "react-native";
 import { GroupCard } from "@/components/GroupCard";
-import { addDoc, setDoc, doc, getDocs, collection } from "firebase/firestore";
+import { addDoc, setDoc, doc, getDocs, collection, query, where } from "firebase/firestore";
 import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
 import * as Haptics from 'expo-haptics';
@@ -13,16 +13,16 @@ import Colors from "@/assets/styles/colors";
 import { BetCard } from "@/components/BetCard";
 
 // Define the type for Group
-interface Group {
+interface Bet {
   id: string;
-  name: string;
-  members: string[];
-  creator: string;
-  visibility: string;
-  startingCurrency: number;
-  password: string;
-  admins: string[];
-  creationDate: Date;
+  date: Date;
+  status: string;
+  risk: string;
+  payout: string;
+  userId: number;
+  groupName: string;
+  picks: any[];
+  odds: string;
 }
 
 export default function GroupsScreen() {
@@ -31,44 +31,50 @@ export default function GroupsScreen() {
  
   useFocusEffect(
     useCallback(() => {
-      fetchGroups();
+      fetchBets();
        
     }, []));
   // Define state to hold fetched groups
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [bets, setBets] = useState<Bet[]>([]);
 
   
 
-  const fetchGroups = async () => {
+  const fetchBets = async () => {
     try {
-      const querySnapshot = await getDocs(collection(FIRESTORE, "groups"));
-      const groupsList: Group[] = [];
+      const betsQuery = query(
+        collection(FIRESTORE, "wagers"),
+        where("userId", "==", FIREBASE_AUTH.currentUser?.uid) // Add the filter for userId
+      );
+  
+      const querySnapshot = await getDocs(betsQuery);
+      const betsList: Bet[] = [];
       querySnapshot.forEach((doc) => {
-        const groupData = doc.data();
-        
-        groupsList.push({
+        const betData = doc.data();
+        betsList.push({
           id: doc.id,
-          name: groupData.name,
-          members: groupData.members,
-          creator: groupData.creator,
-          visibility: groupData.visibility,
-          startingCurrency: groupData.startingCurrency,
-          admins: groupData.admins,
-          creationDate: groupData.creationDate,
-          password: groupData.password,
+          date: betData.date,
+          status: betData.status,
+          risk: betData.risk,
+          payout: betData.payout,
+          userId: betData.userId,
+          groupName: betData.groupName,
+          picks: betData.picks,
+          odds: betData.odds,
         });
       });
-      setGroups(groupsList);
+      setBets(betsList);
     } catch (error) {
       console.error("Error fetching groups:", error);
     }
   };
 
   useEffect(() => {
-    fetchGroups();
+    fetchBets();
   }, []);
 
-
+  //console.log("Test: " + bets[1].picks[0].get("odds"));
+  //console.log("Test: " + bets[0].picks[0].get("odds"));
+  //console.log(bets[0].picks[0].odds);
   return (
     <View style={styles.container}>
       <View style={styles.switchContainer}>
@@ -87,14 +93,19 @@ export default function GroupsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
         {view === "active" ? (
           // Shows all groups that the currect user is NOT currently in using filter
-          <BetCard
-            date="29 February 2025"
-            status="open"
-            risk="1000"
-            payout="1500"
-            pickId="askdhf;asidnbf;oas"
-            userId={FIREBASE_AUTH.currentUser?.uid}
-          ></BetCard>
+          bets.map((bet) => (
+                <BetCard 
+                  key={bet.id}
+                  date={bet.date} 
+                  status={bet.status} 
+                  risk={bet.risk}
+                  payout={bet.payout}
+                  pickId={bet.id}
+                  userId={bet.userId}
+                  bets={bet.picks}
+                  odds={bet.odds}
+                  />
+              ))
       )
     
     
@@ -105,14 +116,6 @@ export default function GroupsScreen() {
       )
         }
       </ScrollView>
-
-      <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreateModalVisible(true)}>
-        <Text style={styles.plusButtonText}>+</Text>
-      </TouchableOpacity>
-
-      <Modal animationType="fade" transparent={true} visible={createModalVisible}>
-        <CreateGroupView fetchGroups={fetchGroups} setModalVisible={setCreateModalVisible}></CreateGroupView>
-      </Modal>
   
     </View>
   );

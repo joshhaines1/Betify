@@ -10,37 +10,69 @@ import Colors from '@/assets/styles/colors';
 export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdds2, spread, spreadOdds1, spreadOdds2, overUnder, overOdds, underOdds, fetchGroups, date, eventId, setBetSlip, setBetSlipOdds, betSlip}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
-  const handlePress = (type: string, odds: string,) => {
+  const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
+    if (bet === type) {
+      selectBet("");
+    } else {
+      selectBet(type);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
   
-      if(bet == type){
-        selectBet("");
+    setBetSlip((prev: Map<string, string>[]) => {
+      // Find existing bet for this event
+      if (!Array.isArray(prev)) {
+        return [];
+    }
+      const existingBetIndex = prev.findIndex((betMap) => betMap.has(eventId));
+      console.log(existingBetIndex);
+      let newBetSlip = [...prev];
+  
+      if (existingBetIndex != -1) {
+        // If event exists, update it
+        if(newBetSlip[existingBetIndex].get(eventId) != type)
+        {
+          newBetSlip.splice(existingBetIndex, 1);
+          // Otherwise, add a new Map with the eventId
+          const newBetMap = new Map<string, string>();
+          newBetMap.set(eventId, type);
+          newBetMap.set("header", header);
+          newBetMap.set("lineAndProp", lineAndProp);
+          newBetMap.set("name", name);
+          newBetMap.set("odds", odds);
+          newBetSlip.push(newBetMap);
+
+        } else {
+
+          newBetSlip.splice(existingBetIndex, 1);
+        }
         
       } else {
-        selectBet(type);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        // Otherwise, add a new Map with the eventId
+        const newBetMap = new Map<string, string>();
+        newBetMap.set(eventId, type);
+        newBetMap.set("header", header);
+        newBetMap.set("lineAndProp", lineAndProp);
+        newBetMap.set("name", name);
+        newBetMap.set("odds", odds);
+        newBetSlip.push(newBetMap);
+        
       }
   
-      setBetSlip((prev) => {
-          const newBetSlip = new Map(prev);
-          if (newBetSlip.get(eventId) === type) {
-              newBetSlip.delete(eventId);
-          } else {
-              newBetSlip.set(eventId, type);
-          }
-          return newBetSlip;
-      });
+      return newBetSlip;
+    });
   
-      setBetSlipOdds((prev) => {
-          const newBetSlipOdds = new Map(prev);
-          if (newBetSlipOdds.get(eventId) === odds) {
-              newBetSlipOdds.delete(eventId);
-          } else {
-              newBetSlipOdds.set(eventId, odds);
-          }
-          return newBetSlipOdds;
-      });
-  
+    setBetSlipOdds((prev) => {
+      const newBetSlipOdds = new Map(prev);
+      if (newBetSlipOdds.get(eventId) === odds) {
+          newBetSlipOdds.delete(eventId);
+      } else {
+          newBetSlipOdds.set(eventId, odds);
+      }
+      return newBetSlipOdds;
+  });
+
   };
+  
 
 
   const calculateSpread = (odds: string, otherOdds: string) => {
@@ -55,10 +87,12 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
 
   useEffect(() => {
     // Reset selection when betSlip is cleared
-    if (!betSlip.has(eventId)) {
-      selectBet("");
+    const isBetPlaced = betSlip.some((betMap) => betMap.has(eventId));
+    if (!isBetPlaced) {
+        selectBet("");
     }
-  }, [betSlip]);
+}, [betSlip, eventId]);
+
   
   return (
     <>
@@ -92,14 +126,14 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
         <View style={styles.eventOptionsTitleContainer}>
             <Text style={styles.eventTitle}>{team1}</Text>
         </View>
-        <TouchableOpacity onPress={() => handlePress('moneyline1', moneylineOdds1)} style={[styles.optionButton, bet === "moneyline1" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('moneyline1', moneylineOdds1, team1, "Moneyline", groupName)} style={[styles.optionButton, bet === "moneyline1" && styles.selectedOptionButton]}>
             <Text style={[styles.oddsText, bet === "moneyline1" && styles.selectedOddsText]}>{moneylineOdds1}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('spread1', spreadOdds1)} style={[styles.optionButton, bet === "spread1" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('spread1', spreadOdds1, team1, "Spread " + calculateSpread(moneylineOdds1, moneylineOdds2), groupName)} style={[styles.optionButton, bet === "spread1" && styles.selectedOptionButton]}>
             <Text style={[styles.linesText, styles.oddsText, bet === "spread1" && styles.selectedOddsText, styles.linesText]}>{calculateSpread(moneylineOdds1, moneylineOdds2)}</Text>
             <Text style={[styles.oddsText, bet === "spread1" && styles.selectedOddsText]}>{spreadOdds1}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('over', overOdds)} style={[styles.optionButton, bet === "over" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('over', overOdds, "Total Score", ("Over " + overUnder), groupName)} style={[styles.optionButton, bet === "over" && styles.selectedOptionButton]}>
             <Text style={[styles.linesText, styles.oddsText, bet === "over" && styles.selectedOddsText, styles.linesText]}>O {overUnder}</Text>
             <Text style={[styles.oddsText, bet === "over" && styles.selectedOddsText]}>{overOdds}</Text>
         </TouchableOpacity>
@@ -116,14 +150,14 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
         <View style={styles.eventOptionsTitleContainer}>
             <Text style={styles.eventTitle}>{team2}</Text>
         </View>
-        <TouchableOpacity onPress={() => handlePress('moneyline2', moneylineOdds2)} style={[styles.optionButton, bet === "moneyline2" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('moneyline2', moneylineOdds2, team2, "Moneyline", groupName)} style={[styles.optionButton, bet === "moneyline2" && styles.selectedOptionButton]}>
             <Text style={[styles.oddsText, bet === "moneyline2" && styles.selectedOddsText]}>{moneylineOdds2}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('spread2', spreadOdds2)} style={[styles.optionButton, bet === "spread2" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('spread2', spreadOdds2, team2, "Spread " + calculateSpread(moneylineOdds2, moneylineOdds1), groupName)} style={[styles.optionButton, bet === "spread2" && styles.selectedOptionButton]}>
             <Text style={[styles.linesText, styles.oddsText, bet === "spread2" && styles.selectedOddsText, styles.linesText]}>{calculateSpread(moneylineOdds2, moneylineOdds1)}</Text>
             <Text style={[styles.oddsText, bet === "spread2" && styles.selectedOddsText]}>{spreadOdds2}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('under', underOdds)} style={[styles.optionButton, bet === "under" && styles.selectedOptionButton]}>
+        <TouchableOpacity onPress={() => handlePress('under', underOdds, "Total Score", "Under " + overUnder, groupName)} style={[styles.optionButton, bet === "under" && styles.selectedOptionButton]}>
             <Text style={[styles.linesText, styles.oddsText, bet === "under" && styles.selectedOddsText, styles.linesText]}>U {overUnder}</Text>
             <Text style={[styles.oddsText, bet === "under" && styles.selectedOddsText]}>{underOdds}</Text>
         </TouchableOpacity>
