@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { 
   View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, ScrollView,
 } from "react-native";
@@ -6,7 +6,10 @@ import { GroupCard } from "@/components/GroupCard";
 import { addDoc, setDoc, doc, getDocs, collection } from "firebase/firestore";
 import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
-import { JoinGroupView } from "@/components/JoinGroupView";
+import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from "expo-router";
+import { EventCard } from "@/components/EventCard";
+import Colors from "@/assets/styles/colors";
 
 // Define the type for Group
 interface Group {
@@ -23,9 +26,13 @@ interface Group {
 
 export default function GroupsScreen() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [view, setView] = useState("join");
+  const [view, setView] = useState("joined");
  
-  
+  useFocusEffect(
+    useCallback(() => {
+      fetchGroups();
+       
+    }, []));
   // Define state to hold fetched groups
   const [groups, setGroups] = useState<Group[]>([]);
 
@@ -65,19 +72,19 @@ export default function GroupsScreen() {
     <View style={styles.container}>
       <View style={styles.switchContainer}>
         <TouchableOpacity 
-          style={[styles.switchButton, view === "join" && styles.activeSwitchButton]} 
-          onPress={() => setView("join")}>
-          <Text style={styles.switchText}>Explore Groups</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
           style={[styles.switchButton, view === "joined" && styles.activeSwitchButton]} 
           onPress={() => setView("joined")}>
           <Text style={styles.switchText}>My Groups</Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.switchButton, view === "explore" && styles.activeSwitchButton]} 
+          onPress={() => setView("explore")}>
+          <Text style={styles.switchText}>Explore Groups</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
-        {view === "join" ? (
+        {view === "explore" ? (
           // Shows all groups that the currect user is NOT currently in using filter
           groups
             .filter((group) => !group.members?.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
@@ -88,6 +95,7 @@ export default function GroupsScreen() {
                     name={group.name}
                     members={group.members}
                     adminName={group.creator}
+                    admins={group.admins}
                     visibility={group.visibility}
                     password={group.password}
                     startingCurrency={group.startingCurrency}
@@ -95,7 +103,9 @@ export default function GroupsScreen() {
                     fetchGroups={fetchGroups}
                     joined={false}
                     />
-      ))
+      )
+    
+    )
         ) : (
 
           //Shows all groups that the current user IS currently in using filter
@@ -107,6 +117,7 @@ export default function GroupsScreen() {
                       name={group.name}
                       members={group.members}
                       adminName={group.creator}
+                      admins={group.admins}
                       visibility={group.visibility}
                       password={group.password}
                       startingCurrency={group.startingCurrency}
@@ -114,6 +125,8 @@ export default function GroupsScreen() {
                       fetchGroups={fetchGroups}
                       joined={true}
                     />
+                    
+                    
       ))
         )}
       </ScrollView>
@@ -133,9 +146,10 @@ export default function GroupsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: Colors.background,
     padding: 10,
     paddingTop: 0,
+    
   },
   header: {
     fontSize: 24,
@@ -273,9 +287,9 @@ const styles = StyleSheet.create({
   },
   switchContainer: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     marginBottom: 10,
-    backgroundColor: 'white',
+  
   },
   switchButton: {
     padding: 10,
@@ -288,7 +302,7 @@ const styles = StyleSheet.create({
   },
   switchText: {
     fontSize: 16,
-    color: 'black',
+    color: Colors.textColor,
     fontWeight: "bold",
   },
   scrollContainer: {

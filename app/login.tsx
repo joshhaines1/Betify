@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfi
 import { useAuth } from './AuthContext';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Colors from '@/assets/styles/colors';
 
 const Login = () => {
   const { isLoggedIn, uid, setIsLoggedIn } = useAuth();
@@ -88,7 +89,7 @@ const Login = () => {
             </Text>
           </TouchableOpacity>
 
-          <Text style={{ margin: 2 }}>User ID: {uid ? uid : "Not Logged In"}</Text>
+          <Text style={{ margin: 2, color: Colors.textColor }}>CREATED BY JOSH HAINES</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -98,7 +99,7 @@ const Login = () => {
 export default Login;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center" },
+  container: { flex: 1, justifyContent: "center", backgroundColor: Colors.background},
 
   title: { fontSize: 70, fontWeight: 'bold', margin: 8, color: '#ff496b' },
 
@@ -110,6 +111,8 @@ const styles = StyleSheet.create({
     width: '80%',
     height: 45,
     borderColor: '#bababa',
+    color: Colors.textColor,
+    backgroundColor: Colors.cardBackground,
   },
 
   loginContainer: { justifyContent: 'center', alignItems: 'center', width: '100%' },
@@ -135,7 +138,7 @@ const styles = StyleSheet.create({
   toggleText: {
     marginTop: 10,
     marginBottom: 10,
-    color: "gray",
+    color: Colors.textColor,
     textDecorationLine: "underline",
   },
 });

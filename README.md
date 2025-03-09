@@ -1,50 +1,24 @@
-# Welcome to your Expo app 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# Betify
 
-## Get started
+Betify is a social sportsbook app designed for friends and family to wager on various events using in-app currency, with no monetary value. The app enables groups to place bets on custom sports, games, or other events in a fun and interactive way. Built with React Native, TypeScript, and Firebase, Betify allows users to create accounts, join groups, place bets, and track their winnings.
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+- **User Authentication:** Users can sign up, log in, and manage their account details.
+- **Group Creation:** Users can create groups and invite others to join.
+- **Event Wagering:** Place bets on custom sports or events with in-app currency.
+- **Leaderboard:** Track the performance of group members and see who’s on top.
+- **Firebase Backend:** Utilizes Google Firebase for real-time data syncing and storage.
+- **Responsive UI:** A sleek and responsive user interface for both iOS and Android platforms.
 
-2. Start the app
+## Technologies Used
 
-   ```bash
-    npx expo start
-   ```
+- **React Native:** For building the mobile app.
+- **TypeScript:** For better type safety and enhanced development experience.
+- **Google Firebase:** For authentication, data storage, and real-time synchronization.
+- **React and Expo:** For app navigation and routing.
 
-In the output, you'll find options to open the app in a
+## License
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -1,9 +1,9 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
 import { collection, doc, setDoc } from 'firebase/firestore';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Text, View } from 'react-native';
-
+import * as Haptics from 'expo-haptics';
 
 export function CreateGroupView({setModalVisible, fetchGroups}) {
   
@@ -12,6 +12,11 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
     const [maxMembers, setMaxMembers] = useState("10");
     const [password, setPassword] = useState("");
     const [startingCurrency, setStartingCurrency] = useState("1000");
+
+    useEffect(() => {
+        resetFields();
+        
+      }, []);
     
     const createGroup = async () => {
         try {
@@ -45,12 +50,12 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
             });
           
       
-          console.log("Group created with subcollection for members!");
+          
         } catch (error) {
           console.error("Error creating group:", error);
         }
     
-        resetFields();
+        
         fetchGroups();
       };
     
@@ -63,8 +68,13 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
     
       const cancelGroupCreation = () => {
         setModalVisible(false);
-        resetFields();
       };
+
+      const handleVisiblityButton = (visibility) => {
+
+        setVisibility(visibility);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
 
     return (
     
@@ -79,10 +89,10 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
                 />
                 <Text style={styles.label}>Visibility:</Text>
                 <View style={styles.visibilityRow}>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Public" && styles.selectedVisibilityButton]} onPress={() => setVisibility("Public")}>
+                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Public" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Public")}>
                     <Text style={styles.visibilityButtonText}>PUBLIC</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Private" && styles.selectedVisibilityButton]} onPress={() => setVisibility("Private")}>
+                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Private" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Private")}>
                     <Text style={styles.visibilityButtonText}>PRIVATE</Text>
                   </TouchableOpacity>
                 </View>

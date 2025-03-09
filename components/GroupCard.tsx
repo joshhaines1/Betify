@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
+import Colors from '@/assets/styles/colors';
 
 
-export function GroupCard({ name, members, adminName, visibility, password, startingCurrency, groupId, fetchGroups, joined}) {
+export function GroupCard({ name, members, adminName, admins, visibility, password, startingCurrency, groupId, fetchGroups, joined}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
 
   const handlePress = () => {
     if(joined){
-      Alert.alert("You are already in this group!")
+      router.navigate({
+        pathname: "/group",
+        params: { 
+          name, 
+          groupId, 
+          admins, 
+        },
+      });
     } else {
       setJoinModalVisible(true);
     }
@@ -21,9 +29,7 @@ export function GroupCard({ name, members, adminName, visibility, password, star
     <>
     <TouchableOpacity style={styles.container} onPress={handlePress}>
       <Image
-        source={{
-          uri: 'https://static.vecteezy.com/system/resources/previews/000/550/535/non_2x/user-icon-vector.jpg',
-        }}
+        source={require('@/assets/images/groupIcon.png')}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -55,14 +61,16 @@ const styles = StyleSheet.create({
     height: 100,
     borderWidth: 2,
     borderRadius: 20,
-    borderColor: '#e8e8e8',
+    borderColor: Colors.border,
     flexDirection: 'row',
     padding: 8,
     marginBottom: 8,
+    backgroundColor: Colors.cardBackground,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: Colors.textColor,
   },
   separator: {
     marginVertical: 30,
@@ -75,22 +83,23 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: '20%',
-    height: '80%',
+    height: '70%',
     position: 'relative',
     alignSelf: 'center',
     justifyContent: 'flex-start',
     margin: 8,
     marginLeft: 0,
+    tintColor: Colors.textColor,
   },
   visibilityText: {
     fontSize: 15,
     marginTop: 3,
     marginLeft: 3,
-    color: 'black',
+    color: Colors.textColor,
   },
   groupName: {
     fontSize: 25,
-    color: '#ff496b', // Colors.light.tint is undefined, replaced with 'blue'
+    color: Colors.textColor, // Colors.light.tint is undefined, replaced with 'blue'
     fontWeight: '500',
   },
   adminName: {
@@ -103,7 +112,7 @@ const styles = StyleSheet.create({
   },
   memberCountText: {
     fontWeight: 'bold',
-    color: 'black',
+    color: Colors.primary,
     fontSize: 25,
     textAlign: 'center',
   },
