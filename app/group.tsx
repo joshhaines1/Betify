@@ -219,8 +219,27 @@ export default function Group() {
 
   return (
     <View style={styles.container}>
+
+      <View style={styles.switchContainer}>
+              <TouchableOpacity 
+                style={[styles.switchButton, view === "events" && styles.activeSwitchButton]} 
+                onPress={() => setView("events")}>
+                <Text style={styles.switchText}>Games</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.switchButton, view === "props" && styles.activeSwitchButton]} 
+                onPress={() => setView("props")}>
+                <Text style={styles.switchText}>Props</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.switchButton, view === "leaderboard" && styles.activeSwitchButton]} 
+                onPress={() => setView("leaderboard")}>
+                <Text style={styles.switchText}>Leaderboard</Text>
+              </TouchableOpacity>
+            </View>
+
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
-                  {view === "events" ? (
+                  {view === "events" && (
                     // Shows all groups that the currect user is NOT currently in using filter
                     events
                           .filter((event) => (event.status == "open"))
@@ -248,7 +267,8 @@ export default function Group() {
                               
                             </EventCard>   
                       ))
-                  ) : (
+                  )}
+                  {view == "props" && (
           
                     props 
                           .filter((prop) => (prop.status == "open"))
@@ -272,6 +292,13 @@ export default function Group() {
                             </PropCard>   
                       ))
                   )}
+
+                  {view == "leaderboard" && (
+
+                    //Add leaderboard here
+                    <></>
+
+                  )}
                 </ScrollView>
 
                 <Modal animationType="fade" transparent={true} visible={createModalVisible}>
@@ -280,7 +307,7 @@ export default function Group() {
 
                 <View style={styles.betSlipAndCreateButton}>
     
-                  {admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && (
+                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "props") && (
 
                   <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateModalVisible(true)}}>
                     <Text style={styles.plusButtonText}>+</Text>
@@ -343,7 +370,7 @@ const styles = StyleSheet.create({
   betSlipButtonText: {
 
     textAlign: 'center',
-    fontSize: 30,
+    fontSize: 28,
     color: 'white',
     fontWeight: '700',
 
@@ -479,7 +506,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginBottom: 10,
-    backgroundColor: 'white',
+    backgroundColor: Colors.background,
   },
   switchButton: {
     padding: 10,
@@ -492,7 +519,7 @@ const styles = StyleSheet.create({
   },
   switchText: {
     fontSize: 16,
-    color: 'black',
+    color: Colors.textColor,
     fontWeight: "bold",
   },
   scrollContainer: {
