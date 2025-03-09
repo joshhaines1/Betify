@@ -21,4 +21,4 @@ Betify is a social sportsbook app designed for friends and family to wager on va
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+All rights reserved. This software may not be reproduced, modified, distributed, or used in any form without the prior written permission of the author.
