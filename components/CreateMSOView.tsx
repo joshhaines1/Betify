@@ -5,14 +5,15 @@ import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-nat
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId}) {
+export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}) {
   
-    const [name, setName] = useState("");
+    const [team1, setTeam1] = useState("");
+    const [team2, setTeam2] = useState("");
     const [description, setDescription] = useState("");
     const [line, setLine] = useState("");
     const [overOdds, setOverOdds] = useState("");
     const [underOdds, setUnderOdds] = useState("");
-    const [type, setType] = useState("prop");
+    const [type, setType] = useState("MSO");
 
     useEffect(() => {
         resetFields();
@@ -52,7 +53,8 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
       };
     
       const resetFields = () => {
-        setName(""); 
+        setTeam1(""); 
+        setTeam2("");
         setDescription("");
         setLine("");
         setOverOdds("");
@@ -68,13 +70,19 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
     
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Create a Prop</Text>
-                <Text style={styles.label}>Name:</Text>
+                <Text style={styles.modalTitle}>Create an Event</Text>
+                <Text style={styles.label}>Teams:</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Johnny Appleseed"
-                  value={name}
-                  onChangeText={setName}
+                  placeholder="Team 1"
+                  value={team1}
+                  onChangeText={setTeam1}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Team 2"
+                  value={team2}
+                  onChangeText={setTeam2}
                 />
                 <Text style={styles.label}>Description:</Text>
                 <TextInput

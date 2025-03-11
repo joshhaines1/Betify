@@ -11,6 +11,7 @@ import { PropCard } from "@/components/PropCard";
 import { CreatePropView } from "@/components/CreatePropView";
 import Colors from "@/assets/styles/colors";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+import { CreateMSOView } from "@/components/CreateMSOView";
 
 
 interface Event {
@@ -28,7 +29,7 @@ interface Event {
   overUnder: string;
   overOdds: string;
   underOdds: string;
-  date: string;
+  date: Date;
   status: string;
   results: string[];
 
@@ -43,7 +44,7 @@ interface Prop {
   overOdds: string;
   underOdds: string;
   overUnder: string;
-  date: string;
+  date: Date;
   groupName: string;
   result: string; 
   status: string;
@@ -68,13 +69,15 @@ export default function Group() {
     const [events, setEvents] = useState<Event[]>([]);
     const [props, setProps] = useState<Prop[]>([]);
     const navigation = useNavigation(); 
-    const [createModalVisible, setCreateModalVisible] = useState(false);
+    const [createPropModalVisible, setCreatePropModalVisible] = useState(false);
+    const [createEventModalVisible, setCreateEventModalVisible] = useState(false);
     const [betSlipOdds, setBetSlipOdds] = useState(new Map<string, string>());
     const [betSlip, setBetSlip] = useState<Map<string, string>[]>([]);
     const [createButtonBottomMargin, setCreateButtonBottomMargin] = useState(50);
     const [liveSlipOdds, setLiveSlipOdds] = useState("");
     const [wager, setWager] = useState(100);
     const [totalDecimalOdds, setTotalDecimalOdds] = useState(1.0);
+    const [loading, setLoading] = useState(false);
     
     useEffect(() => {
       if (betSlip.length > 0) {
@@ -125,7 +128,7 @@ export default function Group() {
     }
 
     const placeBets = async () => {
-
+      setLoading(true);
       console.log("Placed bets");
       try {
         const wagersRef = doc(collection(FIRESTORE, "wagers")); // Create a new group doc reference
@@ -137,9 +140,9 @@ export default function Group() {
           odds: liveSlipOdds,
           risk: wager, 
           payout: Math.round(wager * totalDecimalOdds),
-          date: new Date().toLocaleDateString(),
+          date: new Date(),
           picks: betSlipObjectArray,
-          status: 'open',
+          status: 'active',
           userId: FIREBASE_AUTH.currentUser?.uid,
         });
       } catch (error) {
@@ -147,10 +150,12 @@ export default function Group() {
       }
       setBetSlip([]);
       setBetSlipOdds(new Map<string, string>());
+      setLoading(false);
 
     }
     const fetchEvents = async () => {
         try {
+          
           const querySnapshot = await getDocs(collection(FIRESTORE, "events"));
           const eventsList: Event[] = [];
           const propsList: Prop[] = [];
@@ -301,15 +306,27 @@ export default function Group() {
                   )}
                 </ScrollView>
 
-                <Modal animationType="fade" transparent={true} visible={createModalVisible}>
-                    <CreatePropView fetchGroups={fetchEvents} setModalVisible={setCreateModalVisible} groupId={groupId} groupName={name}></CreatePropView>
+                <Modal animationType="fade" transparent={true} visible={createPropModalVisible}>
+                    <CreatePropView fetchGroups={fetchEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name}></CreatePropView>
+                </Modal>
+
+                <Modal animationType="fade" transparent={true} visible={createEventModalVisible}>
+                    <CreateMSOView fetchGroups={fetchEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name}></CreateMSOView>
                 </Modal>
 
                 <View style={styles.betSlipAndCreateButton}>
     
                   {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "props") && (
 
-                  <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateModalVisible(true)}}>
+                  <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreatePropModalVisible(true)}}>
+                    <Text style={styles.plusButtonText}>+</Text>
+                  </TouchableOpacity>
+
+                  )}
+
+                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "events") && (
+
+                  <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateEventModalVisible(true)}}>
                     <Text style={styles.plusButtonText}>+</Text>
                   </TouchableOpacity>
 
@@ -318,8 +335,10 @@ export default function Group() {
                   {betSlip.length > 0 && (
 
                     <View style={styles.betSlipButtonContainer}>
-                      <TouchableOpacity onPress={() => {placeBets()}}>
-                      <Text style={styles.betSlipButtonText}>OPEN BET SLIP ({liveSlipOdds})</Text>
+                      <TouchableOpacity disabled={loading} onPress={() => {placeBets()}}>
+                          <Text style={styles.betSlipButtonText}>
+                            {loading ? "PLACING BETS...": "OPEN BET SLIP (" + liveSlipOdds + ")"}
+                            </Text>
                       </TouchableOpacity>
                     </View>
 

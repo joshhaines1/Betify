@@ -17,7 +17,12 @@ export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}
       <View style={styles.row1}>
 
         <View style={styles.dateContainer}>
-            <Text style={styles.dateText}>{date}</Text>
+            <Text style={styles.dateText}>{date.toDate().toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                })}
+            </Text>
         </View>
         <View style={styles.watermarkContainer}>
             <Text style={styles.watermarkText}></Text>

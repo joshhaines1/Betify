@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     color: Colors.textColor,
   },
   lineText: {
-    flex: 4,
+    flex: 5,
     textAlign: 'left',
     fontSize: 16,
     color: Colors.textColor,
