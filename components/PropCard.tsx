@@ -88,7 +88,11 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
       <View style={[styles.eventInfoContainer, styles.topInfo]}>
         <View style={styles.eventDateContainer}>
                 
-            <Text style={styles.eventInfoText}>{date}</Text>
+            <Text style={styles.eventInfoText}>{date.toDate().toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                })}</Text>
       
             </View>
             <View style={styles.optionHeaderContainer}>

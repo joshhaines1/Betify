@@ -38,7 +38,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
             overUnder: line,
             result: "",
             status: "active", // Example field
-            date: date.toDateString(),
+            date: new Date(),
           });
           
       

@@ -247,7 +247,7 @@ export default function Group() {
                   {view === "events" && (
                     // Shows all groups that the currect user is NOT currently in using filter
                     events
-                          .filter((event) => (event.status == "open"))
+                          .filter((event) => (event.status == "active"))
                           .map((event) => (
                           
                             <EventCard 
@@ -276,7 +276,7 @@ export default function Group() {
                   {view == "props" && (
           
                     props 
-                          .filter((prop) => (prop.status == "open"))
+                          .filter((prop) => (prop.status == "active"))
                           .map((prop) => (
                           
                             <PropCard 
@@ -504,8 +504,8 @@ const styles = StyleSheet.create({
     height: 55,
     backgroundColor: "#ff496b",
     alignSelf: 'flex-end',
-    marginBottom: 15,
-    
+    bottom: 20,
+    position: 'absolute',
   },
 
   scrollView: {

@@ -1,45 +1,124 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import Colors from '@/assets/styles/colors';
 
 export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}) {
   
     const [team1, setTeam1] = useState("");
     const [team2, setTeam2] = useState("");
-    const [description, setDescription] = useState("");
-    const [line, setLine] = useState("");
+    const [team1MoneylineOdds, setTeam1MoneylineOdds] = useState("");
+    const [team2MoneylineOdds, setTeam2MoneylineOdds] = useState("");
+    const [spread, setSpread] = useState("");
+    const [team1SpreadOdds, setTeam1SpreadOdds] = useState("");
+    const [team2SpreadOdds, setTeam2SpreadOdds] = useState("");
+    const [overUnder, setOverUnder] = useState("");
     const [overOdds, setOverOdds] = useState("");
     const [underOdds, setUnderOdds] = useState("");
-    const [type, setType] = useState("MSO");
+    const [type, setType] = useState("");
+    const [spreadType, setSpreadType] = useState("Spread");
 
     useEffect(() => {
         resetFields();
         
       }, []);
+
+      const checkOddsInput = (odds: string) => {
+        // Check if the input is a number and if it is within a valid range
+        if (isNaN(Number(odds)) || (Number(odds) > -100 && Number(odds) < 100)) {
+          Alert.alert("Invalid Odds", "Odds must be a number less than or equal to -100 or greater than or equal to +100.");
+          return false; // Invalid input
+        }
+        return true; // Valid input
+      }
+
+      const checkOverUnder = (overUnder: string) => {
+
+          if(isNaN(Number(overUnder))){
+            Alert.alert("Invalid Over / Under", "The Over / Under must be a number.");
+            return false; //Invalid
+          }
+
+          return true; //Valid
+      }
+
+      const checkSpread = (spread: string) => {
+
+        if(isNaN(Number(spread)) || Number(spread) < 0){
+          Alert.alert("Invalid Spread", "Spread must be a positive number.");
+          return false; //Invalid
+          
+        }else if(team1MoneylineOdds == team2MoneylineOdds){
+          Alert.alert("Invalid Spread", "Moneyline odds must be different to have a spread.");
+          return false; // Invalid
+        }
+
+        return true; //Valid
+    }
+      
+      const validInputs = () => {
+        // Validate all the required fields
+        if (
+          !checkOddsInput(team1MoneylineOdds) ||
+          !checkOddsInput(team2MoneylineOdds) ||
+          !checkOddsInput(team1SpreadOdds) ||
+          !checkOddsInput(team2SpreadOdds) ||
+          !checkOddsInput(overOdds) ||
+          !checkOddsInput(underOdds) ||
+          !checkOverUnder(overUnder) ||
+          !checkSpread(spread)
+        ) {
+          return false; // Invalid inputs
+        }
+        return true; // All inputs are valid
+      }
+
+      const handleCreateEvent = async () => {
+
+        if(type == "basic"){
+
+          Alert.alert(
+            "Not Implemeneted",
+            "Creating a basic event has not been implemented yet."
+          )
+
+        } else if(type == "MSO"){
+
+          createMSOEvent();
+        }
+      }
     
-    const createEvent = async () => {
+    const createMSOEvent = async () => {
         try {
-    
+          if (!validInputs()) {
+            
+            return;
+          }
           setModalVisible(false);
           const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
           const eventId = eventRef.id; // Get the auto-generated ID
             const date = new Date();
           // Step 1: Create the group document
           await setDoc(eventRef, {
-            name: name,
-            description: description,
+            team1: team1,
+            team2: team2,
             groupId: groupId,
             groupName: groupName,
             type: type,
-            underOdds: underOdds,
-            overOdds: overOdds,
-            overUnder: line,
-            result: "",
+            underOdds: (Number(underOdds) > 0 && !underOdds.includes("+")) ? "+" + underOdds : underOdds,
+            overOdds: (Number(overOdds) > 0 && !overOdds.includes("+")) ? "+" + overOdds : overOdds,
+            overUnder: overUnder,
+            moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
+            moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
+            spread: spreadType == "Spread" ? spread : "-" + spread,
+            spreadOdds1: (Number(team1SpreadOdds) > 0 && !team1SpreadOdds.includes("+")) ? "+" + team1SpreadOdds : team1SpreadOdds,
+            spreadOdds2: (Number(team2SpreadOdds) > 0 && !team2SpreadOdds.includes("+"))? "+" + team2SpreadOdds : team2SpreadOdds,
+            result: ["", "", ""],
             status: "active", // Example field
-            date: date.toDateString(),
+            date: new Date(),
           });
           
       
@@ -55,16 +134,35 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
       const resetFields = () => {
         setTeam1(""); 
         setTeam2("");
-        setDescription("");
-        setLine("");
+        setTeam1MoneylineOdds("");
+        setTeam2MoneylineOdds("");
+        setSpread("");
+        setTeam1SpreadOdds("");
+        setTeam2SpreadOdds("");
+        setOverUnder("");
         setOverOdds("");
         setUnderOdds("");
+        setType("basic");
       };
+      
     
       const cancelGroupCreation = () => {
         setModalVisible(false);
       };
 
+
+  function handleVisiblityButton(type: string): void {
+    setType(type);
+  }
+
+  function handleSpreadButtonPress(): void {
+
+    if(spreadType == "Spread") {
+      setSpreadType("Reverse Spread");
+    }else {
+      setSpreadType("Spread");
+    }
+  }
 
     return (
     
@@ -73,61 +171,157 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                 <Text style={styles.modalTitle}>Create an Event</Text>
                 <Text style={styles.label}>Teams:</Text>
                 <TextInput
-                  style={styles.input}
+                keyboardType='ascii-capable'
+                  style={[styles.input, {marginBottom: 10}]}
                   placeholder="Team 1"
                   value={team1}
                   onChangeText={setTeam1}
+                  maxLength={20}
                 />
                 <TextInput
+                keyboardType='ascii-capable'
                   style={styles.input}
                   placeholder="Team 2"
                   value={team2}
                   onChangeText={setTeam2}
-                />
-                <Text style={styles.label}>Description:</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Burgers Eaten"
-                  value={description}
-                  onChangeText={setDescription}
-                />
-                <Text style={styles.label}>Over / Under Line:</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="5.5"
-                  value={line}
-                  onChangeText={setLine}
+                  maxLength={25}
                 />
                 <View style={styles.visibilityRow}>
+                  <TouchableOpacity style={[styles.deselectedVisibilityButton, type === "basic" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("basic")}>
+                    <Text style={styles.visibilityButtonText}>BASIC</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.deselectedVisibilityButton, type === "MSO" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("MSO")}>
+                    <Text style={styles.visibilityButtonText}>ADVANCED</Text>
+                  </TouchableOpacity>
+                </View>                
 
-                    <View style={styles.oddsContainer}>
 
-                        <Text style={styles.label}>Over Odds:</Text>
-                        <TextInput
-                        style={styles.input}
-                        placeholder="-135"
-                        value={overOdds}
-                        onChangeText={setOverOdds}
-                        />
+                <View style={{alignItems: 'flex-start'}}>
+                  <Text style={styles.header}>Moneyline</Text>
+                  <View style={styles.moneylineRow}>
+                      <View style={styles.oddsContainer}>
+                          <Text style={[styles.label, styles.centerLabel]}>Team 1 Odds:</Text>
+                          <TextInput
+                          keyboardType='ascii-capable'
+                          style={styles.input}
+                          placeholder="-135"
+                          value={team1MoneylineOdds}
+                          onChangeText={setTeam1MoneylineOdds}
+                          maxLength={5}
+                          />
+                      </View>
 
-                    </View>
-
-                    <View style={styles.oddsContainer}>
-
-                        <Text style={styles.label}>Under Odds:</Text>
-                        <TextInput
-                        style={styles.input}
-                        placeholder="+130"
-                        value={underOdds}
-                        onChangeText={setUnderOdds}
-                        />
-                        
-                    </View>
-                    
+                      <View style={styles.oddsContainer}>
+                          <Text style={[styles.label, styles.centerLabel]}>Team 2 Odds:</Text>
+                          <TextInput
+                          style={styles.input}
+                          placeholder="+130"
+                          value={team2MoneylineOdds}
+                          onChangeText={setTeam2MoneylineOdds}
+                          maxLength={5}
+                          />
+                      </View>
+                  </View>
                 </View>
+
+                {type == "MSO" && (
+                    <>
+                
+                  <View style={{alignItems: 'flex-start'}}>
+                    <View style={{flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center'}}>
+                      
+                    <Text style={[styles.header]}>{spreadType}</Text>
+                      <TouchableOpacity style={styles.spreadButton} onPress={handleSpreadButtonPress}>
+
+                        <Image source={require('@/assets/images/switchIcon.png')}
+                          resizeMode='contain'
+                          style={styles.logo}
+                        ></Image>
+
+                      </TouchableOpacity>
+                      
+                    </View>
+                  
+                  <View style={styles.moneylineRow}>
+                      <View style={styles.oddsContainer}>
+                          <Text style={[styles.label, styles.centerLabel]}>Team 1 Odds:</Text>
+                          <TextInput
+                          style={[styles.input, {width: 100}]}
+                          placeholder="-135"
+                          value={team1SpreadOdds}
+                          onChangeText={setTeam1SpreadOdds}
+                          maxLength={5}
+                          />
+                      </View>
+
+                      <View style={styles.oddsContainer}>
+                          <Text style={[styles.label, styles.centerLabel]}>Line</Text>
+                          <TextInput
+                          style={[styles.input, {width: 75, textAlign: 'left'}]}
+                          placeholder="7.5"
+                          value={spread}
+                          onChangeText={setSpread}
+                          maxLength={5}
+                          />
+                      </View>
+
+                      <View style={styles.oddsContainer}>
+                          <Text style={[styles.label, styles.centerLabel]}>Team 2 Odds:</Text>
+                          <TextInput
+                          style={[styles.input, {width: 100}]}
+                          placeholder="+130"
+                          value={team2SpreadOdds}
+                          onChangeText={setTeam2SpreadOdds}
+                          maxLength={5}
+                          />
+                      </View>
+                  </View>
+                  </View>
+
+
+                  <View style={{alignItems: 'flex-start'}}>
+                  <Text style={styles.header}>Over / Under</Text>
+                  <View style={styles.moneylineRow}>
+                      <View style={styles.oddsContainer}>
+                          <Text style={[styles.label, styles.centerLabel]}>Over Odds:</Text>
+                          <TextInput
+                          style={[styles.input, {width: 100}]}
+                          placeholder="-135"
+                          value={overOdds}
+                          onChangeText={setOverOdds}
+                          maxLength={5}
+                          />
+                      </View>
+
+                      <View style={styles.oddsContainer}>
+                          <Text style={[styles.label, styles.centerLabel]}>O/U</Text>
+                          <TextInput
+                          style={[styles.input, {width: 75, textAlign: 'left'}]}
+                          placeholder="191.5"
+                          value={overUnder}
+                          onChangeText={setOverUnder}
+                          maxLength={5}
+                          />
+                      </View>
+
+                      <View style={styles.oddsContainer}>
+                          <Text style={[styles.label, styles.centerLabel]}>Under Odds:</Text>
+                          <TextInput
+                          style={[styles.input, {width: 100}]}
+                          placeholder="+130"
+                          value={underOdds}
+                          onChangeText={setUnderOdds}
+                          maxLength={5}
+                          />
+                      </View>
+                  </View>
+                  </View>
+              </>
+
+                )}
                 
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createEvent()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => handleCreateEvent()}>
                     <Text style={styles.buttonText}>CREATE</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
@@ -146,19 +340,36 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "white",
-        padding: 10,
+        padding: 8,
+      },
+      logo:{
+
+        width: 18,
+        height: 18,
+        position: 'relative',
+        alignSelf: 'center',
+        justifyContent: 'flex-start',
+        margin: 0,
+        marginLeft: 0,
+        tintColor: 'black',
+        resizeMode: 'contain',
+
       },
       oddsContainer: {
 
-        marginRight: 20,
+        paddingHorizontal: 5,
 
       },
+      centerLabel: {
+
+        textAlign: 'center',
+      },
       header: {
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: "bold",
-        color: "#ff496b",
-        textAlign: "center",
-        marginBottom: 15,
+        color: Colors.primary,
+        textAlign: "left",
+        textTransform: 'uppercase',
       },
       buttonStyle: {
         paddingVertical: 12,
@@ -192,7 +403,7 @@ const styles = StyleSheet.create({
       },
       modalContent: {
         backgroundColor: "#fff",
-        padding: 20,
+        padding: 15,
         width: "90%",
         borderRadius: 10,
       },
@@ -207,10 +418,10 @@ const styles = StyleSheet.create({
         borderColor: "#ccc",
         padding: 10,
         borderRadius: 5,
-        marginBottom: 10,
+        marginBottom: 5,
       },
       label: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: "bold",
         marginBottom: 5,
       },
@@ -221,13 +432,23 @@ const styles = StyleSheet.create({
       buttonRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginTop: 10,
+        marginTop: 5,
       },
       visibilityRow: {
         flexDirection: "row",
         justifyContent: "flex-start",
         marginTop: 5,
         marginBottom: 10,
+      },
+
+      moneylineRow: {
+        flexDirection: "row",
+        justifyContent: "flex-start",
+        alignItems: 'center',
+        marginTop: 5,
+        marginBottom: 10,
+        backgroundColor: '',
+
       },
       selectedVisibilityButton: {
         borderRadius: 5,
@@ -247,6 +468,18 @@ const styles = StyleSheet.create({
         height: 35,
         marginRight: 10,
         backgroundColor: "#ccc",
+      },
+
+      spreadButton: {
+        borderRadius: 5,
+        alignItems: "center",
+        justifyContent: "center",
+        width: 25,
+        height: 25,
+        marginLeft: 10,
+        backgroundColor: "white",
+        borderColor: 'gray',
+        borderWidth: 1,
       },
     
       visibilityButtonText: {

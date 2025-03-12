@@ -76,13 +76,30 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
 
 
   const calculateSpread = (odds: string, otherOdds: string) => {
-    if(moneylineOdds1 == moneylineOdds2){
-      return "+0";
-    } else if(+odds < +otherOdds){
-      return "-" + spread;
-    } else{
-      return "+" + spread; 
+    if(Number(spread) < 0){
+      //Add spread from favorite (EXAMPLE: Favorite +6.5 strokes in a golf match)
+      if(+odds == +otherOdds){
+        return "+0"
+      }else if(+odds < +otherOdds){
+        return "+" + spread.substr(1);
+        
+      } else{
+        return "-" + spread.substr(1); 
+      }
+
+    } else {
+      
+      //Subtract spread from favorite (EXAMPLE: Favorite -6.5 points in basketball game)
+      if(+odds == +otherOdds){
+        return "+0"
+      }else if(+odds < +otherOdds){
+        return "-" + spread;
+      } else{
+        return "+" + spread; 
+      }
+
     }
+    
   }
 
   useEffect(() => {
@@ -101,7 +118,11 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
       <View style={styles.eventInfoContainer}>
         <View style={styles.eventDateContainer}>
                 
-            <Text style={styles.eventInfoText}>{date}</Text>
+            <Text style={styles.eventInfoText}>{date.toDate().toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                })}</Text>
       
             </View>
             <View style={styles.optionHeaderContainer}>
