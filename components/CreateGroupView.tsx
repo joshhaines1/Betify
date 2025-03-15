@@ -4,12 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import Colors from '@/assets/styles/colors';
+import * as Utils from '../DataValidation'
 
 export function CreateGroupView({setModalVisible, fetchGroups}) {
   
     const [groupName, setGroupName] = useState("");
     const [visibility, setVisibility] = useState("Public");
-    const [maxMembers, setMaxMembers] = useState("10");
+    const [maxMembers, setMaxMembers] = useState("50");
     const [password, setPassword] = useState("");
     const [startingCurrency, setStartingCurrency] = useState("1000");
 
@@ -17,10 +19,40 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
         resetFields();
         
       }, []);
+
+    const validInputs = () => {
+      if(visibility == "Private"){
+      if(!Utils.validInt(maxMembers)
+       || !Utils.validInt(startingCurrency)
+        || groupName.trim() == "" || password.trim() == ""
+      ){
+        return false;
+      } else {
+
+        return true; 
+
+      }
+    } else {
+
+      if(!Utils.validInt(maxMembers)
+        || !Utils.validInt(startingCurrency)
+         || groupName.trim() == "" 
+       ){
+         return false;
+       } else {
+ 
+         return true; 
+ 
+       }
+
+    }
+    }
     
     const createGroup = async () => {
         try {
-    
+          if(!validInputs()){
+            return; 
+          }
           setModalVisible(false);
           const groupRef = doc(collection(FIRESTORE, "groups")); // Create a new group doc reference
           const groupId = groupRef.id; // Get the auto-generated ID
@@ -62,8 +94,9 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
       const resetFields = () => {
         setGroupName(""); 
         setVisibility("Public");
-        setMaxMembers("10");
+        setMaxMembers("50");
         setStartingCurrency("1000");
+        setPassword("");
       };
     
       const cancelGroupCreation = () => {
@@ -86,6 +119,7 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
                   placeholder="Group Name"
                   value={groupName}
                   onChangeText={setGroupName}
+                  placeholderTextColor={"gray"}
                 />
                 <Text style={styles.label}>Visibility:</Text>
                 <View style={styles.visibilityRow}>
@@ -104,6 +138,7 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
                     placeholder=""
                     value={password}
                     onChangeText={setPassword}
+                    placeholderTextColor={"gray"}
                   />
                   </>
                 )}
@@ -113,6 +148,8 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
                   keyboardType="numeric"
                   value={maxMembers}
                   onChangeText={setMaxMembers}
+                  placeholder='100'
+                  placeholderTextColor={"gray"}
                 />
                 <Text style={styles.label}>Starting Currency:</Text>
                 <TextInput
@@ -120,6 +157,7 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
                   keyboardType="numeric"
                   value={startingCurrency}
                   onChangeText={setStartingCurrency}
+                  placeholderTextColor={"gray"}
                 />
                 <View style={styles.buttonRow}>
                   <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createGroup()}>
@@ -177,19 +215,22 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0,0,0,0.75)",
       },
       modalContent: {
-        backgroundColor: "#fff",
+        backgroundColor: Colors.cardBackground,
         padding: 20,
         width: "90%",
         borderRadius: 10,
+        borderColor: 'gray',
+        borderWidth: 0.5,
       },
       modalTitle: {
         fontSize: 20,
         fontWeight: "bold",
         marginBottom: 15,
         textAlign: "center",
+        color: Colors.textColor,
       },
       input: {
         borderWidth: 1,
@@ -197,11 +238,13 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 5,
         marginBottom: 10,
+        color: Colors.textColor,
       },
       label: {
         fontSize: 16,
         fontWeight: "bold",
         marginBottom: 5,
+        color: Colors.textColor,
       },
       picker: {
         height: 50,

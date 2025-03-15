@@ -11,7 +11,8 @@ import { PropCard } from "@/components/PropCard";
 import { CreatePropView } from "@/components/CreatePropView";
 import Colors from "@/assets/styles/colors";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
-import { CreateMSOView } from "@/components/CreateMSOView";
+import { CreateMSOView } from "@/components/CreateEventView";
+import { BasicEventCard } from "@/components/BasicEventCard";
 
 
 interface Event {
@@ -182,10 +183,32 @@ export default function Group() {
                   underOdds: eventData.underOdds,
                   date: eventData.date,
                   status: eventData.status,
-                  results: eventData.results,
+                  results: eventData.result,
                 });
 
-              } else if(eventData.type == "prop")
+              } else if (eventData.type == "basic")
+                {
+                  eventsList.push({
+                    id: doc.id,
+                    groupId: eventData.groupId,
+                    groupName: eventData.groupName,
+                    type: eventData.type, 
+                    team1: eventData.team1,
+                    team2: eventData.team2,
+                    moneylineOdds1: eventData.moneylineOdds1,
+                    moneylineOdds2: eventData.moneylineOdds2,
+                    spread: "N/A",
+                    spreadOdds1: "N/A",
+                    spreadOdds2: "N/A",
+                    overUnder: "N/A",
+                    overOdds: "N/A",
+                    underOdds: "N/A",
+                    date: eventData.date,
+                    status: eventData.status,
+                    results: eventData.result,
+                  });
+  
+                } else if(eventData.type == "prop")
               {
                 propsList.push({
 
@@ -248,9 +271,12 @@ export default function Group() {
                     // Shows all groups that the currect user is NOT currently in using filter
                     events
                           .filter((event) => (event.status == "active"))
-                          .map((event) => (
-                          
-                            <EventCard 
+                          .map((event) => {
+                          if(event.type == "MSO") {
+
+                            return (
+
+                              <EventCard 
                               key={event.id} 
                               groupName={event.groupName} 
                               team1={event.team1} 
@@ -271,8 +297,37 @@ export default function Group() {
                               >
                               
                             </EventCard>   
+
+                            )
+
+                          } else if(event.type == "basic")
+                          {
+
+                            return (
+
+                              <BasicEventCard 
+                              key={event.id} 
+                              groupName={event.groupName} 
+                              team1={event.team1} 
+                              team2={event.team2} 
+                              moneylineOdds1={event.moneylineOdds1} 
+                              moneylineOdds2={event.moneylineOdds2} 
+                              eventId={event.id} 
+                              date={event.date} 
+                              fetchGroups={fetchEvents}
+                              setBetSlip={setBetSlip}
+                              setBetSlipOdds={setBetSlipOdds}
+                              betSlip={betSlip}
+                              >
+                              
+                            </BasicEventCard>  
+
+                            )
+
+                          }}
+                            
                       ))
-                  )}
+                  }
                   {view == "props" && (
           
                     props 
@@ -316,7 +371,7 @@ export default function Group() {
 
                 <View style={styles.betSlipAndCreateButton}>
     
-                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "props") && (
+                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "props" && betSlip.length == 0) && (
 
                   <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreatePropModalVisible(true)}}>
                     <Text style={styles.plusButtonText}>+</Text>
@@ -324,7 +379,7 @@ export default function Group() {
 
                   )}
 
-                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "events") && (
+                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "events" && betSlip.length == 0) && (
 
                   <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateEventModalVisible(true)}}>
                     <Text style={styles.plusButtonText}>+</Text>

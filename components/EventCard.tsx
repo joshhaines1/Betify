@@ -10,9 +10,12 @@ import Colors from '@/assets/styles/colors';
 export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdds2, spread, spreadOdds1, spreadOdds2, overUnder, overOdds, underOdds, fetchGroups, date, eventId, setBetSlip, setBetSlipOdds, betSlip}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
+
   const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
+    let deselected = false; 
     if (bet === type) {
       selectBet("");
+      deselected = true; 
     } else {
       selectBet(type);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -22,9 +25,10 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
       // Find existing bet for this event
       if (!Array.isArray(prev)) {
         return [];
-    }
+      }
       const existingBetIndex = prev.findIndex((betMap) => betMap.has(eventId));
       console.log(existingBetIndex);
+      console.log(betSlip);
       let newBetSlip = [...prev];
   
       if (existingBetIndex != -1) {
@@ -60,16 +64,22 @@ export function EventCard({groupName, team1, team2, moneylineOdds1, moneylineOdd
   
       return newBetSlip;
     });
+
+    console.log(deselected);
   
-    setBetSlipOdds((prev) => {
-      const newBetSlipOdds = new Map(prev);
-      if (newBetSlipOdds.get(eventId) === odds) {
-          newBetSlipOdds.delete(eventId);
-      } else {
-          newBetSlipOdds.set(eventId, odds);
-      }
-      return newBetSlipOdds;
-  });
+      setBetSlipOdds((prev) => {
+        const newBetSlipOdds = new Map(prev);
+        if (newBetSlipOdds.get(eventId) === odds && deselected) {
+            newBetSlipOdds.delete(eventId);
+            deselected = false; 
+            /*This caused an error when selecting a bet that had the same odds
+            as the previously selected bet. Not sure why I had it delete the event
+            in the first place. Seems to be working now */
+        } else {
+            newBetSlipOdds.set(eventId, odds);
+        }
+        return newBetSlipOdds;
+      });
 
   };
   
@@ -199,9 +209,9 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     width: '100%',
     height: 150,
-    borderWidth: 2,
+    borderWidth: 0.5,
     borderRadius: 20,
-    borderColor: Colors.border,
+    borderColor: Colors.primary,
     flexDirection: 'column',
     padding: 8,
     marginBottom: 8,

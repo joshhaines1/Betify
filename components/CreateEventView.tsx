@@ -5,6 +5,7 @@ import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 're
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
+import * as Utils from '../DataValidation'
 
 export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}) {
   
@@ -26,50 +27,31 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         
       }, []);
 
-      const checkOddsInput = (odds: string) => {
-        // Check if the input is a number and if it is within a valid range
-        if (isNaN(Number(odds)) || (Number(odds) > -100 && Number(odds) < 100)) {
-          Alert.alert("Invalid Odds", "Odds must be a number less than or equal to -100 or greater than or equal to +100.");
-          return false; // Invalid input
-        }
-        return true; // Valid input
-      }
-
-      const checkOverUnder = (overUnder: string) => {
-
-          if(isNaN(Number(overUnder))){
-            Alert.alert("Invalid Over / Under", "The Over / Under must be a number.");
-            return false; //Invalid
-          }
-
-          return true; //Valid
-      }
-
-      const checkSpread = (spread: string) => {
-
-        if(isNaN(Number(spread)) || Number(spread) < 0){
-          Alert.alert("Invalid Spread", "Spread must be a positive number.");
-          return false; //Invalid
-          
-        }else if(team1MoneylineOdds == team2MoneylineOdds){
-          Alert.alert("Invalid Spread", "Moneyline odds must be different to have a spread.");
-          return false; // Invalid
-        }
-
-        return true; //Valid
-    }
       
-      const validInputs = () => {
+      const validMSOInputs = () => {
         // Validate all the required fields
         if (
-          !checkOddsInput(team1MoneylineOdds) ||
-          !checkOddsInput(team2MoneylineOdds) ||
-          !checkOddsInput(team1SpreadOdds) ||
-          !checkOddsInput(team2SpreadOdds) ||
-          !checkOddsInput(overOdds) ||
-          !checkOddsInput(underOdds) ||
-          !checkOverUnder(overUnder) ||
-          !checkSpread(spread)
+          !Utils.validOdds(team1MoneylineOdds) ||
+          !Utils.validOdds(team2MoneylineOdds) ||
+          !Utils.validOdds(team1SpreadOdds) ||
+          !Utils.validOdds(team2SpreadOdds) ||
+          !Utils.validOdds(overOdds) ||
+          !Utils.validOdds(underOdds) ||
+          !Utils.validOverUnder(overUnder) ||
+          !Utils.validSpread(spread, team1MoneylineOdds, team2MoneylineOdds) ||
+          team1.trim() == "" || team2.trim() == ""
+        ) {
+          return false; // Invalid inputs
+        }
+        return true; // All inputs are valid
+      }
+
+      const validBasicInputs = () => {
+        // Validate all the required fields
+        if (
+          !Utils.validOdds(team1MoneylineOdds) ||
+          !Utils.validOdds(team2MoneylineOdds) ||
+          team1.trim() == "" || team2.trim() == ""
         ) {
           return false; // Invalid inputs
         }
@@ -80,10 +62,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
 
         if(type == "basic"){
 
-          Alert.alert(
-            "Not Implemeneted",
-            "Creating a basic event has not been implemented yet."
-          )
+          createBasicEvent();
 
         } else if(type == "MSO"){
 
@@ -93,7 +72,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
     
     const createMSOEvent = async () => {
         try {
-          if (!validInputs()) {
+          if (!validMSOInputs()) {
             
             return;
           }
@@ -130,6 +109,41 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         
         fetchGroups();
       };
+
+      const createBasicEvent = async () => {
+        try {
+          if (!validBasicInputs()) {
+            
+            return;
+          }
+          setModalVisible(false);
+          const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
+          const eventId = eventRef.id; // Get the auto-generated ID
+            const date = new Date();
+          // Step 1: Create the group document
+          await setDoc(eventRef, {
+            team1: team1,
+            team2: team2,
+            groupId: groupId,
+            groupName: groupName,
+            type: type,
+            moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
+            moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
+            result: "",
+            status: "active", // Example field
+            date: new Date(),
+          });
+          
+      
+          
+        } catch (error) {
+          console.error("Error creating group:", error);
+        }
+    
+        
+        fetchGroups();
+      };
+    
     
       const resetFields = () => {
         setTeam1(""); 
@@ -174,9 +188,10 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                 keyboardType='ascii-capable'
                   style={[styles.input, {marginBottom: 10}]}
                   placeholder="Team 1"
+                  placeholderTextColor={"gray"}
                   value={team1}
                   onChangeText={setTeam1}
-                  maxLength={20}
+                  maxLength={25}
                 />
                 <TextInput
                 keyboardType='ascii-capable'
@@ -185,6 +200,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                   value={team2}
                   onChangeText={setTeam2}
                   maxLength={25}
+                  placeholderTextColor={"gray"}
                 />
                 <View style={styles.visibilityRow}>
                   <TouchableOpacity style={[styles.deselectedVisibilityButton, type === "basic" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("basic")}>
@@ -208,6 +224,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                           value={team1MoneylineOdds}
                           onChangeText={setTeam1MoneylineOdds}
                           maxLength={5}
+                          placeholderTextColor={"gray"}
                           />
                       </View>
 
@@ -219,6 +236,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                           value={team2MoneylineOdds}
                           onChangeText={setTeam2MoneylineOdds}
                           maxLength={5}
+                          placeholderTextColor={"gray"}
                           />
                       </View>
                   </View>
@@ -251,6 +269,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                           value={team1SpreadOdds}
                           onChangeText={setTeam1SpreadOdds}
                           maxLength={5}
+                          placeholderTextColor={"gray"}
                           />
                       </View>
 
@@ -262,6 +281,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                           value={spread}
                           onChangeText={setSpread}
                           maxLength={5}
+                          placeholderTextColor={"gray"}
                           />
                       </View>
 
@@ -273,6 +293,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                           value={team2SpreadOdds}
                           onChangeText={setTeam2SpreadOdds}
                           maxLength={5}
+                          placeholderTextColor={"gray"}
                           />
                       </View>
                   </View>
@@ -290,6 +311,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                           value={overOdds}
                           onChangeText={setOverOdds}
                           maxLength={5}
+                          placeholderTextColor={"gray"}
                           />
                       </View>
 
@@ -301,6 +323,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                           value={overUnder}
                           onChangeText={setOverUnder}
                           maxLength={5}
+                          placeholderTextColor={"gray"}
                           />
                       </View>
 
@@ -312,6 +335,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                           value={underOdds}
                           onChangeText={setUnderOdds}
                           maxLength={5}
+                          placeholderTextColor={"gray"}
                           />
                       </View>
                   </View>
@@ -351,7 +375,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
         margin: 0,
         marginLeft: 0,
-        tintColor: 'black',
+        tintColor: Colors.primary,
         resizeMode: 'contain',
 
       },
@@ -399,19 +423,22 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0,0,0,0.75)",
       },
       modalContent: {
-        backgroundColor: "#fff",
+        backgroundColor: Colors.cardBackground,
         padding: 15,
         width: "90%",
         borderRadius: 10,
+        borderWidth: 0.5,
+        borderColor: 'gray',
       },
       modalTitle: {
         fontSize: 20,
         fontWeight: "bold",
         marginBottom: 15,
         textAlign: "center",
+        color: Colors.textColor,
       },
       input: {
         borderWidth: 1,
@@ -419,11 +446,13 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 5,
         marginBottom: 5,
+        color: Colors.textColor,
       },
       label: {
         fontSize: 15,
         fontWeight: "bold",
         marginBottom: 5,
+        color: Colors.textColor,
       },
       picker: {
         height: 50,
@@ -476,10 +505,10 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         width: 25,
         height: 25,
-        marginLeft: 10,
-        backgroundColor: "white",
+        marginLeft: 0,
+        backgroundColor: "",
         borderColor: 'gray',
-        borderWidth: 1,
+        borderWidth: 0,
       },
     
       visibilityButtonText: {

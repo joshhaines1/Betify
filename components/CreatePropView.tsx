@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import Colors from '@/assets/styles/colors';
+import * as Utils from '../DataValidation'
 
 export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId}) {
   
@@ -18,10 +20,25 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
         resetFields();
         
       }, []);
+
+      const validInputs = () => {
+        if(!Utils.validOdds(overOdds) 
+        || !Utils.validOdds(underOdds) 
+        || !Utils.validOverUnder(line)
+        || name.trim() == "" || description.trim() == ""){
+          return false;
+        } else {
+          
+          return true; 
+        }
+      }
     
     const createEvent = async () => {
         try {
-    
+          if (!validInputs()) {
+            
+            return;
+          }
           setModalVisible(false);
           const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
           const eventId = eventRef.id; // Get the auto-generated ID
@@ -75,6 +92,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
                   placeholder="Johnny Appleseed"
                   value={name}
                   onChangeText={setName}
+                  placeholderTextColor={'gray'}
                 />
                 <Text style={styles.label}>Description:</Text>
                 <TextInput
@@ -82,6 +100,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
                   placeholder="Burgers Eaten"
                   value={description}
                   onChangeText={setDescription}
+                  placeholderTextColor={'gray'}
                 />
                 <Text style={styles.label}>Over / Under Line:</Text>
                 <TextInput
@@ -89,6 +108,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
                   placeholder="5.5"
                   value={line}
                   onChangeText={setLine}
+                  placeholderTextColor={'gray'}
                 />
                 <View style={styles.visibilityRow}>
 
@@ -100,6 +120,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
                         placeholder="-135"
                         value={overOdds}
                         onChangeText={setOverOdds}
+                        placeholderTextColor={'gray'}
                         />
 
                     </View>
@@ -112,6 +133,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
                         placeholder="+130"
                         value={underOdds}
                         onChangeText={setUnderOdds}
+                        placeholderTextColor={'gray'}
                         />
                         
                     </View>
@@ -180,19 +202,22 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0,0,0,0.75)",
       },
       modalContent: {
-        backgroundColor: "#fff",
+        backgroundColor: Colors.cardBackground,
         padding: 20,
         width: "90%",
         borderRadius: 10,
+        borderWidth: 0.5,
+        borderColor: 'gray',
       },
       modalTitle: {
         fontSize: 20,
         fontWeight: "bold",
         marginBottom: 15,
         textAlign: "center",
+        color: Colors.textColor,
       },
       input: {
         borderWidth: 1,
@@ -200,11 +225,13 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 5,
         marginBottom: 10,
+        color: Colors.textColor,
       },
       label: {
         fontSize: 16,
         fontWeight: "bold",
         marginBottom: 5,
+        color: Colors.textColor,
       },
       picker: {
         height: 50,
