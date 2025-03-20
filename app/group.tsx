@@ -294,6 +294,8 @@ export default function Group() {
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               betSlip={betSlip}
+                              isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
+                              
                               >
                               
                             </EventCard>   
@@ -318,6 +320,7 @@ export default function Group() {
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               betSlip={betSlip}
+                              isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
                               >
                               
                             </BasicEventCard>  
@@ -348,6 +351,8 @@ export default function Group() {
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               betSlip={betSlip}
+                              isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
+                              
                               >
                             </PropCard>   
                       ))

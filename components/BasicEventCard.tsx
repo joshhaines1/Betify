@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 
 
-export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip}) {
+export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
   const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
@@ -103,7 +103,10 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
                 day: "numeric",
                 })}</Text>
       
-            </View>
+        </View>
+        
+        
+
       </View>
       {/* Row 2 */}
       <View style={styles.eventOptionsContainer}>
@@ -160,7 +163,20 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
       {/* Row 4 */}
       <View style={[styles.eventInfoContainer, styles.bottomInfo]}>
         <Text style={styles.eventInfoText}>{groupName}</Text>
+
+        {(isAdmin && bet != "") && (
+
+        <TouchableOpacity style={styles.settleBetsButton}>
+                        
+          <Text style={styles.settleBetsText}>SETTLE</Text>
+
+        </TouchableOpacity>
+
+        )}
+                
       </View>
+
+      
     </View>
     </>
   );
@@ -181,6 +197,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: Colors.cardBackground,
     
+  },
+  settleBetsText: {
+    fontSize: 10,
+    color: Colors.primary,
+    textAlign: 'right',
+    backgroundColor: '',
+    fontWeight: '800',
+
+  },
+  settleBetsButton: {
+    backgroundColor: '',
+    flex: 1,
+    marginRight: 5,
   },
   column: {
     flex: 4,
@@ -215,7 +244,7 @@ const styles = StyleSheet.create({
   },
   bottomInfo: {
 
-    marginTop: 10,
+    marginTop: 15,
     alignItems: 'flex-end',
     justifyContent: 'flex-start',
   },

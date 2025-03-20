@@ -4,7 +4,8 @@ const Colors = {
     textColor: 'white',
     background: 'black',
     cardBackground: '#1c1619',
-    border: '#5c5c5c',
+    border: '#9e9e9e',
+    //border: 'white',
     propTextColor: 'white'
 };
 

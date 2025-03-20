@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 
 
-export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip}) {
+export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
   const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
@@ -128,6 +128,17 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
       {/* Row 4 */}
       <View style={[styles.eventInfoContainer, styles.bottomInfo]}>
         <Text style={styles.eventInfoText}>{groupName}</Text>
+
+        {(isAdmin && bet != "")&& (
+
+                  <TouchableOpacity style={styles.settleBetsButton}>
+                                  
+                    <Text style={styles.settleBetsText}>SETTLE</Text>
+
+                  </TouchableOpacity>
+
+                )}                
+
       </View>
     </View>
     </>
@@ -158,6 +169,19 @@ const styles = StyleSheet.create({
     height: "100%",
     paddingHorizontal: 8,
     
+  },
+  settleBetsText: {
+    fontSize: 10,
+    color: Colors.primary,
+    textAlign: 'right',
+    backgroundColor: '',
+    fontWeight: '800',
+
+  },
+  settleBetsButton: {
+    backgroundColor: '',
+    flex: 1,
+    marginRight: 5,
   },
   eventInfoContainer: {
     height: '10%',
