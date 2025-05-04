@@ -11,10 +11,10 @@ export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}
 
   return (
     <>
-    <View style={styles.container}>
+    <View style={[styles.container, payout > 0 && status == "settled" && styles.wonContainer]}>
         {/*  Row 1  */}
       
-      <View style={styles.row1}>
+      <View style={[styles.row1, payout > 0 && status == "settled" && styles.wonBorder]}>
 
         <View style={styles.dateContainer}>
             <Text style={styles.dateText}>{date.toDate().toLocaleDateString("en-US", {
@@ -57,7 +57,7 @@ export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}
       ))}
       </View>
       {/*  Row 3  */}
-        <View style={styles.row3}>
+        <View style={[styles.row3, payout > 0 && status == "settled" && styles.wonBorder]}>
             <View style={styles.logoContainer}>
                 {/* Add money image here */}
                 <Image
@@ -93,6 +93,18 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 8,
     backgroundColor: Colors.cardBackground,
+    
+  },
+  wonContainer: {
+
+    backgroundColor: '#f74868',
+    borderColor: 'white',
+    borderWidth: 1,
+
+  },
+  wonBorder: {
+    borderColor: 'white',
+
   },
   parlayLegContainer: {
 

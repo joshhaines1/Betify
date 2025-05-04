@@ -128,6 +128,8 @@ export default function Group() {
 
     }
 
+    
+
     const placeBets = async () => {
       setLoading(true);
       console.log("Placed bets");
@@ -232,6 +234,8 @@ export default function Group() {
           });
           setEvents(eventsList);
           setProps(propsList);
+          setBetSlip([]);
+          setBetSlipOdds(new Map<string, string>());
         } catch (error) {
           console.error("Error fetching events:", error);
         }
@@ -264,8 +268,13 @@ export default function Group() {
                 onPress={() => setView("leaderboard")}>
                 <Text style={styles.switchText}>Leaderboard</Text>
               </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.switchButton, view === "info" && styles.activeSwitchButton]} 
+                onPress={() => setView("info")}>
+                <Text style={styles.switchText}>Info</Text>
+              </TouchableOpacity>
             </View>
-
+          {(view === "events" || view === "props") && (
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
                   {view === "events" && (
                     // Shows all groups that the currect user is NOT currently in using filter
@@ -331,7 +340,7 @@ export default function Group() {
                             
                       ))
                   }
-                  {view == "props" && (
+                  {view === "props" && (
           
                     props 
                           .filter((prop) => (prop.status == "active"))
@@ -357,14 +366,33 @@ export default function Group() {
                             </PropCard>   
                       ))
                   )}
+                  </ScrollView>
+                  )}
 
                   {view == "leaderboard" && (
 
                     //Add leaderboard here
-                    <></>
+                    <>
+                    <View style={{alignItems: 'center', justifyContent: 'center', backgroundColor: '', flex: 1}}>
+                      <Text style={{color: Colors.textColor, fontSize: 30, fontWeight: 'bold'}}>COMING SOON</Text>
+                    </View>
+                    </>
 
                   )}
-                </ScrollView>
+
+                  {view == "info" && (
+
+                  //Add group info here
+                  <>
+
+                    <View style={{alignItems: 'center', justifyContent: 'center', backgroundColor: '', flex: 1}}>
+                      <Text style={{color: Colors.textColor, fontSize: 30, fontWeight: 'bold'}}>Invite Code: {groupId.toString().substring(groupId.toString().length - 6)}</Text>
+                    </View>
+                    
+                  </>
+
+                  )}
+                
 
                 <Modal animationType="fade" transparent={true} visible={createPropModalVisible}>
                     <CreatePropView fetchGroups={fetchEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name}></CreatePropView>

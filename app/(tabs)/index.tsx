@@ -1,17 +1,16 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { 
-  View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, ScrollView,
+import {
+  View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator,
+  Modal,
 } from "react-native";
 import { GroupCard } from "@/components/GroupCard";
-import { addDoc, setDoc, doc, getDocs, collection } from "firebase/firestore";
+import { getDocs, collection, limit, query, where } from "firebase/firestore";
 import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
-import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from "expo-router";
-import { EventCard } from "@/components/EventCard";
 import Colors from "@/assets/styles/colors";
+import { TextInput } from "react-native";
 
-// Define the type for Group
 interface Group {
   id: string;
   name: string;
@@ -27,46 +26,82 @@ interface Group {
 export default function GroupsScreen() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [view, setView] = useState("joined");
- 
-  useFocusEffect(
+  const [myGroups, setMyGroups] = useState<Group[]>([]);
+  const [otherGroups, setOtherGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  //Refresh on refocus
+  /* useFocusEffect(
     useCallback(() => {
       fetchGroups();
-       
-    }, []));
-  // Define state to hold fetched groups
-  const [groups, setGroups] = useState<Group[]>([]);
+    }, [])
+  ); */
+  useEffect(() => {
+    fetchGroups();
+     }, []);
 
-  
+     const buildQuery = (allGroups: boolean) => {
+      let betsQuery = allGroups
+        ? query(collection(FIRESTORE, "groups"),
+          limit(10)
+      ) 
+        : query(
+            collection(FIRESTORE, "groups"),
+            where("members", "array-contains", FIREBASE_AUTH.currentUser?.uid)
+          );
+    
+      return betsQuery;
+    };
+    
 
   const fetchGroups = async () => {
     try {
-      const querySnapshot = await getDocs(collection(FIRESTORE, "groups"));
-      const groupsList: Group[] = [];
-      querySnapshot.forEach((doc) => {
-        const groupData = doc.data();
-        
-        groupsList.push({
-          id: doc.id,
-          name: groupData.name,
-          members: groupData.members,
-          creator: groupData.creator,
-          visibility: groupData.visibility,
-          startingCurrency: groupData.startingCurrency,
-          admins: groupData.admins,
-          creationDate: groupData.creationDate,
-          password: groupData.password,
-        });
-      });
-      setGroups(groupsList);
+      setLoading(true);
+      const querySnapshot = await getDocs(buildQuery(false));
+      const myGroupsList: Group[] = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Group[];
+      setMyGroups(myGroupsList);
+
+      const querySnapshot1 = await getDocs(buildQuery(true));
+      const otherGroupsList: Group[] = querySnapshot1.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Group[];
+      setOtherGroups(otherGroupsList);
     } catch (error) {
       console.error("Error fetching groups:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchGroups();
-  }, []);
+  const onRefresh = async () => {
+    console.log("Refresh..");
+    setRefreshing(true);
+    await sleep(1000);
+    await fetchGroups();
+    setRefreshing(false);
+  };
 
+  const renderGroup = ({ item }: { item: Group }) => (
+    <GroupCard
+      key={item.id}
+      name={item.name}
+      members={item.members}
+      adminName={item.creator}
+      admins={item.admins}
+      visibility={item.visibility}
+      password={item.password}
+      startingCurrency={item.startingCurrency}
+      groupId={item.id}
+      fetchGroups={fetchGroups}
+      joined={view === "joined"}
+    />
+  );
 
   return (
     <View style={styles.container}>
@@ -81,55 +116,31 @@ export default function GroupsScreen() {
           onPress={() => setView("explore")}>
           <Text style={styles.switchText}>Explore Groups</Text>
         </TouchableOpacity>
+
+        <View style={styles.joinButtonContainer}>
+          <TouchableOpacity 
+          style={[styles.joinButton]} 
+          onPress={() => {}}>
+          <Text style={styles.switchText}>JOIN</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
-        {view === "explore" ? (
-          // Shows all groups that the currect user is NOT currently in using filter
-          groups
-            .filter((group) => !group.members?.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
-              .map((group) => (
-                
-                  <GroupCard
-                    key={group.id}
-                    name={group.name}
-                    members={group.members}
-                    adminName={group.creator}
-                    admins={group.admins}
-                    visibility={group.visibility}
-                    password={group.password}
-                    startingCurrency={group.startingCurrency}
-                    groupId={group.id}
-                    fetchGroups={fetchGroups}
-                    joined={false}
-                    />
-      )
-    
-    )
-        ) : (
-
-          //Shows all groups that the current user IS currently in using filter
-          groups
-            .filter((group) => group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
-              .map((group) => (
-                    <GroupCard
-                      key={group.id}
-                      name={group.name}
-                      members={group.members}
-                      adminName={group.creator}
-                      admins={group.admins}
-                      visibility={group.visibility}
-                      password={group.password}
-                      startingCurrency={group.startingCurrency}
-                      groupId={group.id}
-                      fetchGroups={fetchGroups}
-                      joined={true}
-                    />
-                    
-                    
-      ))
-        )}
-      </ScrollView>
+      {refreshing && (
+        <ActivityIndicator size="large" color="#ff496b" />
+      )}
+        <TextInput></TextInput>
+        <FlatList
+          data={view == "joined" ? myGroups : otherGroups.filter((group) =>
+                  !group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
+                }
+          keyExtractor={(item) => item.id}
+          renderItem={renderGroup}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          showsVerticalScrollIndicator={false}
+        />
+      
 
       <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreateModalVisible(true)}>
         <Text style={styles.plusButtonText}>+</Text>
@@ -138,7 +149,6 @@ export default function GroupsScreen() {
       <Modal animationType="fade" transparent={true} visible={createModalVisible}>
         <CreateGroupView fetchGroups={fetchGroups} setModalVisible={setCreateModalVisible}></CreateGroupView>
       </Modal>
-  
     </View>
   );
 }
@@ -148,117 +158,47 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
     padding: 10,
-    paddingTop: 0,
-    
   },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#ff496b",
-    textAlign: "center",
-    marginBottom: 15,
-  },
-  buttonStyle: {
-    paddingVertical: 12,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 120,
-    height: 50,
-  },
-  createButton: {
-    backgroundColor: "#ff496b",
-  },
-  cancelButton: {
-    backgroundColor: "#ccc",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  cancelButtonText: {
-    color: "#000",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    padding: 20,
-    width: "90%",
-    borderRadius: 10,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 15,
-    textAlign: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  picker: {
-    height: 50,
-    marginBottom: 10,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  visibilityRow: {
+  switchContainer: {
     flexDirection: "row",
     justifyContent: "flex-start",
-    marginTop: 5,
     marginBottom: 10,
+    backgroundColor: '',
   },
-  selectedVisibilityButton: {
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 120,
-    height: 35,
-    marginRight: 10,
-    backgroundColor: "#ff496b",
+  switchButton: {
+    padding: 10,
+    marginHorizontal: 5,
+    borderBottomWidth: 2,
+    borderColor: "transparent",
   },
+  joinButtonContainer: {
+    alignItems: 'flex-end',
+    flex: 1, 
+    padding: 5,
+    marginHorizontal: 5,
+    borderBottomWidth: 0,
+    borderColor: "transparent",
+    height: '100%',
+    backgroundColor: '',
+    
+  },
+  joinButton: {
 
-  deselectedVisibilityButton: {
+    backgroundColor: Colors.primary, 
+    width: '50%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1, 
     borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 120,
-    height: 35,
-    marginRight: 10,
-    backgroundColor: "#ccc",
-  },
 
-  visibilityButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
+  },
+  activeSwitchButton: {
+    borderColor: "#ff496b",
+  },
+  switchText: {
     fontSize: 16,
-  },
-
-  plusButtonText: {
-    color: "#fff",
+    color: Colors.textColor,
     fontWeight: "bold",
-    fontSize: 50,
-    padding: 0,
-    lineHeight: 52.5,
   },
   plusButtonStyle: {
     position: "absolute",
@@ -271,42 +211,11 @@ const styles = StyleSheet.create({
     height: 55,
     backgroundColor: "#ff496b",
   },
-
-  scrollView: {
-    maxHeight: 200,
-    marginBottom: 20,
-  },
-  visibilityButton: {
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 120,
-    height: 35,
-    marginRight: 10,
-    backgroundColor: "#ccc",
-  },
-  switchContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    marginBottom: 10,
-  
-  },
-  switchButton: {
-    padding: 10,
-    marginHorizontal: 5,
-    borderBottomWidth: 2,
-    borderColor: "transparent",
-  },
-  activeSwitchButton: {
-    borderColor: "#ff496b",
-  },
-  switchText: {
-    fontSize: 16,
-    color: Colors.textColor,
+  plusButtonText: {
+    color: "#fff",
     fontWeight: "bold",
-  },
-  scrollContainer: {
-    flex: 1,
-    
+    fontSize: 50,
+    padding: 0,
+    lineHeight: 52.5,
   },
 });

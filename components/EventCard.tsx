@@ -3,6 +3,8 @@ import { StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
+import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
+import { FIRESTORE } from '@/.FirebaseConfig';
 
 export function EventCard({
   groupName,
@@ -27,6 +29,27 @@ export function EventCard({
   const [moneylineSelection, setMoneylineSelection] = useState('');
   const [spreadSelection, setSpreadSelection] = useState('');
   const [overUnderSelection, setOverUnderSelection] = useState('');
+
+  const settleBets = async () => {
+
+      let eventDocRef = doc(FIRESTORE, "events", eventId);
+      await updateDoc(eventDocRef, {
+        result: arrayUnion(moneylineSelection, overUnderSelection, spreadSelection),
+        status: "settled",
+      });
+      
+  }
+
+  const handleSettleButtonPress =  () => {
+
+    settleBets();
+    fetchGroups();
+    setMoneylineSelection('');
+    setSpreadSelection('');
+    setOverUnderSelection('');
+    console.log("Refresh events...");
+
+  }
 
   const handlePress = (category, type, odds, name, lineAndProp, header) => {
     let deselected = false;
@@ -304,7 +327,7 @@ export function EventCard({
         <Text style={styles.eventInfoText}>{groupName}</Text>
 
         {(isAdmin && betSlip.length == 3) && (
-          <TouchableOpacity style={styles.settleBetsButton}>
+          <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
             <Text style={styles.settleBetsText}>SETTLE</Text>
           </TouchableOpacity>
         )}
@@ -322,7 +345,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderWidth: 0.5,
     borderRadius: 20,
-    borderColor: Colors.primary,
+    borderColor: Colors.border,
     flexDirection: 'column',
     padding: 8,
     paddingBottom: 10,

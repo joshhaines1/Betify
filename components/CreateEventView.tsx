@@ -129,7 +129,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
             type: type,
             moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
             moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
-            result: "",
+            result: [""],
             status: "active", // Example field
             date: new Date(),
           });

@@ -5,11 +5,33 @@ import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
+import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
+import { FIRESTORE } from '@/.FirebaseConfig';
 
 
 export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
+
+  const settleBets = async () => {
+  
+        let eventDocRef = doc(FIRESTORE, "events", eventId);
+        await updateDoc(eventDocRef, {
+          result: bet,
+          status: "settled",
+        });
+        
+    }
+  
+    const handleSettleButtonPress = () => {
+  
+      settleBets();
+      fetchGroups();
+      selectBet('');
+      console.log("Refresh events...");
+  
+    }
+
   const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
       let deselected = false; 
       if (bet === type) {
@@ -166,7 +188,7 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
 
         {(isAdmin && bet != "") && (
 
-        <TouchableOpacity style={styles.settleBetsButton}>
+        <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
                         
           <Text style={styles.settleBetsText}>SETTLE</Text>
 
@@ -191,7 +213,7 @@ const styles = StyleSheet.create({
     height: 175,
     borderWidth: 0.5,
     borderRadius: 20,
-    borderColor: Colors.primary,
+    borderColor: Colors.border,
     flexDirection: 'column',
     padding: 8,
     marginBottom: 8,

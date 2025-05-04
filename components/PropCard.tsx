@@ -5,11 +5,33 @@ import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
+import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
+import { FIRESTORE } from '@/.FirebaseConfig';
 
 
 export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
+
+  const settleBets = async () => {
+  
+        let eventDocRef = doc(FIRESTORE, "events", eventId);
+        await updateDoc(eventDocRef, {
+          result: bet,
+          status: "settled",
+        });
+        
+    }
+  
+    const handleSettleButtonPress =  () => {
+  
+      fetchGroups();
+      selectBet('');
+      settleBets();
+      console.log("Refresh events...");
+  
+    }
+
   const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
       if (bet === type) {
         selectBet("");
@@ -131,7 +153,7 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
 
         {(isAdmin && bet != "")&& (
 
-                  <TouchableOpacity style={styles.settleBetsButton}>
+                  <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
                                   
                     <Text style={styles.settleBetsText}>SETTLE</Text>
 
@@ -154,7 +176,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderWidth: 0.5,
     borderRadius: 20,
-    borderColor: Colors.primary,
+    borderColor: Colors.border,
     flexDirection: 'column',
     padding: 8,
     marginBottom: 8,
