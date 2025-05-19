@@ -103,6 +103,7 @@ export function EventCard({
       if (!deselected) {
         const newBetMap = new Map<string, string>();
         newBetMap.set(`${eventId}-${category}`, type);
+        newBetMap.set('eventId', eventId)
         newBetMap.set('header', header);
         newBetMap.set('lineAndProp', lineAndProp);
         newBetMap.set('name', name);

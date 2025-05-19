@@ -60,6 +60,7 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
             // Otherwise, add a new Map with the eventId
             const newBetMap = new Map<string, string>();
             newBetMap.set(eventId, type);
+            newBetMap.set('eventId', eventId)
             newBetMap.set("header", header);
             newBetMap.set("lineAndProp", lineAndProp);
             newBetMap.set("name", name);
@@ -75,6 +76,7 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
           // Otherwise, add a new Map with the eventId
           const newBetMap = new Map<string, string>();
           newBetMap.set(eventId, type);
+          newBetMap.set('eventId', eventId)
           newBetMap.set("header", header);
           newBetMap.set("lineAndProp", lineAndProp);
           newBetMap.set("name", name);

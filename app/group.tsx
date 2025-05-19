@@ -79,6 +79,7 @@ export default function Group() {
     const [wager, setWager] = useState(100);
     const [totalDecimalOdds, setTotalDecimalOdds] = useState(1.0);
     const [loading, setLoading] = useState(false);
+    const [currentBalance, setCurrentBalance] = useState(0);
     
     useEffect(() => {
       if (betSlip.length > 0) {
@@ -128,6 +129,16 @@ export default function Group() {
 
     }
 
+    function oddsToMultiplier(odds: number): number {
+      if (odds > 0) {
+        return +(odds / 100 + 1).toFixed(2);
+      } else if (odds < 0) {
+        return +(100 / Math.abs(odds) + 1).toFixed(2);
+      } else {
+        throw new Error("Odds cannot be zero.");
+      }
+    }
+
     
 
     const placeBets = async () => {
@@ -135,12 +146,17 @@ export default function Group() {
       console.log("Placed bets");
       try {
         const wagersRef = doc(collection(FIRESTORE, "wagers")); // Create a new group doc reference
+        const userRef = doc(collection(FIRESTORE, "groups"));
         const wagerId = wagersRef.id; // Get the auto-generated ID
         const betSlipObjectArray = betSlip.map((betMap) => Object.fromEntries(betMap));
+        const eventIds = betSlipObjectArray.map(bet => bet.eventId);
+
 
         await setDoc(wagersRef, {
           groupId: groupId,
+          eventIds: eventIds,
           odds: liveSlipOdds,
+          multiplier: oddsToMultiplier(Number(liveSlipOdds)),
           risk: wager, 
           payout: Math.round(wager * totalDecimalOdds),
           date: new Date(),
@@ -148,12 +164,52 @@ export default function Group() {
           status: 'active',
           userId: FIREBASE_AUTH.currentUser?.uid,
         });
+
+        const userId = FIREBASE_AUTH.currentUser?.uid;
+        if (!userId) throw new Error("User not authenticated");
+
+        const memberRef = doc(FIRESTORE, "groups", groupId as string, "members", userId);
+
+        // Fetch current balance
+        const memberSnap = await getDocs(collection(FIRESTORE, `groups/${groupId}/members`));
+        const memberDoc = memberSnap.docs.find(doc => doc.id === userId);
+
+        if (!memberDoc || !memberDoc.exists()) {
+          throw new Error("Member document not found");
+        }
+
+        const currentBalance = memberDoc.data().balance;
+        const newBalance = currentBalance - wager;
+
+        await setDoc(memberRef, {
+          balance: newBalance,
+        }, { merge: true });
+
       } catch (error) {
         console.error("Error placing bet:", error);
       }
       setBetSlip([]);
       setBetSlipOdds(new Map<string, string>());
       setLoading(false);
+      fetchBalance();
+
+    }
+    const fetchBalance = async () => {
+
+      const userId = FIREBASE_AUTH.currentUser?.uid;
+        if (!userId) throw new Error("User not authenticated");
+
+        const memberRef = doc(FIRESTORE, "groups", groupId as string, "members", userId);
+
+        // Fetch current balance
+        const memberSnap = await getDocs(collection(FIRESTORE, `groups/${groupId}/members`));
+        const memberDoc = memberSnap.docs.find(doc => doc.id === userId);
+
+        if (!memberDoc || !memberDoc.exists()) {
+          throw new Error("Member document not found");
+        }
+
+        setCurrentBalance(memberDoc.data().balance)
 
     }
     const fetchEvents = async () => {
@@ -243,6 +299,7 @@ export default function Group() {
 
       useEffect(() => {
           fetchEvents();
+          fetchBalance();
            }, []);
 
       useLayoutEffect(() => {
@@ -272,6 +329,10 @@ export default function Group() {
                 style={[styles.switchButton, view === "info" && styles.activeSwitchButton]} 
                 onPress={() => setView("info")}>
                 <Text style={styles.switchText}>Info</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.switchButton]}>
+                <Text style={styles.currencyText}>{currentBalance}</Text>
               </TouchableOpacity>
             </View>
           {(view === "events" || view === "props") && (
@@ -627,6 +688,11 @@ const styles = StyleSheet.create({
   switchText: {
     fontSize: 16,
     color: Colors.textColor,
+    fontWeight: "bold",
+  },
+  currencyText: {
+    fontSize: 16,
+    color: Colors.primary,
     fontWeight: "bold",
   },
   scrollContainer: {

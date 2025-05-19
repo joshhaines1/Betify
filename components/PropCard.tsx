@@ -57,6 +57,7 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
             // Otherwise, add a new Map with the eventId
             const newBetMap = new Map<string, string>();
             newBetMap.set(eventId, type);
+            newBetMap.set('eventId', eventId)
             newBetMap.set("header", header);
             newBetMap.set("lineAndProp", lineAndProp);
             newBetMap.set("name", name);
@@ -72,6 +73,7 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
           // Otherwise, add a new Map with the eventId
           const newBetMap = new Map<string, string>();
           newBetMap.set(eventId, type);
+          newBetMap.set('eventId', eventId)
           newBetMap.set("header", header);
           newBetMap.set("lineAndProp", lineAndProp);
           newBetMap.set("name", name);

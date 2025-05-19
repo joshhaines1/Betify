@@ -26,7 +26,7 @@ export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, c
         id: FIREBASE_AUTH.currentUser?.uid,
         displayName: FIREBASE_AUTH.currentUser?.displayName,
         joinedAt: new Date(),
-        currency: startingCurrency,
+        balance: Number(startingCurrency),
       });
 
     }
@@ -84,7 +84,7 @@ export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, c
                   </>
                 )}
                 <Text style={styles.label}>Current Members:</Text>
-                <View style={styles.infoContainer}><Text style={styles.infoText}>{members.length}</Text></View>
+                <View style={styles.infoContainer}><Text style={styles.infoText}>{members?.length}</Text></View>
                 <Text style={styles.label}>Starting Currency:</Text>
                 <View style={styles.infoContainer}><Text style={styles.infoText}>{startingCurrency}</Text></View>
                 <View style={styles.buttonRow}>

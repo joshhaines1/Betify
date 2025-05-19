@@ -10,6 +10,7 @@ import { CreateGroupView } from "@/components/CreateGroupView";
 import { useFocusEffect } from "expo-router";
 import Colors from "@/assets/styles/colors";
 import { TextInput } from "react-native";
+import { JoinGroupWithCodeView } from "@/components/JoinGroupWithCodeView";
 
 interface Group {
   id: string;
@@ -25,6 +26,7 @@ interface Group {
 
 export default function GroupsScreen() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [inviteCodeModal, setInviteCodeModalVisible] = useState(false);
   const [view, setView] = useState("joined");
   const [myGroups, setMyGroups] = useState<Group[]>([]);
   const [otherGroups, setOtherGroups] = useState<Group[]>([]);
@@ -120,7 +122,7 @@ export default function GroupsScreen() {
         <View style={styles.joinButtonContainer}>
           <TouchableOpacity 
           style={[styles.joinButton]} 
-          onPress={() => {}}>
+          onPress={() => setInviteCodeModalVisible(true)}>
           <Text style={styles.switchText}>JOIN</Text>
           </TouchableOpacity>
         </View>
@@ -148,6 +150,10 @@ export default function GroupsScreen() {
 
       <Modal animationType="fade" transparent={true} visible={createModalVisible}>
         <CreateGroupView fetchGroups={fetchGroups} setModalVisible={setCreateModalVisible}></CreateGroupView>
+      </Modal>
+
+      <Modal animationType="fade" transparent={true} visible={inviteCodeModal}>
+        <JoinGroupWithCodeView fetchGroups={fetchGroups} setModalVisible={setInviteCodeModalVisible}></JoinGroupWithCodeView>
       </Modal>
     </View>
   );
