@@ -101,6 +101,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     color: Colors.textColor, // Colors.light.tint is undefined, replaced with 'blue'
     fontWeight: '500',
+    width: 225,
   },
   adminName: {
     fontSize: 15,

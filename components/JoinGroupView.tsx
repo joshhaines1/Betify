@@ -1,4 +1,5 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
+import Colors from '@/assets/styles/colors';
 import { arrayUnion, collection, doc, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
@@ -25,7 +26,7 @@ export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, c
         id: FIREBASE_AUTH.currentUser?.uid,
         displayName: FIREBASE_AUTH.currentUser?.displayName,
         joinedAt: new Date(),
-        currency: startingCurrency,
+        balance: Number(startingCurrency),
       });
 
     }
@@ -68,9 +69,9 @@ export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, c
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Join a Group</Text>
                 <Text style={styles.label}>Name:</Text>
-                <View style={styles.infoContainer}><Text>{name}</Text></View>
+                <View style={styles.infoContainer}><Text style={styles.infoText}>{name}</Text></View>
                 <Text style={styles.label}>Visibility:</Text>
-                <View style={styles.infoContainer}><Text>{visibility}</Text></View>
+                <View style={styles.infoContainer}><Text style={styles.infoText}>{visibility}</Text></View>
                 {visibility === "Private" && (
                   <>
                   <Text style={styles.label}>Password:</Text>
@@ -83,9 +84,9 @@ export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, c
                   </>
                 )}
                 <Text style={styles.label}>Current Members:</Text>
-                <View style={styles.infoContainer}><Text>{members.length}</Text></View>
+                <View style={styles.infoContainer}><Text style={styles.infoText}>{members?.length}</Text></View>
                 <Text style={styles.label}>Starting Currency:</Text>
-                <View style={styles.infoContainer}><Text>{startingCurrency}</Text></View>
+                <View style={styles.infoContainer}><Text style={styles.infoText}>{startingCurrency}</Text></View>
                 <View style={styles.buttonRow}>
                   <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => joinGroup()}>
                     <Text style={styles.buttonText}>JOIN</Text>
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
       },
       infoContainer: {
         borderColor: '#bdbdbd',
-        borderWidth: 1, 
+        borderWidth: 0, 
         borderRadius: 4, 
         padding: 6,
         marginTop: 5,
@@ -137,6 +138,12 @@ const styles = StyleSheet.create({
       cancelButton: {
         backgroundColor: "#ccc",
       },
+
+      infoText: {
+        color: Colors.textColor,
+        fontSize: 20,
+        marginBottom: 10,
+      },
       buttonText: {
         color: "#fff",
         fontWeight: "bold",
@@ -151,19 +158,22 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0,0,0,0.75)",
       },
       modalContent: {
-        backgroundColor: "#fff",
+        backgroundColor: Colors.cardBackground,
         padding: 20,
         width: "90%",
         borderRadius: 10,
+        borderWidth: 0.5,
+        borderColor: 'gray',
       },
       modalTitle: {
         fontSize: 20,
         fontWeight: "bold",
         marginBottom: 5,
         textAlign: "center",
+        color: Colors.textColor,
       },
       input: {
         borderWidth: 1,
@@ -171,11 +181,14 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 5,
         marginBottom: 10,
+        marginTop: 10,
+        color: Colors.textColor,
       },
       label: {
         fontSize: 16,
         fontWeight: "bold",
-        marginBottom: 5,
+        marginBottom: 0,
+        color: Colors.textColor,
       },
       picker: {
         height: 50,

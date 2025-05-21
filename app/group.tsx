@@ -1,7 +1,7 @@
 
 import { useEffect, useLayoutEffect, useState } from "react";
 import { getAuth, updateProfile } from "firebase/auth";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { EventCard } from "@/components/EventCard";
 import { collection, doc, getDocs, setDoc } from "firebase/firestore";
@@ -11,6 +11,9 @@ import { PropCard } from "@/components/PropCard";
 import { CreatePropView } from "@/components/CreatePropView";
 import Colors from "@/assets/styles/colors";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
+import { CreateMSOView } from "@/components/CreateEventView";
+import { BasicEventCard } from "@/components/BasicEventCard";
+import { BetSlipView } from "@/components/BetSlipView";
 
 
 interface Event {
@@ -28,7 +31,7 @@ interface Event {
   overUnder: string;
   overOdds: string;
   underOdds: string;
-  date: string;
+  date: Date;
   status: string;
   results: string[];
 
@@ -43,7 +46,7 @@ interface Prop {
   overOdds: string;
   underOdds: string;
   overUnder: string;
-  date: string;
+  date: Date;
   groupName: string;
   result: string; 
   status: string;
@@ -68,13 +71,17 @@ export default function Group() {
     const [events, setEvents] = useState<Event[]>([]);
     const [props, setProps] = useState<Prop[]>([]);
     const navigation = useNavigation(); 
-    const [createModalVisible, setCreateModalVisible] = useState(false);
+    const [createPropModalVisible, setCreatePropModalVisible] = useState(false);
+    const [createEventModalVisible, setCreateEventModalVisible] = useState(false);
     const [betSlipOdds, setBetSlipOdds] = useState(new Map<string, string>());
     const [betSlip, setBetSlip] = useState<Map<string, string>[]>([]);
     const [createButtonBottomMargin, setCreateButtonBottomMargin] = useState(50);
     const [liveSlipOdds, setLiveSlipOdds] = useState("");
     const [wager, setWager] = useState(100);
     const [totalDecimalOdds, setTotalDecimalOdds] = useState(1.0);
+    const [loading, setLoading] = useState(false);
+    const [currentBalance, setCurrentBalance] = useState(0);
+    const [betSlipModalVisible, setBetSlipModalVisible] = useState(false);
     
     useEffect(() => {
       if (betSlip.length > 0) {
@@ -124,33 +131,133 @@ export default function Group() {
 
     }
 
-    const placeBets = async () => {
+    function oddsToMultiplier(odds: number): number {
+      if (odds > 0) {
+        return +(odds / 100 + 1).toFixed(2);
+      } else if (odds < 0) {
+        return +(100 / Math.abs(odds) + 1).toFixed(2);
+      } else {
+        return 1; 
+      }
+    }
 
+    
+
+    const placeBets = async () => {
+      setLoading(true);
       console.log("Placed bets");
       try {
         const wagersRef = doc(collection(FIRESTORE, "wagers")); // Create a new group doc reference
+        const userRef = doc(collection(FIRESTORE, "groups"));
         const wagerId = wagersRef.id; // Get the auto-generated ID
+        
+
+        let counter = 0; 
+        betSlip.forEach(bet => {
+          const eventId = bet.get("eventId");
+
+          if (!eventId) return; // safety check
+
+          const moneylineKey = `${eventId}-moneyline`;
+          const spreadKey = `${eventId}-spread`;
+          const overUnderKey = `${eventId}-overUnder`;
+
+          if (bet.has(moneylineKey)) {
+            const value = bet.get(moneylineKey);
+            bet.set(eventId, value!);
+            bet.delete(moneylineKey);
+            counter++;
+          } else if (bet.has(spreadKey)) {
+            const value = bet.get(spreadKey);
+            bet.set(eventId, value!);
+            bet.delete(spreadKey);
+            counter++;
+          } else if (bet.has(overUnderKey)) {
+            const value = bet.get(overUnderKey);
+            bet.set(eventId, value!);
+            bet.delete(overUnderKey);
+            counter++;
+          }
+        });
+
         const betSlipObjectArray = betSlip.map((betMap) => Object.fromEntries(betMap));
+        const eventIds = betSlipObjectArray.map(bet => bet.eventId);
+
+        if(counter > 1){
+
+          Alert.alert("Error", "You cannot parlay bets from the same event."); 
+          setBetSlip([]);
+          setBetSlipOdds(new Map<string, string>());
+          setLoading(false);
+          fetchBalance();
+          return; 
+
+        } 
+
 
         await setDoc(wagersRef, {
           groupId: groupId,
+          eventIds: eventIds,
           odds: liveSlipOdds,
+          multiplier: oddsToMultiplier(Number(liveSlipOdds)),
           risk: wager, 
           payout: Math.round(wager * totalDecimalOdds),
-          date: new Date().toLocaleDateString(),
+          date: new Date(),
           picks: betSlipObjectArray,
-          status: 'open',
+          status: 'active',
           userId: FIREBASE_AUTH.currentUser?.uid,
         });
+
+        const userId = FIREBASE_AUTH.currentUser?.uid;
+        if (!userId) throw new Error("User not authenticated");
+
+        const memberRef = doc(FIRESTORE, "groups", groupId as string, "members", userId);
+
+        // Fetch current balance
+        const memberSnap = await getDocs(collection(FIRESTORE, `groups/${groupId}/members`));
+        const memberDoc = memberSnap.docs.find(doc => doc.id === userId);
+
+        if (!memberDoc || !memberDoc.exists()) {
+          throw new Error("Member document not found");
+        }
+
+        const currentBalance = memberDoc.data().balance;
+        const newBalance = currentBalance - wager;
+
+        await setDoc(memberRef, {
+          balance: newBalance,
+        }, { merge: true });
+
       } catch (error) {
         console.error("Error placing bet:", error);
       }
       setBetSlip([]);
       setBetSlipOdds(new Map<string, string>());
+      setLoading(false);
+      fetchBalance();
+
+    }
+    const fetchBalance = async () => {
+
+      const userId = FIREBASE_AUTH.currentUser?.uid;
+        if (!userId) throw new Error("User not authenticated");
+
+        const memberRef = doc(FIRESTORE, "groups", groupId as string, "members", userId);
+
+        // Fetch current balance
+        const memberSnap = await getDocs(collection(FIRESTORE, `groups/${groupId}/members`));
+        const memberDoc = memberSnap.docs.find(doc => doc.id === userId);
+
+        if (!memberDoc || !memberDoc.exists()) {
+          throw new Error("Member document not found");
+        }
+
+        setCurrentBalance(memberDoc.data().balance)
 
     }
     const fetchEvents = async () => {
         try {
+          
           const querySnapshot = await getDocs(collection(FIRESTORE, "events"));
           const eventsList: Event[] = [];
           const propsList: Prop[] = [];
@@ -177,10 +284,32 @@ export default function Group() {
                   underOdds: eventData.underOdds,
                   date: eventData.date,
                   status: eventData.status,
-                  results: eventData.results,
+                  results: eventData.result,
                 });
 
-              } else if(eventData.type == "prop")
+              } else if (eventData.type == "basic")
+                {
+                  eventsList.push({
+                    id: doc.id,
+                    groupId: eventData.groupId,
+                    groupName: eventData.groupName,
+                    type: eventData.type, 
+                    team1: eventData.team1,
+                    team2: eventData.team2,
+                    moneylineOdds1: eventData.moneylineOdds1,
+                    moneylineOdds2: eventData.moneylineOdds2,
+                    spread: "N/A",
+                    spreadOdds1: "N/A",
+                    spreadOdds2: "N/A",
+                    overUnder: "N/A",
+                    overOdds: "N/A",
+                    underOdds: "N/A",
+                    date: eventData.date,
+                    status: eventData.status,
+                    results: eventData.result,
+                  });
+  
+                } else if(eventData.type == "prop")
               {
                 propsList.push({
 
@@ -204,6 +333,8 @@ export default function Group() {
           });
           setEvents(eventsList);
           setProps(propsList);
+          setBetSlip([]);
+          setBetSlipOdds(new Map<string, string>());
         } catch (error) {
           console.error("Error fetching events:", error);
         }
@@ -211,6 +342,7 @@ export default function Group() {
 
       useEffect(() => {
           fetchEvents();
+          fetchBalance();
            }, []);
 
       useLayoutEffect(() => {
@@ -236,16 +368,32 @@ export default function Group() {
                 onPress={() => setView("leaderboard")}>
                 <Text style={styles.switchText}>Leaderboard</Text>
               </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.switchButton, view === "info" && styles.activeSwitchButton]} 
+                onPress={() => setView("info")}>
+                <Text style={styles.switchText}>Info</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.switchButton, styles.balance]}>
+                <Text numberOfLines={1} ellipsizeMode="clip" style={styles.currencyText}>
+                  {currentBalance <= 9999 
+                    ? currentBalance 
+                    : (currentBalance / 1000).toFixed(1).replace(/\.0$/, '') + 'K'}
+                </Text>
+              </TouchableOpacity>
             </View>
-
+          {(view === "events" || view === "props") && (
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
                   {view === "events" && (
                     // Shows all groups that the currect user is NOT currently in using filter
                     events
-                          .filter((event) => (event.status == "open"))
-                          .map((event) => (
-                          
-                            <EventCard 
+                          .filter((event) => (event.status == "active"))
+                          .map((event) => {
+                          if(event.type == "MSO") {
+
+                            return (
+
+                              <EventCard 
                               key={event.id} 
                               groupName={event.groupName} 
                               team1={event.team1} 
@@ -263,15 +411,47 @@ export default function Group() {
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               betSlip={betSlip}
+                              isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
+                              
                               >
                               
                             </EventCard>   
+
+                            )
+
+                          } else if(event.type == "basic")
+                          {
+
+                            return (
+
+                              <BasicEventCard 
+                              key={event.id} 
+                              groupName={event.groupName} 
+                              team1={event.team1} 
+                              team2={event.team2} 
+                              moneylineOdds1={event.moneylineOdds1} 
+                              moneylineOdds2={event.moneylineOdds2} 
+                              eventId={event.id} 
+                              date={event.date} 
+                              fetchGroups={fetchEvents}
+                              setBetSlip={setBetSlip}
+                              setBetSlipOdds={setBetSlipOdds}
+                              betSlip={betSlip}
+                              isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
+                              >
+                              
+                            </BasicEventCard>  
+
+                            )
+
+                          }}
+                            
                       ))
-                  )}
-                  {view == "props" && (
+                  }
+                  {view === "props" && (
           
                     props 
-                          .filter((prop) => (prop.status == "open"))
+                          .filter((prop) => (prop.status == "active"))
                           .map((prop) => (
                           
                             <PropCard 
@@ -288,28 +468,65 @@ export default function Group() {
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               betSlip={betSlip}
+                              isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
+                              
                               >
                             </PropCard>   
                       ))
+                  )}
+                  </ScrollView>
                   )}
 
                   {view == "leaderboard" && (
 
                     //Add leaderboard here
-                    <></>
+                    <>
+                    <View style={{alignItems: 'center', justifyContent: 'center', backgroundColor: '', flex: 1}}>
+                      <Text style={{color: Colors.textColor, fontSize: 30, fontWeight: 'bold'}}>COMING SOON</Text>
+                    </View>
+                    </>
 
                   )}
-                </ScrollView>
 
-                <Modal animationType="fade" transparent={true} visible={createModalVisible}>
-                    <CreatePropView fetchGroups={fetchEvents} setModalVisible={setCreateModalVisible} groupId={groupId} groupName={name}></CreatePropView>
+                  {view == "info" && (
+
+                  //Add group info here
+                  <>
+
+                    <View style={{alignItems: 'center', justifyContent: 'center', backgroundColor: '', flex: 1}}>
+                      <Text style={{color: Colors.textColor, fontSize: 30, fontWeight: 'bold'}}>Invite Code: {(groupId.toString().substring(groupId.toString().length - 6)).toUpperCase()}</Text>
+                    </View>
+                    
+                  </>
+
+                  )}
+                
+
+                <Modal animationType="fade" transparent={true} visible={createPropModalVisible}>
+                    <CreatePropView fetchGroups={fetchEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name}></CreatePropView>
+                </Modal>
+
+                <Modal animationType="fade" transparent={true} visible={createEventModalVisible}>
+                    <CreateMSOView fetchGroups={fetchEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name}></CreateMSOView>
+                </Modal>
+
+                <Modal animationType="fade" transparent={true} visible={betSlipModalVisible}>
+                    <BetSlipView fetchGroups={fetchEvents} setModalVisible={setBetSlipModalVisible} numberOfPicks={betSlip.length} odds={liveSlipOdds} oddsToMultiplier={oddsToMultiplier} balance={currentBalance} setWager={setWager} wager={wager} placeBets={placeBets}></BetSlipView>
                 </Modal>
 
                 <View style={styles.betSlipAndCreateButton}>
     
-                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "props") && (
+                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "props" && betSlip.length == 0) && (
 
-                  <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateModalVisible(true)}}>
+                  <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreatePropModalVisible(true)}}>
+                    <Text style={styles.plusButtonText}>+</Text>
+                  </TouchableOpacity>
+
+                  )}
+
+                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "events" && betSlip.length == 0) && (
+
+                  <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateEventModalVisible(true)}}>
                     <Text style={styles.plusButtonText}>+</Text>
                   </TouchableOpacity>
 
@@ -318,8 +535,10 @@ export default function Group() {
                   {betSlip.length > 0 && (
 
                     <View style={styles.betSlipButtonContainer}>
-                      <TouchableOpacity onPress={() => {placeBets()}}>
-                      <Text style={styles.betSlipButtonText}>OPEN BET SLIP ({liveSlipOdds})</Text>
+                      <TouchableOpacity disabled={loading} onPress={() => {setBetSlipModalVisible(true)}}>
+                          <Text style={styles.betSlipButtonText}>
+                            {loading ? "PLACING BETS...": "OPEN BET SLIP (" + liveSlipOdds + ")"}
+                            </Text>
                       </TouchableOpacity>
                     </View>
 
@@ -341,6 +560,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     padding: 10,
     paddingTop: 0,
+  },
+  balance: {
+
+    maxWidth: 75,
+
   },
   header: {
     fontSize: 24,
@@ -485,8 +709,8 @@ const styles = StyleSheet.create({
     height: 55,
     backgroundColor: "#ff496b",
     alignSelf: 'flex-end',
-    marginBottom: 15,
-    
+    bottom: 20,
+    position: 'absolute',
   },
 
   scrollView: {
@@ -520,6 +744,11 @@ const styles = StyleSheet.create({
   switchText: {
     fontSize: 16,
     color: Colors.textColor,
+    fontWeight: "bold",
+  },
+  currencyText: {
+    fontSize: 16,
+    color: Colors.primary,
     fontWeight: "bold",
   },
   scrollContainer: {

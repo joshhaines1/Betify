@@ -3,8 +3,9 @@ const Colors = {
     primary: '#ff496b',
     textColor: 'white',
     background: 'black',
-    cardBackground: '#241b1f',
-    border: '#5c5c5c',
+    cardBackground: '#1c1619',
+    border: '#7a7a7a',
+    //border: 'white',
     propTextColor: 'white'
 };
 

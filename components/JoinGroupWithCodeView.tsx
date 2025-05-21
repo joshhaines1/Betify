@@ -1,165 +1,186 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { arrayUnion, collection, doc, DocumentData, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
+import { JoinGroupView } from './JoinGroupView';
 
-export function CreateGroupView({setModalVisible, fetchGroups}) {
+export function JoinGroupWithCodeView({setModalVisible, fetchGroups}) {
   
-    const [groupName, setGroupName] = useState("");
-    const [visibility, setVisibility] = useState("Public");
-    const [maxMembers, setMaxMembers] = useState("50");
-    const [password, setPassword] = useState("");
-    const [startingCurrency, setStartingCurrency] = useState("1000");
+    const [inviteCode, setInviteCode] = useState("");
+    const [joinGroupModal, setJoinGroupModal] = useState(false);
+    const [password, setPassword] = useState("")
+    const [visibility, setVisibility] = useState("")
+    let name: string | null = null;
+    let correctPassword: string | null = null;
+    let members: any[] | null = null;
+    let startingCurrency: number | null = null;
+    let groupId: string | null = null;
+    
 
     useEffect(() => {
         resetFields();
         
       }, []);
 
-    const validInputs = () => {
-      if(visibility == "Private"){
-      if(!Utils.validInt(maxMembers)
-       || !Utils.validInt(startingCurrency)
-        || groupName.trim() == "" || password.trim() == ""
-      ){
-        return false;
-      } else {
-
-        return true; 
-
-      }
-    } else {
-
-      if(!Utils.validInt(maxMembers)
-        || !Utils.validInt(startingCurrency)
-         || groupName.trim() == "" 
-       ){
-         return false;
-       } else {
- 
-         return true; 
- 
-       }
-
-    }
-    }
-    
-    const createGroup = async () => {
-        try {
-          if(!validInputs()){
-            return; 
-          }
-          setModalVisible(false);
-          const groupRef = doc(collection(FIRESTORE, "groups")); // Create a new group doc reference
-          const groupId = groupRef.id; // Get the auto-generated ID
-      
-          // Step 1: Create the group document
-          await setDoc(groupRef, {
-            name: groupName,
-            creator: FIREBASE_AUTH.currentUser?.displayName,
-            visibility: visibility,
-            admins: [FIREBASE_AUTH.currentUser?.uid],
-            members: [FIREBASE_AUTH.currentUser?.uid],
-            startingCurrency: startingCurrency,
-            password: password, // Example field
-            creationDate: new Date(),
-          });
-      
-          // Step 2: Add members as a subcollection
-          const membersCollectionRef = collection(groupRef, "members");
-      
-          
+      const addMemberToGroup = async (groupId : string) => {
+            
+        const groupDocRef = doc(FIRESTORE, "groups", groupId);
+            await updateDoc(groupDocRef, {
+              members: arrayUnion(FIREBASE_AUTH.currentUser?.uid)
+            });
+            
+            //Add a new member to the members subcollection
+            const membersCollectionRef = collection(groupDocRef, "members");
             const memberDocRef = doc(membersCollectionRef, FIREBASE_AUTH.currentUser?.uid);
             await setDoc(memberDocRef, {
               id: FIREBASE_AUTH.currentUser?.uid,
               displayName: FIREBASE_AUTH.currentUser?.displayName,
               joinedAt: new Date(),
-              balance: startingCurrency,
+              balance: Number(startingCurrency),
             });
+      
+          }
+    
+      const joinGroup = async () => {
+        const trimmedCode = inviteCode.trim().toLowerCase();
+        if (trimmedCode.length !== 6) {
+          alert("Invite code must be exactly 6 characters.");
+          return;
+        }
+      
+        try {
+          const groupsRef = collection(FIRESTORE, "groups");
+          const snapshot = await getDocs(groupsRef);
+      
+          const matchedDoc = snapshot.docs.find(docSnap => {
+            const code = docSnap.id.slice(-6).toLowerCase();
+            return code === trimmedCode;
+          });
+      
+          if (!matchedDoc) {
+            alert("No group found with that invite code.");
+            return;
+          }
+      
+          const user = FIREBASE_AUTH.currentUser;
+          if (!user) {
+            alert("You must be logged in to join a group.");
+            return;
+          }
+      
+          const groupData = matchedDoc.data();
+      
+          // Assign values from Firestore doc to variables
+          groupId = matchedDoc.id;
+          name = groupData.name ?? null;
+          setVisibility(groupData.visibility);
+          correctPassword = groupData.password ?? null;
+          members = groupData.members ?? null;
+          startingCurrency = groupData.startingCurrency ?? null;
+      
+          if(groupData.visibility == "Public" && !members?.includes(user.uid))
+          {
+
+            console.log("JOIN")
+            addMemberToGroup(matchedDoc.id);
+            alert("Successfully joined group!");
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            fetchGroups();
+            setModalVisible(false);
+
+          } else if(groupData.visibility == "Private"){
+
+            if(password != ""){
+
+                if(password == correctPassword && !members?.includes(user.uid)){
+
+                    console.log("JOIN")
+                    addMemberToGroup(matchedDoc.id);
+                    alert("Successfully joined group!");
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    fetchGroups();
+                    setModalVisible(false);
+
+                } else {
+
+                    alert("Incorrect password!");
+
+                }
+
+            }
+
+          }
           
       
-          
         } catch (error) {
-          console.error("Error creating group:", error);
+          console.error("Error joining group:", error);
+          alert("An error occurred while joining the group.");
         }
-    
-        
-        fetchGroups();
       };
+      
+    
+    
     
       const resetFields = () => {
-        setGroupName(""); 
-        setVisibility("Public");
-        setMaxMembers("50");
-        setStartingCurrency("1000");
-        setPassword("");
+        setInviteCode("");
       };
     
       const cancelGroupCreation = () => {
         setModalVisible(false);
       };
 
-      const handleVisiblityButton = (visibility) => {
-
-        setVisibility(visibility);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
 
     return (
     
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Create a Group</Text>
+                <Text style={styles.modalTitle}>Invite Code</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Group Name"
-                  value={groupName}
-                  onChangeText={setGroupName}
+                  placeholder="ABC123"
+                  value={inviteCode}
+                  onChangeText={setInviteCode}
                   placeholderTextColor={"gray"}
                 />
-                <Text style={styles.label}>Visibility:</Text>
-                <View style={styles.visibilityRow}>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Public" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Public")}>
-                    <Text style={styles.visibilityButtonText}>PUBLIC</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Private" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Private")}>
-                    <Text style={styles.visibilityButtonText}>PRIVATE</Text>
-                  </TouchableOpacity>
-                </View>
-                {visibility === "Private" && (
-                  <>
-                  <Text style={styles.label}>Password:</Text>
-                  <TextInput
+                {visibility == "Private" && (
+
+                    <TextInput
                     style={styles.input}
-                    placeholder=""
+                    placeholder="Password"
                     value={password}
                     onChangeText={setPassword}
                     placeholderTextColor={"gray"}
-                  />
-                  </>
+                    />
+
                 )}
-              
-                <Text style={styles.label}>Starting Currency:</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={startingCurrency}
-                  onChangeText={setStartingCurrency}
-                  placeholderTextColor={"gray"}
-                />
+            
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createGroup()}>
-                    <Text style={styles.buttonText}>CREATE</Text>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => joinGroup()}>
+                    <Text style={styles.buttonText}>JOIN</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>
                   </TouchableOpacity>
                 </View>
               </View>
+
+              <Modal animationType="fade" transparent={true} visible={joinGroupModal}>
+                        {/** setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId */}
+                        <JoinGroupView
+                            fetchGroups={fetchGroups}
+                            setModalVisible={setJoinGroupModal}
+                            name={name}
+                            visibility={visibility}
+                            correctPassword={correctPassword}
+                            members={[1, 2, 3]}
+                            startingCurrency={1000}
+                            groupId={groupId}
+                        />
+                </Modal>
             </View>
           
   );

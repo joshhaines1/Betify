@@ -9,7 +9,7 @@ import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
 import { FIRESTORE } from '@/.FirebaseConfig';
 
 
-export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
+export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
 
@@ -24,37 +24,39 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
     }
   
     const handleSettleButtonPress =  () => {
-  
-      Alert.alert(
-        "Settle Event?",
-        "Are you sure you want to settle this event with the selected outcome?",
-        [
-          {
-            text: "Yes",
-            onPress: () => {
-
-              fetchGroups();
-              selectBet('');  
-              settleBets();
-              console.log("Refresh events...");
-
-            },
-          },
-          {
-            text: "No",
-            onPress: () => console.log("User answered: No"),
-            style: "cancel",
-          },
-        ],
-        { cancelable: false }
-      );
       
-  
-    }
+          Alert.alert(
+            "Settle Event?",
+            "Are you sure you want to settle this event with the selected outcome?",
+            [
+              {
+                text: "Yes",
+                onPress: () => {
+    
+                  fetchGroups();
+                  selectBet('');  
+                  settleBets();
+                  console.log("Refresh events...");
+    
+                },
+              },
+              {
+                text: "No",
+                onPress: () => console.log("User answered: No"),
+                style: "cancel",
+              },
+            ],
+            { cancelable: false }
+          );
+          
+      
+        }
 
   const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
+      let deselected = false; 
       if (bet === type) {
         selectBet("");
+        deselected = true; 
       } else {
         selectBet(type);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -64,9 +66,10 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
         // Find existing bet for this event
         if (!Array.isArray(prev)) {
           return [];
-      }
+        }
         const existingBetIndex = prev.findIndex((betMap) => betMap.has(eventId));
         console.log(existingBetIndex);
+        console.log(betSlip);
         let newBetSlip = [...prev];
     
         if (existingBetIndex != -1) {
@@ -104,20 +107,26 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
     
         return newBetSlip;
       });
+  
+      console.log(deselected);
     
-      setBetSlipOdds((prev) => {
-        const newBetSlipOdds = new Map(prev);
-        if (newBetSlipOdds.get(eventId) === odds) {
-            newBetSlipOdds.delete(eventId);
-        } else {
-            newBetSlipOdds.set(eventId, odds);
-        }
-        return newBetSlipOdds;
-    });
+        setBetSlipOdds((prev) => {
+          const newBetSlipOdds = new Map(prev);
+          if (newBetSlipOdds.get(eventId) === odds && deselected) {
+              newBetSlipOdds.delete(eventId);
+              deselected = false; 
+              /*This caused an error when selecting a bet that had the same odds
+              as the previously selected bet. Not sure why I had it delete the event
+              in the first place. Seems to be working now */
+          } else {
+              newBetSlipOdds.set(eventId, odds);
+          }
+          return newBetSlipOdds;
+        });
   
     };
 
- useEffect(() => {
+useEffect(() => {
     // Reset selection when betSlip is cleared
     const isBetPlaced = betSlip.some((betMap) => betMap.has(eventId));
     const betMapWithEvent = betSlip.find((betMap) => betMap.has(eventId));
@@ -127,7 +136,6 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
         selectBet("");
     }
 }, [betSlip, eventId]);
-
 
   return (
     <>
@@ -142,34 +150,60 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
                 day: "numeric",
                 })}</Text>
       
-            </View>
-            <View style={styles.optionHeaderContainer}>
-                <Text style={styles.optionHeaderText}>Over {overUnder}</Text>
-            </View>
-            <View style={styles.optionHeaderContainer}>
-                <Text style={styles.optionHeaderText}>Under {overUnder}</Text>
-            </View>
+        </View>
+        
+        
+
       </View>
       {/* Row 2 */}
       <View style={styles.eventOptionsContainer}>
-        <View style={styles.nameAndDescriptionContainer}>
 
-            <View style={styles.eventOptionsTitleContainer}>
-                <Text style={styles.eventTitle}>{name}</Text>
+        {/* Columb 1 */}
+        <View style={styles.column}>
+        <Image
+                source={require('@/assets/images/groupIcon.png')}
+                style={styles.logo}
+                resizeMode="contain"
+                  />
+            <View style={styles.teamContainer}>
+
+                <Text style={styles.eventTitle}>{team1}</Text>
+
             </View>
-            
-            <View style={styles.descriptionContainer}>
-                <Text style={styles.descriptionText}>{description}</Text>
-            </View>
+            <TouchableOpacity onPress={() => handlePress("moneyline1", moneylineOdds1, team1, "Moneyline", groupName)} style={[styles.optionButton, bet === "moneyline1" && styles.selectedOptionButton]}>
+                <Text style={[styles.oddsText, bet === "moneyline1" && styles.selectedOddsText]}>{moneylineOdds1}</Text>
+            </TouchableOpacity>
 
         </View>
+
+         {/* Columb 2 */}
+        <View style={[styles.column, {flex: 1}]}>
+
+                <Text style={styles.versusText}>VS</Text>
+                
+        </View>
+
+         {/* Column 3 */}
+        <View style={styles.column}>
+
+            <Image
+                source={require('@/assets/images/groupIcon.png')}
+                style={styles.logo}
+                resizeMode="contain"
+                  />
+            <View style={styles.teamContainer}>
+
+                <Text style={styles.eventTitle}>{team2}</Text>
+            
+             </View>
+            <TouchableOpacity onPress={() => handlePress("moneyline2", moneylineOdds2, team2, "Moneyline", groupName)} style={[styles.optionButton, bet === "moneyline2" && styles.selectedOptionButton]}>
+                <Text style={[styles.oddsText, bet === "moneyline2" && styles.selectedOddsText]}>{moneylineOdds2}</Text>
+            </TouchableOpacity>
+            
+        </View>
         
-        <TouchableOpacity onPress={() => handlePress('over', overOdds, name, "Over " + overUnder + " - " + description, groupName)} style={[styles.optionButton, bet === "over" && styles.selectedOptionButton]}>
-            <Text style={[styles.oddsText, bet === "over" && styles.selectedOddsText]}>{overOdds}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handlePress('under', underOdds, name, "Under " + overUnder + " - " + description, groupName)} style={[styles.optionButton, bet === "under" && styles.selectedOptionButton]}>
-            <Text style={[styles.oddsText, bet === "under" && styles.selectedOddsText]}>{underOdds}</Text>
-        </TouchableOpacity>
+        
+        
       </View>
       {/* Row 3 */}
       
@@ -177,17 +211,19 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
       <View style={[styles.eventInfoContainer, styles.bottomInfo]}>
         <Text style={styles.eventInfoText}>{groupName}</Text>
 
-        {(isAdmin && bet != "")&& (
+        {(isAdmin && bet != "") && (
 
-                  <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
-                                  
-                    <Text style={styles.settleBetsText}>SETTLE</Text>
+        <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
+                        
+          <Text style={styles.settleBetsText}>SETTLE</Text>
 
-                  </TouchableOpacity>
+        </TouchableOpacity>
 
-                )}                
-
+        )}
+                
       </View>
+
+      
     </View>
     </>
   );
@@ -199,7 +235,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'stretch',
     width: '100%',
-    height: 100,
+    height: 175,
     borderWidth: 0.5,
     borderRadius: 20,
     borderColor: Colors.border,
@@ -207,15 +243,6 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 8,
     backgroundColor: Colors.cardBackground,
-    
-  },
-  nameAndDescriptionContainer: {
-    backgroundColor: '',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: "52.5%",
-    height: "100%",
-    paddingHorizontal: 8,
     
   },
   settleBetsText: {
@@ -231,6 +258,22 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 5,
   },
+  column: {
+    flex: 4,
+    padding: 10,
+    alignItems: 'center',
+
+
+  },
+  nameAndDescriptionContainer: {
+    backgroundColor: '',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: "52.5%",
+    height: "100%",
+    paddingHorizontal: 8,
+    
+  },
   eventInfoContainer: {
     height: '10%',
     width: '100%',
@@ -244,15 +287,17 @@ const styles = StyleSheet.create({
   },
   topInfo: {
     
-    marginBottom: 0,
+    marginBottom: 10,
   },
   bottomInfo: {
 
-    marginTop: 3,
+    marginTop: 15,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
   },
   logo: {
-    width: '100%',
-    height: '100%',
+    width: '50%',
+    height: '50%',
     
   },
   logoContainer: {
@@ -260,8 +305,17 @@ const styles = StyleSheet.create({
     backgroundColor: '',
     width: '13%',
     objectFit: 'cover',
-    marginRight: 5,
+    marginRight: 0,
     
+  },
+  versusText: {
+
+    fontSize: 20,
+    //color: '#ff496b',
+    color: Colors.textColor,
+    fontWeight: '700',
+    textAlign: 'center',
+
   },
   eventDateContainer: {
 
@@ -278,9 +332,9 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     backgroundColor: Colors.cardBackground,
-    width: '24%',
-    height: '100%',
-    marginRight: 5,
+    width: '65%',
+    height: '55%',
+    marginTop: 5,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -289,9 +343,10 @@ const styles = StyleSheet.create({
   },
   selectedOptionButton: {
     backgroundColor: Colors.primary,
-    width: '24%',
-    height: '100%',
-    marginRight: 5,
+    width: '65%',
+    height: '55%',
+    marginRight: 0,
+    marginTop: 5,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -299,8 +354,9 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   oddsText: {
-    fontWeight: '400',
+    fontWeight: '600',
     color: Colors.textColor,
+    fontSize: 15,
   }, 
   selectedOddsText: {
     fontWeight: '700',
@@ -347,6 +403,14 @@ const styles = StyleSheet.create({
     color: Colors.textColor,
     fontWeight: '500',
     textAlign: 'center',
+    
+  },
+  teamContainer: {
+    height: 50,
+    padding: 0,
+    alignItems: "center",
+    justifyContent: "center",
+
   },
   descriptionText: {
     textAlign: 'center',

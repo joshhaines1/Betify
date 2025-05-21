@@ -1,79 +1,77 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { arrayUnion, collection, doc, DocumentData, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
+import { JoinGroupView } from './JoinGroupView';
 
-export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId}) {
+export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, oddsToMultiplier, balance, placeBets, setWager, wager}) {
   
-    const [name, setName] = useState("");
-    const [description, setDescription] = useState("");
-    const [line, setLine] = useState("");
-    const [overOdds, setOverOdds] = useState("");
-    const [underOdds, setUnderOdds] = useState("");
-    const [type, setType] = useState("prop");
+    const [inviteCode, setInviteCode] = useState("");
+    const [joinGroupModal, setJoinGroupModal] = useState(false);
+    const [password, setPassword] = useState("")
+    const [visibility, setVisibility] = useState("")
+    const [multiplier, setMultiplier] = useState(1);
+    let name: string | null = null;
+    let correctPassword: string | null = null;
+    let members: any[] | null = null;
+    let startingCurrency: number | null = null;
+    let groupId: string | null = null;
+    
 
     useEffect(() => {
         resetFields();
+        setMultiplier(oddsToMultiplier(odds));
         
       }, []);
 
-      const validInputs = () => {
-        if(!Utils.validOdds(overOdds) 
-        || !Utils.validOdds(underOdds) 
-        || !Utils.validOverUnder(line)
-        || name.trim() == "" || description.trim() == ""){
-          return false;
-        } else {
-          
-          return true; 
-        }
-      }
-    
-    const createEvent = async () => {
-        try {
-          if (!validInputs()) {
+      const addMemberToGroup = async (groupId : string) => {
             
-            return;
-          }
-          setModalVisible(false);
-          const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
-          const eventId = eventRef.id; // Get the auto-generated ID
-            const date = new Date();
-          // Step 1: Create the group document
-          await setDoc(eventRef, {
-            name: name,
-            description: description,
-            groupId: groupId,
-            groupName: groupName,
-            type: type,
-            underOdds: underOdds,
-            overOdds: overOdds,
-            overUnder: line,
-            result: "",
-            status: "active", // Example field
-            date: new Date(),
-          });
-          
+        const groupDocRef = doc(FIRESTORE, "groups", groupId);
+            await updateDoc(groupDocRef, {
+              members: arrayUnion(FIREBASE_AUTH.currentUser?.uid)
+            });
+            
+            //Add a new member to the members subcollection
+            const membersCollectionRef = collection(groupDocRef, "members");
+            const memberDocRef = doc(membersCollectionRef, FIREBASE_AUTH.currentUser?.uid);
+            await setDoc(memberDocRef, {
+              id: FIREBASE_AUTH.currentUser?.uid,
+              displayName: FIREBASE_AUTH.currentUser?.displayName,
+              joinedAt: new Date(),
+              balance: Number(startingCurrency),
+            });
       
-          
-        } catch (error) {
-          console.error("Error creating group:", error);
-        }
+          }
     
-        
-        fetchGroups();
+      const submitBets = async () => {
+        if(wager <= 0){
+
+            return; 
+
+        }
+        if(wager <= balance){
+
+            placeBets();
+            setModalVisible(false);
+            
+        } else{
+            console.log(wager, balance);
+            console.log(wager <= balance)
+            Alert.alert("Insufficient Balance", "You do not have enough currency to place this bet.")
+
+        }
       };
+      
+    
+    
     
       const resetFields = () => {
-        setName(""); 
-        setDescription("");
-        setLine("");
-        setOverOdds("");
-        setUnderOdds("");
+        setInviteCode("");
+        setWager(0);
       };
     
       const cancelGroupCreation = () => {
@@ -85,71 +83,65 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
     
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Create a Prop</Text>
-                <Text style={styles.label}>Name:</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Johnny Appleseed"
-                  value={name}
-                  onChangeText={setName}
-                  placeholderTextColor={'gray'}
-                />
-                <Text style={styles.label}>Description:</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Burgers Eaten"
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholderTextColor={'gray'}
-                />
-                <Text style={styles.label}>Over / Under Line:</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="5.5"
-                  value={line}
-                  onChangeText={setLine}
-                  placeholderTextColor={'gray'}
-                />
-                <View style={styles.visibilityRow}>
+                <Text style={styles.modalTitle}>Bet Slip</Text>
+                <View style={{flexDirection: 'row'}}>
+                    <Text style={[styles.betSlipText, {flex: 1, marginRight: 15}]}>
+                        Picks: {numberOfPicks}
+                    </Text>
+                    <Text style={[styles.betSlipText, {flex: 1}]}>
+                        Odds: {odds}
+                    </Text>
 
-                    <View style={styles.oddsContainer}>
+                </View>
+                <View style={{flexDirection: 'row'}}>
+                    <Text style={[styles.riskPayoutText, {flex: 1, marginRight: 15}]}>
+                        Risk:
+                    </Text>
+                    <Text style={[styles.riskPayoutText, {flex: 1}]}>
+                        Payout:
+                    </Text>
 
-                        <Text style={styles.label}>Over Odds:</Text>
-                        <TextInput
-                        style={styles.input}
-                        placeholder="-135"
-                        value={overOdds}
-                        onChangeText={setOverOdds}
-                        placeholderTextColor={'gray'}
-                        />
+                </View>
 
-                    </View>
+                <View style={{flexDirection: 'row'}}>
+                    <TextInput
+                        style={[styles.input, {flex: 1, marginRight: 15}]}
+                        placeholder="Ex: 100"
+                        value={wager}
+                        onChangeText={setWager}
+                        placeholderTextColor={"gray"}
+                    />
+                    <Text
+                        style={[styles.input, {flex: 1}]}
+                    >{Math.round(wager * multiplier)}</Text>
 
-                    <View style={styles.oddsContainer}>
-
-                        <Text style={styles.label}>Under Odds:</Text>
-                        <TextInput
-                        style={styles.input}
-                        placeholder="+130"
-                        value={underOdds}
-                        onChangeText={setUnderOdds}
-                        placeholderTextColor={'gray'}
-                        />
-                        
-                    </View>
-                    
                 </View>
                 
+                
+            
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createEvent()}>
-                    <Text style={styles.buttonText}>CREATE</Text>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => submitBets()}>
+                    <Text style={styles.buttonText}>PLACE BETS</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>
                   </TouchableOpacity>
                 </View>
-
               </View>
+
+              <Modal animationType="fade" transparent={true} visible={joinGroupModal}>
+                        {/** setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId */}
+                        <JoinGroupView
+                            fetchGroups={fetchGroups}
+                            setModalVisible={setJoinGroupModal}
+                            name={name}
+                            visibility={visibility}
+                            correctPassword={correctPassword}
+                            members={[1, 2, 3]}
+                            startingCurrency={1000}
+                            groupId={groupId}
+                        />
+                </Modal>
             </View>
           
   );
@@ -161,11 +153,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "white",
         padding: 10,
-      },
-      oddsContainer: {
-
-        marginRight: 20,
-
       },
       header: {
         fontSize: 24,
@@ -181,6 +168,16 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         width: 120,
         height: 50,
+      },
+      betSlipText:{
+
+        borderColor: "#ccc",
+        fontSize: 20,
+        borderRadius: 5,
+        marginBottom: 5,
+        color: Colors.primary,
+        fontWeight: '700'
+
       },
       createButton: {
         backgroundColor: "#ff496b",
@@ -209,8 +206,8 @@ const styles = StyleSheet.create({
         padding: 20,
         width: "90%",
         borderRadius: 10,
-        borderWidth: 0.5,
         borderColor: 'gray',
+        borderWidth: 0.5,
       },
       modalTitle: {
         fontSize: 20,
@@ -226,6 +223,16 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         marginBottom: 10,
         color: Colors.textColor,
+      },
+      riskPayoutText: {
+
+        borderColor: "#ccc",
+        fontSize: 15,
+        borderRadius: 5,
+        color: Colors.textColor,
+        fontWeight: '700',
+        marginBottom: 10,
+
       },
       label: {
         fontSize: 16,
