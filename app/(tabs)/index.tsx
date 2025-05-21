@@ -113,9 +113,10 @@ export default function GroupsScreen() {
           onPress={() => setView("joined")}>
           <Text style={styles.switchText}>My Groups</Text>
         </TouchableOpacity>
+        
         <TouchableOpacity 
           style={[styles.switchButton, view === "explore" && styles.activeSwitchButton]} 
-          onPress={() => setView("explore")}>
+          onPress={() => {}}>
           <Text style={styles.switchText}>Explore Groups</Text>
         </TouchableOpacity>
 
@@ -132,16 +133,54 @@ export default function GroupsScreen() {
         <ActivityIndicator size="large" color="#ff496b" />
       )}
         <TextInput></TextInput>
-        <FlatList
-          data={view == "joined" ? myGroups : otherGroups.filter((group) =>
-                  !group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))
-                }
-          keyExtractor={(item) => item.id}
-          renderItem={renderGroup}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          showsVerticalScrollIndicator={false}
-        />
+        {view === "joined" && myGroups.length === 0 ? (
+  <View style={{ alignItems: 'center', marginTop: 50 }}>
+    
+    <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600'}}>
+      You haven't joined any groups yet.
+    </Text>
+    
+      <View style={{flexDirection: "row"}}>
+        <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
+        <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
+          Create{' '}
+        </Text>
+        </TouchableOpacity>
+
+        <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
+          or{' '}
+        </Text>
+
+        <TouchableOpacity onPress={() => setInviteCodeModalVisible(true)}>
+        <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
+          join{' '}
+        </Text>
+        </TouchableOpacity>
+
+        <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
+          a group now!
+        </Text>
+      </View>
+    
+  </View>
+) : (
+  <FlatList
+    data={
+      view == "joined"
+        ? myGroups
+        : otherGroups.filter(
+            (group) =>
+              !group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? "")
+          )
+    }
+    keyExtractor={(item) => item.id}
+    renderItem={renderGroup}
+    refreshing={refreshing}
+    onRefresh={onRefresh}
+    showsVerticalScrollIndicator={false}
+  />
+)}
+
       
 
       <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreateModalVisible(true)}>

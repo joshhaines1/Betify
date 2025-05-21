@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import {
 } from "firebase/firestore";
 import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import Colors from "@/assets/styles/colors";
+import { useFocusEffect } from "expo-router";
 
 interface Bet {
   id: string;
@@ -151,6 +152,7 @@ export default function Bets() {
     if (view === "active") {
       setLastVisibleActive(null);
       setHasMoreActiveBets(true);
+      setActiveBets([]);
       await fetchBets("active", true);
     } else {
       setLastVisibleSettled(null);
@@ -161,6 +163,7 @@ export default function Bets() {
     setRefreshing(false);
   };
 
+ 
   const renderBetItem = ({ item }: { item: Bet }) => (
     <BetCard
       key={`${view}-${item.id}`}

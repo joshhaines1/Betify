@@ -1,19 +1,20 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
 import { arrayUnion, collection, doc, DocumentData, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
 import { JoinGroupView } from './JoinGroupView';
 
-export function JoinGroupWithCodeView({setModalVisible, fetchGroups}) {
+export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, oddsToMultiplier, balance, placeBets, setWager, wager}) {
   
     const [inviteCode, setInviteCode] = useState("");
     const [joinGroupModal, setJoinGroupModal] = useState(false);
     const [password, setPassword] = useState("")
     const [visibility, setVisibility] = useState("")
+    const [multiplier, setMultiplier] = useState(1);
     let name: string | null = null;
     let correctPassword: string | null = null;
     let members: any[] | null = null;
@@ -23,6 +24,7 @@ export function JoinGroupWithCodeView({setModalVisible, fetchGroups}) {
 
     useEffect(() => {
         resetFields();
+        setMultiplier(oddsToMultiplier(odds));
         
       }, []);
 
@@ -45,80 +47,22 @@ export function JoinGroupWithCodeView({setModalVisible, fetchGroups}) {
       
           }
     
-      const joinGroup = async () => {
-        const trimmedCode = inviteCode.trim().toLowerCase();
-        if (trimmedCode.length !== 6) {
-          alert("Invite code must be exactly 6 characters.");
-          return;
+      const submitBets = async () => {
+        if(wager <= 0){
+
+            return; 
+
         }
-      
-        try {
-          const groupsRef = collection(FIRESTORE, "groups");
-          const snapshot = await getDocs(groupsRef);
-      
-          const matchedDoc = snapshot.docs.find(docSnap => {
-            const code = docSnap.id.slice(-6).toLowerCase();
-            return code === trimmedCode;
-          });
-      
-          if (!matchedDoc) {
-            alert("No group found with that invite code.");
-            return;
-          }
-      
-          const user = FIREBASE_AUTH.currentUser;
-          if (!user) {
-            alert("You must be logged in to join a group.");
-            return;
-          }
-      
-          const groupData = matchedDoc.data();
-      
-          // Assign values from Firestore doc to variables
-          groupId = matchedDoc.id;
-          name = groupData.name ?? null;
-          setVisibility(groupData.visibility);
-          correctPassword = groupData.password ?? null;
-          members = groupData.members ?? null;
-          startingCurrency = groupData.startingCurrency ?? null;
-      
-          if(groupData.visibility == "Public" && !members?.includes(user.uid))
-          {
+        if(wager <= balance){
 
-            console.log("JOIN")
-            addMemberToGroup(matchedDoc.id);
-            alert("Successfully joined group!");
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            fetchGroups();
+            placeBets();
             setModalVisible(false);
+            
+        } else{
+            console.log(wager, balance);
+            console.log(wager <= balance)
+            Alert.alert("Insufficient Balance", "You do not have enough currency to place this bet.")
 
-          } else if(groupData.visibility == "Private"){
-
-            if(password != ""){
-
-                if(password == correctPassword && !members?.includes(user.uid)){
-
-                    console.log("JOIN")
-                    addMemberToGroup(matchedDoc.id);
-                    alert("Successfully joined group!");
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    fetchGroups();
-                    setModalVisible(false);
-
-                } else {
-
-                    alert("Incorrect password!");
-
-                }
-
-            }
-
-          }
-          
-      
-        } catch (error) {
-          console.error("Error joining group:", error);
-          alert("An error occurred while joining the group.");
         }
       };
       
@@ -127,6 +71,7 @@ export function JoinGroupWithCodeView({setModalVisible, fetchGroups}) {
     
       const resetFields = () => {
         setInviteCode("");
+        setWager(0);
       };
     
       const cancelGroupCreation = () => {
@@ -138,29 +83,45 @@ export function JoinGroupWithCodeView({setModalVisible, fetchGroups}) {
     
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Invite Code</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="ABC123"
-                  value={inviteCode}
-                  onChangeText={setInviteCode}
-                  placeholderTextColor={"gray"}
-                />
-                {visibility == "Private" && (
+                <Text style={styles.modalTitle}>Bet Slip</Text>
+                <View style={{flexDirection: 'row'}}>
+                    <Text style={[styles.betSlipText, {flex: 1, marginRight: 15}]}>
+                        Picks: {numberOfPicks}
+                    </Text>
+                    <Text style={[styles.betSlipText, {flex: 1}]}>
+                        Odds: {odds}
+                    </Text>
 
+                </View>
+                <View style={{flexDirection: 'row'}}>
+                    <Text style={[styles.riskPayoutText, {flex: 1, marginRight: 15}]}>
+                        Risk:
+                    </Text>
+                    <Text style={[styles.riskPayoutText, {flex: 1}]}>
+                        Payout:
+                    </Text>
+
+                </View>
+
+                <View style={{flexDirection: 'row'}}>
                     <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholderTextColor={"gray"}
+                        style={[styles.input, {flex: 1, marginRight: 15}]}
+                        placeholder="Ex: 100"
+                        value={wager}
+                        onChangeText={setWager}
+                        placeholderTextColor={"gray"}
                     />
+                    <Text
+                        style={[styles.input, {flex: 1}]}
+                    >{Math.round(wager * multiplier)}</Text>
 
-                )}
+                </View>
+                
+                
             
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => joinGroup()}>
-                    <Text style={styles.buttonText}>JOIN</Text>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => submitBets()}>
+                    <Text style={styles.buttonText}>PLACE BETS</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>
@@ -208,6 +169,16 @@ const styles = StyleSheet.create({
         width: 120,
         height: 50,
       },
+      betSlipText:{
+
+        borderColor: "#ccc",
+        fontSize: 20,
+        borderRadius: 5,
+        marginBottom: 5,
+        color: Colors.primary,
+        fontWeight: '700'
+
+      },
       createButton: {
         backgroundColor: "#ff496b",
       },
@@ -252,6 +223,16 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         marginBottom: 10,
         color: Colors.textColor,
+      },
+      riskPayoutText: {
+
+        borderColor: "#ccc",
+        fontSize: 15,
+        borderRadius: 5,
+        color: Colors.textColor,
+        fontWeight: '700',
+        marginBottom: 10,
+
       },
       label: {
         fontSize: 16,

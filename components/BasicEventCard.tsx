@@ -23,14 +23,34 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
         
     }
   
-    const handleSettleButtonPress = () => {
-  
-      settleBets();
-      fetchGroups();
-      selectBet('');
-      console.log("Refresh events...");
-  
-    }
+    const handleSettleButtonPress =  () => {
+      
+          Alert.alert(
+            "Settle Event?",
+            "Are you sure you want to settle this event with the selected outcome?",
+            [
+              {
+                text: "Yes",
+                onPress: () => {
+    
+                  fetchGroups();
+                  selectBet('');  
+                  settleBets();
+                  console.log("Refresh events...");
+    
+                },
+              },
+              {
+                text: "No",
+                onPress: () => console.log("User answered: No"),
+                style: "cancel",
+              },
+            ],
+            { cancelable: false }
+          );
+          
+      
+        }
 
   const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
       let deselected = false; 
@@ -106,9 +126,12 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
   
     };
 
- useEffect(() => {
+useEffect(() => {
     // Reset selection when betSlip is cleared
     const isBetPlaced = betSlip.some((betMap) => betMap.has(eventId));
+    const betMapWithEvent = betSlip.find((betMap) => betMap.has(eventId));
+    selectBet(betMapWithEvent?.get(eventId));
+    
     if (!isBetPlaced) {
         selectBet("");
     }

@@ -1,7 +1,7 @@
 
 import { useEffect, useLayoutEffect, useState } from "react";
 import { getAuth, updateProfile } from "firebase/auth";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { EventCard } from "@/components/EventCard";
 import { collection, doc, getDocs, setDoc } from "firebase/firestore";
@@ -13,6 +13,7 @@ import Colors from "@/assets/styles/colors";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import { CreateMSOView } from "@/components/CreateEventView";
 import { BasicEventCard } from "@/components/BasicEventCard";
+import { BetSlipView } from "@/components/BetSlipView";
 
 
 interface Event {
@@ -80,6 +81,7 @@ export default function Group() {
     const [totalDecimalOdds, setTotalDecimalOdds] = useState(1.0);
     const [loading, setLoading] = useState(false);
     const [currentBalance, setCurrentBalance] = useState(0);
+    const [betSlipModalVisible, setBetSlipModalVisible] = useState(false);
     
     useEffect(() => {
       if (betSlip.length > 0) {
@@ -135,7 +137,7 @@ export default function Group() {
       } else if (odds < 0) {
         return +(100 / Math.abs(odds) + 1).toFixed(2);
       } else {
-        throw new Error("Odds cannot be zero.");
+        return 1; 
       }
     }
 
@@ -148,8 +150,49 @@ export default function Group() {
         const wagersRef = doc(collection(FIRESTORE, "wagers")); // Create a new group doc reference
         const userRef = doc(collection(FIRESTORE, "groups"));
         const wagerId = wagersRef.id; // Get the auto-generated ID
+        
+
+        let counter = 0; 
+        betSlip.forEach(bet => {
+          const eventId = bet.get("eventId");
+
+          if (!eventId) return; // safety check
+
+          const moneylineKey = `${eventId}-moneyline`;
+          const spreadKey = `${eventId}-spread`;
+          const overUnderKey = `${eventId}-overUnder`;
+
+          if (bet.has(moneylineKey)) {
+            const value = bet.get(moneylineKey);
+            bet.set(eventId, value!);
+            bet.delete(moneylineKey);
+            counter++;
+          } else if (bet.has(spreadKey)) {
+            const value = bet.get(spreadKey);
+            bet.set(eventId, value!);
+            bet.delete(spreadKey);
+            counter++;
+          } else if (bet.has(overUnderKey)) {
+            const value = bet.get(overUnderKey);
+            bet.set(eventId, value!);
+            bet.delete(overUnderKey);
+            counter++;
+          }
+        });
+
         const betSlipObjectArray = betSlip.map((betMap) => Object.fromEntries(betMap));
         const eventIds = betSlipObjectArray.map(bet => bet.eventId);
+
+        if(counter > 1){
+
+          Alert.alert("Error", "You cannot parlay bets from the same event."); 
+          setBetSlip([]);
+          setBetSlipOdds(new Map<string, string>());
+          setLoading(false);
+          fetchBalance();
+          return; 
+
+        } 
 
 
         await setDoc(wagersRef, {
@@ -331,8 +374,12 @@ export default function Group() {
                 <Text style={styles.switchText}>Info</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.switchButton]}>
-                <Text style={styles.currencyText}>{currentBalance}</Text>
+                style={[styles.switchButton, styles.balance]}>
+                <Text numberOfLines={1} ellipsizeMode="clip" style={styles.currencyText}>
+                  {currentBalance <= 9999 
+                    ? currentBalance 
+                    : (currentBalance / 1000).toFixed(1).replace(/\.0$/, '') + 'K'}
+                </Text>
               </TouchableOpacity>
             </View>
           {(view === "events" || view === "props") && (
@@ -447,7 +494,7 @@ export default function Group() {
                   <>
 
                     <View style={{alignItems: 'center', justifyContent: 'center', backgroundColor: '', flex: 1}}>
-                      <Text style={{color: Colors.textColor, fontSize: 30, fontWeight: 'bold'}}>Invite Code: {groupId.toString().substring(groupId.toString().length - 6)}</Text>
+                      <Text style={{color: Colors.textColor, fontSize: 30, fontWeight: 'bold'}}>Invite Code: {(groupId.toString().substring(groupId.toString().length - 6)).toUpperCase()}</Text>
                     </View>
                     
                   </>
@@ -461,6 +508,10 @@ export default function Group() {
 
                 <Modal animationType="fade" transparent={true} visible={createEventModalVisible}>
                     <CreateMSOView fetchGroups={fetchEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name}></CreateMSOView>
+                </Modal>
+
+                <Modal animationType="fade" transparent={true} visible={betSlipModalVisible}>
+                    <BetSlipView fetchGroups={fetchEvents} setModalVisible={setBetSlipModalVisible} numberOfPicks={betSlip.length} odds={liveSlipOdds} oddsToMultiplier={oddsToMultiplier} balance={currentBalance} setWager={setWager} wager={wager} placeBets={placeBets}></BetSlipView>
                 </Modal>
 
                 <View style={styles.betSlipAndCreateButton}>
@@ -484,7 +535,7 @@ export default function Group() {
                   {betSlip.length > 0 && (
 
                     <View style={styles.betSlipButtonContainer}>
-                      <TouchableOpacity disabled={loading} onPress={() => {placeBets()}}>
+                      <TouchableOpacity disabled={loading} onPress={() => {setBetSlipModalVisible(true)}}>
                           <Text style={styles.betSlipButtonText}>
                             {loading ? "PLACING BETS...": "OPEN BET SLIP (" + liveSlipOdds + ")"}
                             </Text>
@@ -509,6 +560,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     padding: 10,
     paddingTop: 0,
+  },
+  balance: {
+
+    maxWidth: 75,
+
   },
   header: {
     fontSize: 24,

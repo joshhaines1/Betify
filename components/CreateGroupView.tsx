@@ -78,7 +78,7 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
               id: FIREBASE_AUTH.currentUser?.uid,
               displayName: FIREBASE_AUTH.currentUser?.displayName,
               joinedAt: new Date(),
-              currency: startingCurrency,
+              balance: startingCurrency,
             });
           
       
@@ -142,15 +142,7 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
                   />
                   </>
                 )}
-                <Text style={styles.label}>Max Members:</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={maxMembers}
-                  onChangeText={setMaxMembers}
-                  placeholder='100'
-                  placeholderTextColor={"gray"}
-                />
+              
                 <Text style={styles.label}>Starting Currency:</Text>
                 <TextInput
                   style={styles.input}

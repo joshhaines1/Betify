@@ -25,10 +25,30 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
   
     const handleSettleButtonPress =  () => {
   
-      fetchGroups();
-      selectBet('');
-      settleBets();
-      console.log("Refresh events...");
+      Alert.alert(
+        "Settle Event?",
+        "Are you sure you want to settle this event with the selected outcome?",
+        [
+          {
+            text: "Yes",
+            onPress: () => {
+
+              fetchGroups();
+              selectBet('');  
+              settleBets();
+              console.log("Refresh events...");
+
+            },
+          },
+          {
+            text: "No",
+            onPress: () => console.log("User answered: No"),
+            style: "cancel",
+          },
+        ],
+        { cancelable: false }
+      );
+      
   
     }
 
@@ -100,10 +120,14 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
  useEffect(() => {
     // Reset selection when betSlip is cleared
     const isBetPlaced = betSlip.some((betMap) => betMap.has(eventId));
+    const betMapWithEvent = betSlip.find((betMap) => betMap.has(eventId));
+    selectBet(betMapWithEvent?.get(eventId));
+    
     if (!isBetPlaced) {
         selectBet("");
     }
 }, [betSlip, eventId]);
+
 
   return (
     <>

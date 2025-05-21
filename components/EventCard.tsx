@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
@@ -34,22 +34,42 @@ export function EventCard({
 
       let eventDocRef = doc(FIRESTORE, "events", eventId);
       await updateDoc(eventDocRef, {
-        result: arrayUnion(moneylineSelection, overUnderSelection, spreadSelection),
+        result: [moneylineSelection, overUnderSelection, spreadSelection],
         status: "settled",
       });
       
   }
 
   const handleSettleButtonPress =  () => {
-
-    settleBets();
-    fetchGroups();
-    setMoneylineSelection('');
-    setSpreadSelection('');
-    setOverUnderSelection('');
-    console.log("Refresh events...");
-
-  }
+    
+        Alert.alert(
+          "Settle Event?",
+          "Are you sure you want to settle this event with the selected outcome?",
+          [
+            {
+              text: "Yes",
+              onPress: () => {
+  
+                fetchGroups();
+                setMoneylineSelection('');  
+                setSpreadSelection('');
+                setOverUnderSelection('');
+                settleBets();
+                console.log("Refresh events...");
+  
+              },
+            },
+            {
+              text: "No",
+              onPress: () => console.log("User answered: No"),
+              style: "cancel",
+            },
+          ],
+          { cancelable: false }
+        );
+        
+    
+      }
 
   const handlePress = (category, type, odds, name, lineAndProp, header) => {
     let deselected = false;
@@ -152,10 +172,20 @@ export function EventCard({
     const hasSpreadBet = betSlip.some((betMap) => betMap.has(`${eventId}-spread`));
     const hasOverUnderBet = betSlip.some((betMap) => betMap.has(`${eventId}-overUnder`));
 
+      const betMapWithEvent1 = betSlip.find((betMap) => betMap.has(`${eventId}-moneyline`));
+      setMoneylineSelection(betMapWithEvent1?.get(`${eventId}-moneyline`));
+
+      const betMapWithEvent2 = betSlip.find((betMap) => betMap.has(`${eventId}-spread`));
+      setSpreadSelection(betMapWithEvent2?.get(`${eventId}-spread`));
+
+      const betMapWithEvent3 = betSlip.find((betMap) => betMap.has(`${eventId}-overUnder`));
+      setOverUnderSelection(betMapWithEvent3?.get(`${eventId}-overUnder`));
+
     if (!hasMoneylineBet) setMoneylineSelection('');
     if (!hasSpreadBet) setSpreadSelection('');
     if (!hasOverUnderBet) setOverUnderSelection('');
   }, [betSlip, eventId]);
+
 
   return (
     <View style={styles.container}>
@@ -327,7 +357,7 @@ export function EventCard({
       <View style={[styles.eventInfoContainer, styles.bottomInfo]}>
         <Text style={styles.eventInfoText}>{groupName}</Text>
 
-        {(isAdmin && betSlip.length == 3) && (
+        {(isAdmin && moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") && (
           <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
             <Text style={styles.settleBetsText}>SETTLE</Text>
           </TouchableOpacity>
