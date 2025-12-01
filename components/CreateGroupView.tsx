@@ -6,6 +6,7 @@ import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
+import * as groups_service from '../services/groups-service'
 
 export function CreateGroupView({setModalVisible, fetchGroups}) {
   
@@ -48,48 +49,12 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
     }
     }
     
-    const createGroup = async () => {
-        try {
-          if(!validInputs()){
-            return; 
-          }
-          setModalVisible(false);
-          const groupRef = doc(collection(FIRESTORE, "groups")); // Create a new group doc reference
-          const groupId = groupRef.id; // Get the auto-generated ID
-      
-          // Step 1: Create the group document
-          await setDoc(groupRef, {
-            name: groupName,
-            creator: FIREBASE_AUTH.currentUser?.displayName,
-            visibility: visibility,
-            admins: [FIREBASE_AUTH.currentUser?.uid],
-            members: [FIREBASE_AUTH.currentUser?.uid],
-            startingCurrency: startingCurrency,
-            password: password, // Example field
-            creationDate: new Date(),
-          });
-      
-          // Step 2: Add members as a subcollection
-          const membersCollectionRef = collection(groupRef, "members");
-      
-          
-            const memberDocRef = doc(membersCollectionRef, FIREBASE_AUTH.currentUser?.uid);
-            await setDoc(memberDocRef, {
-              id: FIREBASE_AUTH.currentUser?.uid,
-              displayName: FIREBASE_AUTH.currentUser?.displayName,
-              joinedAt: new Date(),
-              balance: startingCurrency,
-            });
-          
-      
-          
-        } catch (error) {
-          console.error("Error creating group:", error);
-        }
-    
-        
-        fetchGroups();
-      };
+  const createGroup = async () => {
+    if (!validInputs()) return;
+    setModalVisible(false);
+    groups_service.createGroup(groupName, visibility, startingCurrency, password);
+    fetchGroups();
+  };
     
       const resetFields = () => {
         setGroupName(""); 

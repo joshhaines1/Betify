@@ -1,4 +1,4 @@
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { useState } from "react";
 import { getAuth, updateProfile } from "firebase/auth";
 import { View, Text, TouchableOpacity, TextInput, StyleSheet } from "react-native";
@@ -48,7 +48,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   text: {
-    color: "#ff496b",
+    color: Colors.textColor,
+    fontSize: 24,
+    fontWeight: 600,
   },
   input: {
     borderWidth: 2,

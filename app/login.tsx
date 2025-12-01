@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { KeyboardAvoidingView, StyleSheet, TextInput, TouchableOpacity, View, Text } from 'react-native';
 import { FIREBASE_AUTH } from '@/.FirebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '@/assets/styles/colors';

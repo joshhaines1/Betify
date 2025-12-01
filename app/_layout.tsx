@@ -1,6 +1,6 @@
-import { AuthProvider } from '@/app/AuthContext';
+import { AuthProvider } from '@/context/AuthContext';
 import Colors from '@/assets/styles/colors';
-import { Stack } from 'expo-router';
+import { Slot, Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
 export default function RootLayout() {
@@ -26,6 +26,7 @@ export default function RootLayout() {
           
         }} 
       /></Stack>
+      
 
     </AuthProvider>
     

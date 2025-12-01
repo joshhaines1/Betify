@@ -4,7 +4,7 @@ import { getAuth, updateProfile } from "firebase/auth";
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { EventCard } from "@/components/EventCard";
-import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import { arrayRemove, collection, deleteDoc, doc, getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { FIREBASE_AUTH, FIRESTORE } from "@/.FirebaseConfig";
 import { useNavigation } from '@react-navigation/native';
 import { PropCard } from "@/components/PropCard";
@@ -14,6 +14,8 @@ import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import { CreateMSOView } from "@/components/CreateEventView";
 import { BasicEventCard } from "@/components/BasicEventCard";
 import { BetSlipView } from "@/components/BetSlipView";
+import fetchGroups from "./(tabs)/index"
+import * as wagers_service from "../services/wagers-service"
 
 
 interface Event {
@@ -144,99 +146,90 @@ export default function Group() {
     
 
     const placeBets = async () => {
-      setLoading(true);
-      console.log("Placed bets");
-      try {
-        const wagersRef = doc(collection(FIRESTORE, "wagers")); // Create a new group doc reference
-        const userRef = doc(collection(FIRESTORE, "groups"));
-        const wagerId = wagersRef.id; // Get the auto-generated ID
-        
+  setLoading(true);
 
-        let counter = 0; 
-        betSlip.forEach(bet => {
-          const eventId = bet.get("eventId");
+  try {
+    console.log("Placing bets...");
 
-          if (!eventId) return; // safety check
+    let counter = 0;
+    betSlip.forEach((bet) => {
+      const eventId = bet.get("eventId");
+      if (!eventId) return;
 
-          const moneylineKey = `${eventId}-moneyline`;
-          const spreadKey = `${eventId}-spread`;
-          const overUnderKey = `${eventId}-overUnder`;
+      const moneylineKey = `${eventId}-moneyline`;
+      const spreadKey = `${eventId}-spread`;
+      const overUnderKey = `${eventId}-overUnder`;
 
-          if (bet.has(moneylineKey)) {
-            const value = bet.get(moneylineKey);
-            bet.set(eventId, value!);
-            bet.delete(moneylineKey);
-            counter++;
-          } else if (bet.has(spreadKey)) {
-            const value = bet.get(spreadKey);
-            bet.set(eventId, value!);
-            bet.delete(spreadKey);
-            counter++;
-          } else if (bet.has(overUnderKey)) {
-            const value = bet.get(overUnderKey);
-            bet.set(eventId, value!);
-            bet.delete(overUnderKey);
-            counter++;
-          }
-        });
-
-        const betSlipObjectArray = betSlip.map((betMap) => Object.fromEntries(betMap));
-        const eventIds = betSlipObjectArray.map(bet => bet.eventId);
-
-        if(counter > 1){
-
-          Alert.alert("Error", "You cannot parlay bets from the same event."); 
-          setBetSlip([]);
-          setBetSlipOdds(new Map<string, string>());
-          setLoading(false);
-          fetchBalance();
-          return; 
-
-        } 
-
-
-        await setDoc(wagersRef, {
-          groupId: groupId,
-          eventIds: eventIds,
-          odds: liveSlipOdds,
-          multiplier: oddsToMultiplier(Number(liveSlipOdds)),
-          risk: wager, 
-          payout: Math.round(wager * totalDecimalOdds),
-          date: new Date(),
-          picks: betSlipObjectArray,
-          status: 'active',
-          userId: FIREBASE_AUTH.currentUser?.uid,
-        });
-
-        const userId = FIREBASE_AUTH.currentUser?.uid;
-        if (!userId) throw new Error("User not authenticated");
-
-        const memberRef = doc(FIRESTORE, "groups", groupId as string, "members", userId);
-
-        // Fetch current balance
-        const memberSnap = await getDocs(collection(FIRESTORE, `groups/${groupId}/members`));
-        const memberDoc = memberSnap.docs.find(doc => doc.id === userId);
-
-        if (!memberDoc || !memberDoc.exists()) {
-          throw new Error("Member document not found");
+      if (bet.has(moneylineKey)) {
+        const value = bet.get(moneylineKey);
+        if (value !== undefined) {
+          bet.set(eventId, value);
+          bet.delete(moneylineKey);
+          counter++;
         }
-
-        const currentBalance = memberDoc.data().balance;
-        const newBalance = currentBalance - wager;
-
-        await setDoc(memberRef, {
-          balance: newBalance,
-        }, { merge: true });
-
-      } catch (error) {
-        console.error("Error placing bet:", error);
       }
-      setBetSlip([]);
-      setBetSlipOdds(new Map<string, string>());
-      setLoading(false);
-      fetchBalance();
 
+      else if (bet.has(spreadKey)) {
+        const value = bet.get(spreadKey);
+        if (value !== undefined) {
+          bet.set(eventId, value);
+          bet.delete(spreadKey);
+          counter++;
+        }
+      }
+
+      else if (bet.has(overUnderKey)) {
+        const value = bet.get(overUnderKey);
+        if (value !== undefined) {
+          bet.set(eventId, value);
+          bet.delete(overUnderKey);
+          counter++;
+        }
+      }
+    });
+
+    if (counter > 1) {
+      Alert.alert("Error", "You cannot parlay bets from the same event.");
+      resetSlip();
+      return;
     }
+
+    const betSlipObjectArray = betSlip.map((betMap) =>
+      Object.fromEntries(betMap)
+    );
+
+    await wagers_service.placeWager({
+      groupId,
+      userId: FIREBASE_AUTH.currentUser?.uid!,
+      picks: betSlipObjectArray,
+      eventIds: betSlipObjectArray.map(b => b.eventId),
+      odds: liveSlipOdds,
+      multiplier: totalDecimalOdds,
+      risk: wager,
+      payout: Math.round(wager * totalDecimalOdds),
+});
+
+
+    Alert.alert("Success!", "Your wager has been placed.");
+    resetSlip();
+    fetchBalance();
+
+  } catch (err) {
+    if (err instanceof Error) {
+      console.error("Error:", err.message);
+      Alert.alert("Error", err.message);
+    } else {
+      console.error("Unknown error:", err);
+    }
+  }
+
+  setLoading(false);
+};
+
+const resetSlip = () => {
+  setBetSlip([]);
+  setBetSlipOdds(new Map());
+};
     const fetchBalance = async () => {
 
       const userId = FIREBASE_AUTH.currentUser?.uid;
@@ -349,6 +342,19 @@ export default function Group() {
         navigation.setOptions({ title: `${name}` });
       }, [navigation, name]);
 
+      const handleLeaveButtonPress = async () => {
+        try {
+          const groupRef = doc(FIRESTORE, "groups", groupId as string);
+          await updateDoc(groupRef, {
+            members: arrayRemove(FIREBASE_AUTH.currentUser?.uid),
+          });
+          console.log(`User ${FIREBASE_AUTH.currentUser?.uid} removed from group ${groupId}`);
+          router.replace('/(tabs)');
+        } catch (error) {
+          console.error("Error removing user:", error);
+        }
+      };
+
   return (
     <View style={styles.container}>
 
@@ -375,7 +381,7 @@ export default function Group() {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.switchButton, styles.balance]}>
-                <Text numberOfLines={1} ellipsizeMode="clip" style={styles.currencyText}>
+                <Text ellipsizeMode="clip" style={styles.currencyText}>
                   {currentBalance <= 9999 
                     ? currentBalance 
                     : (currentBalance / 1000).toFixed(1).replace(/\.0$/, '') + 'K'}
@@ -495,6 +501,11 @@ export default function Group() {
 
                     <View style={{alignItems: 'center', justifyContent: 'center', backgroundColor: '', flex: 1}}>
                       <Text style={{color: Colors.textColor, fontSize: 30, fontWeight: 'bold'}}>Invite Code: {(groupId.toString().substring(groupId.toString().length - 6)).toUpperCase()}</Text>
+                      <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveButtonPress}>
+
+                        <Text style={{color: Colors.textColor, fontWeight: 700, fontSize: 16}}>Leave Group</Text>
+
+                      </TouchableOpacity>
                     </View>
                     
                   </>
@@ -564,6 +575,17 @@ const styles = StyleSheet.create({
   balance: {
 
     maxWidth: 75,
+
+  },
+  leaveButton: {
+
+    backgroundColor: Colors.primary,
+    width: 120,
+    height: 35,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 10, 
 
   },
   header: {
@@ -730,11 +752,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginBottom: 10,
-    backgroundColor: Colors.background,
+    backgroundColor: '',
   },
   switchButton: {
     padding: 10,
-    marginHorizontal: 5,
+    alignItems: 'center',
+    backgroundColor: '',
+    marginHorizontal: 3,
     borderBottomWidth: 2,
     borderColor: "transparent",
   },
