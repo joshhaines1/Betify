@@ -1,11 +1,10 @@
-import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
-import { collection, doc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
+import * as events_service from '../services/events-service';
 
 export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId}) {
   
@@ -34,38 +33,28 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
       }
     
     const createEvent = async () => {
-        try {
-          if (!validInputs()) {
-            
-            return;
-          }
-          setModalVisible(false);
-          const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
-          const eventId = eventRef.id; // Get the auto-generated ID
-            const date = new Date();
-          // Step 1: Create the group document
-          await setDoc(eventRef, {
+
+        if(!validInputs()){
+          Alert.alert("Invalid Input", "Please ensure all fields are filled out correctly.");
+          return;
+        }
+          events_service.createEvent({
+          groupId: groupId,
+          type: type,
+          options: {
             name: name,
             description: description,
-            groupId: groupId,
-            groupName: groupName,
-            type: type,
             underOdds: underOdds,
             overOdds: overOdds,
             overUnder: line,
-            result: "",
-            status: "active", // Example field
-            date: new Date(),
-          });
-          
-      
-          
-        } catch (error) {
-          console.error("Error creating group:", error);
-        }
-    
-        
-        fetchGroups();
+          },
+        }).then(() => {
+          console.log("Event created successfully");
+          setModalVisible(false);
+          fetchGroups();
+        }).catch((error) => {
+          console.error("Error creating event:", error);
+        });
       };
     
       const resetFields = () => {

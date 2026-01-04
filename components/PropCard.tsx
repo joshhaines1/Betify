@@ -1,26 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Text, View } from 'react-native';
-import { Link, router } from 'expo-router';
-import { JoinGroupView } from './JoinGroupView';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
-import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
-import { FIRESTORE } from '@/.FirebaseConfig';
+import * as events_service from '../services/events-service';
 
 
-export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
+export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, createdAt, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
 
   const settleBets = async () => {
-  
-        let eventDocRef = doc(FIRESTORE, "events", eventId);
-        await updateDoc(eventDocRef, {
-          result: bet,
+        events_service.updateEvent({
+          eventId: eventId,
           status: "settled",
+          results: [bet],
+          acceptingWagers: false,
+        }).then(() => {
+          console.log("Event settled successfully");
+        }).catch((error) => {
+          console.error("Error settling event:", error);
         });
-        
     }
   
     const handleSettleButtonPress =  () => {
@@ -136,11 +136,8 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
       <View style={[styles.eventInfoContainer, styles.topInfo]}>
         <View style={styles.eventDateContainer}>
                 
-            <Text style={styles.eventInfoText}>{date.toDate().toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                })}</Text>
+            <Text style={styles.eventInfoText}>{new Date(createdAt._seconds * 1000).toLocaleDateString("en-US")}</Text>
+                  
       
             </View>
             <View style={styles.optionHeaderContainer}>

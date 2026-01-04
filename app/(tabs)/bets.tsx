@@ -9,18 +9,12 @@ import {
 } from "react-native";
 import { BetCard } from "@/components/BetCard";
 import {
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  startAfter,
-  collection,
   DocumentSnapshot,
 } from "firebase/firestore";
 import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import Colors from "@/assets/styles/colors";
 import { useFocusEffect } from "expo-router";
+import * as wagers_service from "../../services/wagers-service";
 
 interface Bet {
   id: string;
@@ -51,26 +45,6 @@ export default function Bets() {
 
   const getStatusFilter = () => (view === "active" ? "active" : "settled");
 
-  const buildQuery = (
-    statusFilter: string,
-    refresh = false,
-    lastVisible: DocumentSnapshot | null
-  ) => {
-    let betsQuery = query(
-      collection(FIRESTORE, "wagers"),
-      where("userId", "==", FIREBASE_AUTH.currentUser?.uid),
-      where("status", "==", statusFilter),
-      orderBy("date", "desc"),
-      limit(5)
-    );
-
-    if (!refresh && lastVisible) {
-      betsQuery = query(betsQuery, startAfter(lastVisible));
-    }
-
-    return betsQuery;
-  };
-
   const mapDocsToBets = (docs: any[]): Bet[] => {
     return docs.map((docSnap) => {
       const data = docSnap.data();
@@ -98,10 +72,8 @@ export default function Bets() {
       const lastVisible =
         statusFilter === "active" ? lastVisibleActive : lastVisibleSettled;
 
-      const querySnapshot = await getDocs(
-        buildQuery(statusFilter, refresh, lastVisible)
-      );
-
+      const querySnapshot = await wagers_service.getWagersByUser(statusFilter, lastVisible, refresh);
+      
       if (!querySnapshot.empty) {
         const fetchedBets = mapDocsToBets(querySnapshot.docs);
         const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];

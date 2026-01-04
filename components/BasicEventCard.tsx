@@ -5,22 +5,27 @@ import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
-import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
-import { FIRESTORE } from '@/.FirebaseConfig';
+import * as events_service from '../services/events-service';
 
 
-export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
+export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fetchGroups, createdAt, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
 
   const settleBets = async () => {
-  
-        let eventDocRef = doc(FIRESTORE, "events", eventId);
-        await updateDoc(eventDocRef, {
-          result: bet,
-          status: "settled",
-        });
+      events_service.updateEvent({
+        eventId: eventId,
+        status: "settled",
+        results: [bet],
+        acceptingWagers: false,
+      }).then(() => {
+        console.log("Event settled successfully");
+        fetchGroups();
+        selectBet('');  
         
+      }).catch((error) => {
+        console.error("Error settling event:", error);
+      });
     }
   
     const handleSettleButtonPress =  () => {
@@ -33,8 +38,6 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
                 text: "Yes",
                 onPress: () => {
     
-                  fetchGroups();
-                  selectBet('');  
                   settleBets();
                   console.log("Refresh events...");
     
@@ -144,11 +147,7 @@ useEffect(() => {
       <View style={[styles.eventInfoContainer, styles.topInfo]}>
         <View style={styles.eventDateContainer}>
                 
-            <Text style={styles.eventInfoText}>{date.toDate().toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                })}</Text>
+            <Text style={styles.eventInfoText}>{new Date(createdAt._seconds * 1000).toLocaleDateString("en-US")}</Text>
       
         </View>
         

@@ -4,7 +4,7 @@ import { getAuth, updateProfile } from "firebase/auth";
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { EventCard } from "@/components/EventCard";
-import { arrayRemove, collection, deleteDoc, doc, getDocs, setDoc, updateDoc } from "firebase/firestore";
+import { arrayRemove, doc, updateDoc } from "firebase/firestore";
 import { FIREBASE_AUTH, FIRESTORE } from "@/.FirebaseConfig";
 import { useNavigation } from '@react-navigation/native';
 import { PropCard } from "@/components/PropCard";
@@ -16,6 +16,8 @@ import { BasicEventCard } from "@/components/BasicEventCard";
 import { BetSlipView } from "@/components/BetSlipView";
 import fetchGroups from "./(tabs)/index"
 import * as wagers_service from "../services/wagers-service"
+import * as groups_service from "../services/groups-service"
+import * as events_service from "../services/events-service"
 
 
 interface Event {
@@ -23,17 +25,19 @@ interface Event {
   groupId: string;
   groupName: string;
   type: string; 
-  team1: string;
-  team2: string;
-  moneylineOdds1: string;
-  moneylineOdds2: string;
-  spread: string;
-  spreadOdds1: string;
-  spreadOdds2: string;
-  overUnder: string;
-  overOdds: string;
-  underOdds: string;
-  date: Date;
+  options: {
+    team1: string;
+    team2: string;
+    moneylineOdds1: string;
+    moneylineOdds2: string;
+    spread: string;
+    spreadOdds1: string;
+    spreadOdds2: string;
+    overUnder: string;
+    overOdds: string;
+    underOdds: string;
+  }
+  createdAt: Date;
   status: string;
   results: string[];
 
@@ -48,7 +52,7 @@ interface Prop {
   overOdds: string;
   underOdds: string;
   overUnder: string;
-  date: Date;
+  createdAt: Date;
   groupName: string;
   result: string; 
   status: string;
@@ -200,7 +204,6 @@ export default function Group() {
 
     await wagers_service.placeWager({
       groupId,
-      userId: FIREBASE_AUTH.currentUser?.uid!,
       picks: betSlipObjectArray,
       eventIds: betSlipObjectArray.map(b => b.eventId),
       odds: liveSlipOdds,
@@ -232,90 +235,81 @@ const resetSlip = () => {
 };
     const fetchBalance = async () => {
 
-      const userId = FIREBASE_AUTH.currentUser?.uid;
-        if (!userId) throw new Error("User not authenticated");
-
-        const memberRef = doc(FIRESTORE, "groups", groupId as string, "members", userId);
-
-        // Fetch current balance
-        const memberSnap = await getDocs(collection(FIRESTORE, `groups/${groupId}/members`));
-        const memberDoc = memberSnap.docs.find(doc => doc.id === userId);
-
-        if (!memberDoc || !memberDoc.exists()) {
-          throw new Error("Member document not found");
-        }
-
-        setCurrentBalance(memberDoc.data().balance)
+       const balance = await groups_service.getUsersCurrency(groupId as string);
+        setCurrentBalance(balance);
 
     }
     const fetchEvents = async () => {
         try {
-          
-          const querySnapshot = await getDocs(collection(FIRESTORE, "events"));
+        
+          const events = await events_service.getEventsByGroupId({ groupId: groupId as string });
           const eventsList: Event[] = [];
           const propsList: Prop[] = [];
-          querySnapshot.forEach((doc) => {
-            const eventData = doc.data();
+          events.forEach((eventData) => {
             if(groupId == eventData.groupId)
             {
               if(eventData.type == "MSO")
               {
                 eventsList.push({
-                  id: doc.id,
+                  id: eventData.id,
                   groupId: eventData.groupId,
                   groupName: eventData.groupName,
                   type: eventData.type, 
-                  team1: eventData.team1,
-                  team2: eventData.team2,
-                  moneylineOdds1: eventData.moneylineOdds1,
-                  moneylineOdds2: eventData.moneylineOdds2,
-                  spread: eventData.spread,
-                  spreadOdds1: eventData.spreadOdds1,
-                  spreadOdds2: eventData.spreadOdds2,
-                  overUnder: eventData.overUnder,
-                  overOdds: eventData.overOdds,
-                  underOdds: eventData.underOdds,
-                  date: eventData.date,
+                  options: {
+                    team1: eventData.options.team1,
+                    team2: eventData.options.team2,
+                    moneylineOdds1: eventData.options.moneylineOdds1,
+                    moneylineOdds2: eventData.options.moneylineOdds2,
+                    spread: eventData.options.spread,
+                    spreadOdds1: eventData.options.spreadOdds1,
+                    spreadOdds2: eventData.options.spreadOdds2,
+                    overUnder: eventData.options.overUnder,
+                    overOdds: eventData.options.overOdds,
+                    underOdds: eventData.options.underOdds,
+                  },
+                  createdAt: eventData.createdAt,
                   status: eventData.status,
-                  results: eventData.result,
+                  results: eventData.results,
                 });
 
               } else if (eventData.type == "basic")
                 {
                   eventsList.push({
-                    id: doc.id,
+                    id: eventData.id,
                     groupId: eventData.groupId,
                     groupName: eventData.groupName,
                     type: eventData.type, 
-                    team1: eventData.team1,
-                    team2: eventData.team2,
-                    moneylineOdds1: eventData.moneylineOdds1,
-                    moneylineOdds2: eventData.moneylineOdds2,
-                    spread: "N/A",
-                    spreadOdds1: "N/A",
-                    spreadOdds2: "N/A",
-                    overUnder: "N/A",
-                    overOdds: "N/A",
-                    underOdds: "N/A",
-                    date: eventData.date,
+                    options: {
+                      team1: eventData.options.team1,
+                      team2: eventData.options.team2,
+                      moneylineOdds1: eventData.options.moneylineOdds1,
+                      moneylineOdds2: eventData.options.moneylineOdds2,
+                      spread: "N/A",
+                      spreadOdds1: "N/A",
+                      spreadOdds2: "N/A",
+                      overUnder: "N/A",
+                      overOdds: "N/A",
+                      underOdds: "N/A",
+                    },
+                    createdAt: eventData.createdAt,
                     status: eventData.status,
-                    results: eventData.result,
+                    results: eventData.results[0],
                   });
   
                 } else if(eventData.type == "prop")
               {
                 propsList.push({
 
-                  id: doc.id,
+                  id: eventData.id,
                   groupId: eventData.groupId,
-                  name: eventData.name,
-                  description: eventData.description,
-                  overOdds: eventData.overOdds,
-                  underOdds: eventData.underOdds,
-                  overUnder: eventData.overUnder,
-                  date: eventData.date,
+                  name: eventData.options.name,
+                  description: eventData.options.description,
+                  overOdds: eventData.options.overOdds,
+                  underOdds: eventData.options.underOdds,
+                  overUnder: eventData.options.overUnder,
+                  createdAt: eventData.createdAt,
                   groupName: eventData.groupName,
-                  result: eventData.result,
+                  result: eventData.results[0],
                   status: eventData.status,
 
                 });
@@ -344,11 +338,15 @@ const resetSlip = () => {
 
       const handleLeaveButtonPress = async () => {
         try {
+
+          // Call API here instead
           const groupRef = doc(FIRESTORE, "groups", groupId as string);
           await updateDoc(groupRef, {
             members: arrayRemove(FIREBASE_AUTH.currentUser?.uid),
           });
           console.log(`User ${FIREBASE_AUTH.currentUser?.uid} removed from group ${groupId}`);
+          //
+
           router.replace('/(tabs)');
         } catch (error) {
           console.error("Error removing user:", error);
@@ -393,7 +391,7 @@ const resetSlip = () => {
                   {view === "events" && (
                     // Shows all groups that the currect user is NOT currently in using filter
                     events
-                          .filter((event) => (event.status == "active"))
+                          .filter((event) => (event.status == "open"))
                           .map((event) => {
                           if(event.type == "MSO") {
 
@@ -402,17 +400,17 @@ const resetSlip = () => {
                               <EventCard 
                               key={event.id} 
                               groupName={event.groupName} 
-                              team1={event.team1} 
-                              team2={event.team2} 
-                              moneylineOdds1={event.moneylineOdds1} moneylineOdds2={event.moneylineOdds2} 
-                              spread={event.spread}
-                              spreadOdds1={event.spreadOdds1}
-                              spreadOdds2={event.spreadOdds2}
-                              overUnder={event.overUnder}
-                              overOdds={event.overOdds}
-                              underOdds={event.underOdds}
+                              team1={event.options.team1} 
+                              team2={event.options.team2} 
+                              moneylineOdds1={event.options.moneylineOdds1} moneylineOdds2={event.options.moneylineOdds2} 
+                              spread={event.options.spread}
+                              spreadOdds1={event.options.spreadOdds1}
+                              spreadOdds2={event.options.spreadOdds2}
+                              overUnder={event.options.overUnder}
+                              overOdds={event.options.overOdds}
+                              underOdds={event.options.underOdds}
                               eventId={event.id} 
-                              date={event.date} 
+                              createdAt={event.createdAt} 
                               fetchGroups={fetchEvents}
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
@@ -433,12 +431,12 @@ const resetSlip = () => {
                               <BasicEventCard 
                               key={event.id} 
                               groupName={event.groupName} 
-                              team1={event.team1} 
-                              team2={event.team2} 
-                              moneylineOdds1={event.moneylineOdds1} 
-                              moneylineOdds2={event.moneylineOdds2} 
+                              team1={event.options.team1} 
+                              team2={event.options.team2} 
+                              moneylineOdds1={event.options.moneylineOdds1} 
+                              moneylineOdds2={event.options.moneylineOdds2} 
                               eventId={event.id} 
-                              date={event.date} 
+                              createdAt={event.createdAt} 
                               fetchGroups={fetchEvents}
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
@@ -457,7 +455,7 @@ const resetSlip = () => {
                   {view === "props" && (
           
                     props 
-                          .filter((prop) => (prop.status == "active"))
+                          .filter((prop) => (prop.status == "open"))
                           .map((prop) => (
                           
                             <PropCard 
@@ -469,7 +467,7 @@ const resetSlip = () => {
                               overOdds={prop.overOdds}
                               underOdds={prop.underOdds}
                               eventId={prop.id} 
-                              date={prop.date} 
+                              createdAt={prop.createdAt} 
                               fetchGroups={fetchEvents}
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}

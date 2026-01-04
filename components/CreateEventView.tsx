@@ -1,11 +1,11 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
-import { collection, doc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
+import * as events_service from "../services/events-service"
 
 export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}) {
   
@@ -60,33 +60,18 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
 
       const handleCreateEvent = async () => {
 
-        if(type == "basic"){
+        if(type == "MSO"){
 
-          createBasicEvent();
-
-        } else if(type == "MSO"){
-
-          createMSOEvent();
+        if(!validMSOInputs()){
+          Alert.alert("Invalid Input", "Please ensure all fields are filled out correctly.");
+          return;
         }
-      }
-    
-    const createMSOEvent = async () => {
-        try {
-          if (!validMSOInputs()) {
-            
-            return;
-          }
-          setModalVisible(false);
-          const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
-          const eventId = eventRef.id; // Get the auto-generated ID
-            const date = new Date();
-          // Step 1: Create the group document
-          await setDoc(eventRef, {
+          events_service.createEvent({
+          groupId: groupId,
+          type: type,
+          options: {
             team1: team1,
             team2: team2,
-            groupId: groupId,
-            groupName: groupName,
-            type: type,
             underOdds: (Number(underOdds) > 0 && !underOdds.includes("+")) ? "+" + underOdds : underOdds,
             overOdds: (Number(overOdds) > 0 && !overOdds.includes("+")) ? "+" + overOdds : overOdds,
             overUnder: overUnder,
@@ -95,54 +80,40 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
             spread: spreadType == "Spread" ? spread : "-" + spread,
             spreadOdds1: (Number(team1SpreadOdds) > 0 && !team1SpreadOdds.includes("+")) ? "+" + team1SpreadOdds : team1SpreadOdds,
             spreadOdds2: (Number(team2SpreadOdds) > 0 && !team2SpreadOdds.includes("+"))? "+" + team2SpreadOdds : team2SpreadOdds,
-            result: ["", "", ""],
-            status: "active", // Example field
-            date: new Date(),
-          });
-          
-      
-          
-        } catch (error) {
-          console.error("Error creating group:", error);
-        }
-    
-        
-        fetchGroups();
-      };
+          },
+        }).then(() => {
+          console.log("Event created successfully");
+        }).catch((error) => {
+          console.error("Error creating event:", error);
+        });
 
-      const createBasicEvent = async () => {
-        try {
-          if (!validBasicInputs()) {
-            
+        } else if(type == "basic"){
+
+          if(!validBasicInputs()){
+            Alert.alert("Invalid Input", "Please ensure all fields are filled out correctly.");
             return;
           }
-          setModalVisible(false);
-          const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
-          const eventId = eventRef.id; // Get the auto-generated ID
-            const date = new Date();
-          // Step 1: Create the group document
-          await setDoc(eventRef, {
+          console.log(groupId, type);
+          events_service.createEvent({
+          groupId: groupId,
+          type: type,
+          options: {
             team1: team1,
             team2: team2,
-            groupId: groupId,
-            groupName: groupName,
-            type: type,
             moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
             moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
-            result: [""],
-            status: "active", // Example field
-            date: new Date(),
-          });
-          
-      
-          
-        } catch (error) {
-          console.error("Error creating group:", error);
+          },
+        }).then(() => {
+          console.log("Event created successfully");
+          setModalVisible(false);
+        }).catch((error) => {
+          console.error("Error creating event:", error);
+        });
         }
-    
-        
-        fetchGroups();
-      };
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        fetchGroups(); 
+      }
     
     
       const resetFields = () => {

@@ -53,6 +53,25 @@ export const getUsersGroups = async () => {
   }
 };
 
+export const getGroupById = async (groupId) => {
+  try {
+    const user = FIREBASE_AUTH.currentUser;
+    if (!user) {
+      console.error("No logged-in user.");
+      return [];
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching group by ID:", error);
+    return [];
+  }};
+
 export const getAllGroups = async (limit = 0) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
@@ -85,3 +104,23 @@ export const joinGroup = async (groupId) => {
 
     return await response.json();
 }
+
+export const getUsersCurrency = async (groupId) => {
+  try {
+    const user = FIREBASE_AUTH.currentUser;
+    if (!user) {
+      console.error("No logged-in user.");
+      return [];
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/members/${user.uid}/balance`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    return data.balance;
+  } catch (error) {
+    console.error("Error fetching user's currency:", error);
+    return [];
+  }
+};

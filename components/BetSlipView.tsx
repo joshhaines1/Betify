@@ -1,5 +1,4 @@
 import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
-import { arrayUnion, collection, doc, DocumentData, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
@@ -27,25 +26,6 @@ export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, 
         setMultiplier(oddsToMultiplier(odds));
         
       }, []);
-
-      const addMemberToGroup = async (groupId : string) => {
-            
-        const groupDocRef = doc(FIRESTORE, "groups", groupId);
-            await updateDoc(groupDocRef, {
-              members: arrayUnion(FIREBASE_AUTH.currentUser?.uid)
-            });
-            
-            //Add a new member to the members subcollection
-            const membersCollectionRef = collection(groupDocRef, "members");
-            const memberDocRef = doc(membersCollectionRef, FIREBASE_AUTH.currentUser?.uid);
-            await setDoc(memberDocRef, {
-              id: FIREBASE_AUTH.currentUser?.uid,
-              displayName: FIREBASE_AUTH.currentUser?.displayName,
-              joinedAt: new Date(),
-              balance: Number(startingCurrency),
-            });
-      
-          }
     
       const submitBets = async () => {
         if(wager <= 0){
