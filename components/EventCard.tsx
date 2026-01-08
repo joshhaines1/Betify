@@ -3,7 +3,6 @@ import { StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
-import { FIRESTORE } from '@/.FirebaseConfig';
 import * as events_service from '../services/events-service';
 
 export function EventCard({

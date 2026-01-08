@@ -1,4 +1,3 @@
-import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
@@ -83,6 +82,8 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
           },
         }).then(() => {
           console.log("Event created successfully");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          fetchGroups(); 
         }).catch((error) => {
           console.error("Error creating event:", error);
         });
@@ -105,14 +106,13 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
           },
         }).then(() => {
           console.log("Event created successfully");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          fetchGroups(); 
           setModalVisible(false);
         }).catch((error) => {
           console.error("Error creating event:", error);
         });
         }
-
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        fetchGroups(); 
       }
     
     

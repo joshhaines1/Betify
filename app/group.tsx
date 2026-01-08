@@ -241,7 +241,7 @@ const resetSlip = () => {
     }
     const fetchEvents = async () => {
         try {
-        
+          console.log("Fetching events...");
           const events = await events_service.getEventsByGroupId({ groupId: groupId as string });
           const eventsList: Event[] = [];
           const propsList: Prop[] = [];

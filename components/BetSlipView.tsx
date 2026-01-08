@@ -1,4 +1,3 @@
-import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';

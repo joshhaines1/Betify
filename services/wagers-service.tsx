@@ -30,20 +30,33 @@ export async function placeWager({ groupId, picks, eventIds, odds, multiplier, r
   return data;
 }
 
-export async function getWagersByUser(statusFilter, lastVisible, refresh = false) {
+export async function getWagersByUser(statusFilter, lastVisible, refresh: boolean = false) {
   const user = FIREBASE_AUTH.currentUser;
-    if (!user) {
-      console.error("No logged-in user.");
-      return [];
-    }
-  const token = await FIREBASE_AUTH.currentUser?.getIdToken();
+  if (!user) {
+    console.error("No logged-in user.");
+    return [];
+  }
+
+  const token = await user.getIdToken();
   if (!token) throw new Error("User not authenticated");
 
-  const res = await fetch(`${BASE_API_ENDPOINT}/wagers/${user.uid}`, {
+  // Build query params
+  const params = new URLSearchParams();
+
+  if (statusFilter) {
+    params.append("status", statusFilter);
+  }
+
+  if (!refresh && lastVisible) {
+    params.append("lastVisible", lastVisible);
+  }
+
+  const url = `${BASE_API_ENDPOINT}/users/${user.uid}/wagers?${params.toString()}`;
+
+  const res = await fetch(url, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
-      body: JSON.stringify({ status: statusFilter, lastVisible: refresh ? null : lastVisible }),
     },
   });
 

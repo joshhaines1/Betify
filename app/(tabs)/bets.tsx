@@ -11,7 +11,6 @@ import { BetCard } from "@/components/BetCard";
 import {
   DocumentSnapshot,
 } from "firebase/firestore";
-import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import Colors from "@/assets/styles/colors";
 import { useFocusEffect } from "expo-router";
 import * as wagers_service from "../../services/wagers-service";
@@ -72,20 +71,26 @@ export default function Bets() {
       const lastVisible =
         statusFilter === "active" ? lastVisibleActive : lastVisibleSettled;
 
-      const querySnapshot = await wagers_service.getWagersByUser(statusFilter, lastVisible, refresh);
-      
-      if (!querySnapshot.empty) {
-        const fetchedBets = mapDocsToBets(querySnapshot.docs);
-        const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
+      const { wagers, nextCursor } =
+        await wagers_service.getWagersByUser(
+          statusFilter,
+          lastVisible,
+          refresh
+        );
 
+      if (wagers.length > 0) {
         if (statusFilter === "active") {
-          setLastVisibleActive(lastDoc);
-          setHasMoreActiveBets(querySnapshot.docs.length === 5);
-          setActiveBets((prev) => (refresh ? fetchedBets : [...prev, ...fetchedBets]));
+          setLastVisibleActive(nextCursor);
+          setHasMoreActiveBets(wagers.length === 5);
+          setActiveBets((prev) =>
+            refresh ? wagers : [...prev, ...wagers]
+          );
         } else {
-          setLastVisibleSettled(lastDoc);
-          setHasMoreSettledBets(querySnapshot.docs.length === 5);
-          setSettledBets((prev) => (refresh ? fetchedBets : [...prev, ...fetchedBets]));
+          setLastVisibleSettled(nextCursor);
+          setHasMoreSettledBets(wagers.length === 5);
+          setSettledBets((prev) =>
+            refresh ? wagers : [...prev, ...wagers]
+          );
         }
       } else {
         console.log(`No more ${statusFilter} bets to load!`);
@@ -101,6 +106,7 @@ export default function Bets() {
       setLoading(false);
     }
   };
+
 
   const handleEndScroll = () => {
     if (!loading) {
@@ -119,7 +125,6 @@ export default function Bets() {
   };
 
   const onRefresh = async () => {
-    console.log("refreshing...");
     setRefreshing(true);
     if (view === "active") {
       setLastVisibleActive(null);
