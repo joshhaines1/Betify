@@ -11,7 +11,7 @@ import { CreateGroupView } from "@/components/CreateGroupView";
 import Colors from "@/assets/styles/colors";
 import { TextInput } from "react-native";
 import { JoinGroupWithCodeView } from "@/components/JoinGroupWithCodeView";
-import * as groups_service from "../../services/groups-service"
+import * as groups_service from "../../clients/groups-client";
 
 interface Group {
   id: string;
@@ -107,7 +107,11 @@ export default function GroupsScreen() {
         <ActivityIndicator size="large" color="#ff496b" />
       )}
         <TextInput></TextInput>
-        {view === "joined" && myGroups.length === 0 ? (
+        {loading && myGroups.length === 0 && otherGroups.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : view === "joined" && myGroups.length === 0 ? (
   <View style={{ alignItems: 'center', marginTop: 50 }}>
     
     <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600'}}>
@@ -248,5 +252,11 @@ const styles = StyleSheet.create({
     fontSize: 50,
     padding: 0,
     lineHeight: 52.5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 50,
   },
 });

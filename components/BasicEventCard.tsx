@@ -5,23 +5,31 @@ import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
-import * as events_service from '../services/events-service';
+import * as events_service from '../clients/events-client';
 
 
-export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fetchGroups, createdAt, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
+export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fetchGroups, createdAt, groupName, eventId, setBetSlip, setBetSlipOdds, lockDate, betSlip, isAdmin, acceptingWagers, onEventSettled}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
 
   const settleBets = async () => {
       events_service.updateEvent({
         eventId: eventId,
-        status: "settled",
-        results: [bet],
+        status: bet != "" ? "settled" : "closed",
+        results: bet != "" ? [bet] : [],
         acceptingWagers: false,
       }).then(() => {
         console.log("Event settled successfully");
-        fetchGroups();
-        selectBet('');  
+        selectBet('');
+        setBetSlip((prev: Map<string, string>[]) => {
+          return prev.filter((betMap) => !betMap.has(eventId));
+        });
+        setBetSlipOdds((prev) => {
+          const newBetSlipOdds = new Map(prev);
+          newBetSlipOdds.delete(eventId);
+          return newBetSlipOdds;
+        });
+        onEventSettled(eventId);
         
       }).catch((error) => {
         console.error("Error settling event:", error);
@@ -29,31 +37,32 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
     }
   
     const handleSettleButtonPress =  () => {
+      if(acceptingWagers === false && bet == ""){
+        return;
+      }
+      Alert.alert(
+        bet != "" ? "Settle Event?" : "Manually Lock Event?",
+        bet != "" ? "Are you sure you want to settle this event with the selected outcome?" : "Are you sure you want to manually lock this event and stop accepting wagers?",
+        [
+          {
+            text: "Yes",
+            onPress: () => {
+
+              settleBets();
+
+            },
+          },
+          {
+            text: "No",
+            onPress: () => console.log("User answered: No"),
+            style: "cancel",
+          },
+        ],
+        { cancelable: false }
+      );
       
-          Alert.alert(
-            "Settle Event?",
-            "Are you sure you want to settle this event with the selected outcome?",
-            [
-              {
-                text: "Yes",
-                onPress: () => {
-    
-                  settleBets();
-                  console.log("Refresh events...");
-    
-                },
-              },
-              {
-                text: "No",
-                onPress: () => console.log("User answered: No"),
-                style: "cancel",
-              },
-            ],
-            { cancelable: false }
-          );
-          
-      
-        }
+  
+    }
 
   const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
       let deselected = false; 
@@ -63,6 +72,9 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
       } else {
         selectBet(type);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+      if(!acceptingWagers){
+        return;
       }
     
       setBetSlip((prev: Map<string, string>[]) => {
@@ -88,6 +100,7 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
             newBetMap.set("lineAndProp", lineAndProp);
             newBetMap.set("name", name);
             newBetMap.set("odds", odds);
+            newBetMap.set("lockDate", lockDate);
             newBetSlip.push(newBetMap);
   
           } else {
@@ -104,6 +117,7 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
           newBetMap.set("lineAndProp", lineAndProp);
           newBetMap.set("name", name);
           newBetMap.set("odds", odds);
+          newBetMap.set("lockDate", lockDate);
           newBetSlip.push(newBetMap);
           
         }
@@ -147,7 +161,7 @@ useEffect(() => {
       <View style={[styles.eventInfoContainer, styles.topInfo]}>
         <View style={styles.eventDateContainer}>
                 
-            <Text style={styles.eventInfoText}>{new Date(createdAt._seconds * 1000).toLocaleDateString("en-US")}</Text>
+            <Text style={styles.eventInfoText}>{new Date(lockDate._seconds * 1000).toLocaleString("en-US", { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</Text>
       
         </View>
         
@@ -210,11 +224,11 @@ useEffect(() => {
       <View style={[styles.eventInfoContainer, styles.bottomInfo]}>
         <Text style={styles.eventInfoText}>{groupName}</Text>
 
-        {(isAdmin && bet != "") && (
+        {(isAdmin) && (
 
         <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
                         
-          <Text style={styles.settleBetsText}>SETTLE</Text>
+          <Text style={(acceptingWagers || bet != "") == true ? styles.settleBetsText : styles.lockedBetText}>{bet != "" ? "SETTLE" : (acceptingWagers ? "LOCK" : "LOCKED")}</Text>
 
         </TouchableOpacity>
 
@@ -251,6 +265,13 @@ const styles = StyleSheet.create({
     backgroundColor: '',
     fontWeight: '800',
 
+  },
+  lockedBetText: {
+    fontSize: 10,
+    color: "#8f8f8fff",
+    textAlign: 'right',
+    backgroundColor: '',
+    fontWeight: '800',
   },
   settleBetsButton: {
     backgroundColor: '',

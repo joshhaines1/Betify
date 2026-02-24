@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { Text, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
-import * as events_service from "../services/events-service"
+import * as events_client from "../clients/events-client"
 
 export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}) {
   
@@ -20,6 +21,9 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
     const [underOdds, setUnderOdds] = useState("");
     const [type, setType] = useState("");
     const [spreadType, setSpreadType] = useState("Spread");
+    const [lockDate, setLockDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
 
     useEffect(() => {
         resetFields();
@@ -37,6 +41,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
           !Utils.validOdds(overOdds) ||
           !Utils.validOdds(underOdds) ||
           !Utils.validOverUnder(overUnder) ||
+          !Utils.validDate(lockDate) ||
           !Utils.validSpread(spread, team1MoneylineOdds, team2MoneylineOdds) ||
           team1.trim() == "" || team2.trim() == ""
         ) {
@@ -50,6 +55,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         if (
           !Utils.validOdds(team1MoneylineOdds) ||
           !Utils.validOdds(team2MoneylineOdds) ||
+          !Utils.validDate(lockDate) ||
           team1.trim() == "" || team2.trim() == ""
         ) {
           return false; // Invalid inputs
@@ -62,12 +68,12 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         if(type == "MSO"){
 
         if(!validMSOInputs()){
-          Alert.alert("Invalid Input", "Please ensure all fields are filled out correctly.");
           return;
         }
-          events_service.createEvent({
+          events_client.createEvent({
           groupId: groupId,
           type: type,
+          lockDate: lockDate,
           options: {
             team1: team1,
             team2: team2,
@@ -84,6 +90,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
           console.log("Event created successfully");
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           fetchGroups(); 
+          setModalVisible(false);
         }).catch((error) => {
           console.error("Error creating event:", error);
         });
@@ -91,13 +98,12 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         } else if(type == "basic"){
 
           if(!validBasicInputs()){
-            Alert.alert("Invalid Input", "Please ensure all fields are filled out correctly.");
             return;
           }
-          console.log(groupId, type);
-          events_service.createEvent({
+          events_client.createEvent({
           groupId: groupId,
           type: type,
+          lockDate: lockDate,
           options: {
             team1: team1,
             team2: team2,
@@ -128,6 +134,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         setOverOdds("");
         setUnderOdds("");
         setType("basic");
+        setLockDate(new Date());
       };
       
     
@@ -141,7 +148,6 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
   }
 
   function handleSpreadButtonPress(): void {
-
     if(spreadType == "Spread") {
       setSpreadType("Reverse Spread");
     }else {
@@ -149,10 +155,38 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
     }
   }
 
+  const handleDateClick = (choice) => {
+    if(choice == "date"){
+      if(!showDatePicker){
+        setShowDatePicker(true);
+        setShowTimePicker(false);
+      } else {
+        setShowDatePicker(false);
+        setShowTimePicker(false);
+      }
+    } else {
+      if(!showTimePicker){
+        setShowTimePicker(true);
+        setShowDatePicker(false);
+      } else {
+        setShowTimePicker(false);
+        setShowDatePicker(false);
+      }
+    }
+  }
+
     return (
     
             <View style={styles.modalContainer}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoidingView}
+              >
               <View style={styles.modalContent}>
+                <ScrollView 
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
                 <Text style={styles.modalTitle}>Create an Event</Text>
                 <Text style={styles.label}>Teams:</Text>
                 <TextInput
@@ -315,6 +349,45 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
 
                 )}
                 
+                <View style={{marginTop: 10, marginBottom: 10}}>
+                  <Text style={styles.label}>Event Lock Time:</Text>
+                  <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <TouchableOpacity 
+                      style={styles.datePickerButton} 
+                      onPress={() => handleDateClick("date")}
+                    >
+                      <Text style={styles.datePickerText}>
+                        {lockDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.datePickerButton} 
+                      onPress={() => handleDateClick("time")}
+                    >
+                      <Text style={styles.datePickerText}>
+                        {lockDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.helperText}>Event will lock and stop accepting wagers at this time</Text>
+                </View>
+
+                {(showDatePicker || showTimePicker) && (
+                  <DateTimePicker
+                    value={lockDate}
+                    mode={showDatePicker ? "date" : "time"}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    textColor={Colors.textColor}
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        setLockDate(selectedDate);
+                      }
+                    }}
+                    minimumDate={new Date()}
+                  />
+                )}
+                
                 <View style={styles.buttonRow}>
                   <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => handleCreateEvent()}>
                     <Text style={styles.buttonText}>CREATE</Text>
@@ -324,7 +397,9 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                   </TouchableOpacity>
                 </View>
 
+                </ScrollView>
               </View>
+              </KeyboardAvoidingView>
             </View>
           
   );
@@ -543,5 +618,32 @@ const styles = StyleSheet.create({
       scrollContainer: {
         flex: 1,
         
+      },
+      datePickerButton: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        padding: 12,
+        borderRadius: 5,
+        backgroundColor: Colors.cardBackground,
+        flex: 1,
+        marginHorizontal: 5,
+        alignItems: 'center',
+      },
+      datePickerText: {
+        color: Colors.textColor,
+        fontSize: 14,
+        fontWeight: '600',
+      },
+      helperText: {
+        fontSize: 11,
+        color: '#999',
+        marginTop: 5,
+        fontStyle: 'italic',
+      },
+      keyboardAvoidingView: {
+        width: '100%',
+        height: '85%',
+        justifyContent: 'center',
+        alignItems: 'center',
       },
 });

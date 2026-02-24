@@ -1,7 +1,7 @@
 
 import { useEffect, useLayoutEffect, useState } from "react";
 import { getAuth, updateProfile } from "firebase/auth";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal, Alert } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { EventCard } from "@/components/EventCard";
 import { arrayRemove, doc, updateDoc } from "firebase/firestore";
@@ -15,9 +15,9 @@ import { CreateMSOView } from "@/components/CreateEventView";
 import { BasicEventCard } from "@/components/BasicEventCard";
 import { BetSlipView } from "@/components/BetSlipView";
 import fetchGroups from "./(tabs)/index"
-import * as wagers_service from "../services/wagers-service"
-import * as groups_service from "../services/groups-service"
-import * as events_service from "../services/events-service"
+import * as wagers_service from "../clients/wagers-client"
+import * as groups_service from "../clients/groups-client"
+import * as events_service from "../clients/events-client"
 
 
 interface Event {
@@ -37,9 +37,11 @@ interface Event {
     overOdds: string;
     underOdds: string;
   }
+  lockDate: Date;
   createdAt: Date;
   status: string;
   results: string[];
+  acceptingWagers: boolean;
 
 }
 
@@ -56,6 +58,8 @@ interface Prop {
   groupName: string;
   result: string; 
   status: string;
+  lockDate: Date;
+  acceptingWagers: boolean;
 
 
 }
@@ -65,9 +69,10 @@ interface Bet {
   amount: number;
   groupId: string;
   odds: string;
-  picks: Map<string, string>,
+  picks: Map<string, any>,
   status: string;
   userId: string;
+  lockDate: Date;
 
 }
 
@@ -86,6 +91,7 @@ export default function Group() {
     const [wager, setWager] = useState(100);
     const [totalDecimalOdds, setTotalDecimalOdds] = useState(1.0);
     const [loading, setLoading] = useState(false);
+    const [loadingEvents, setLoadingEvents] = useState(false);
     const [currentBalance, setCurrentBalance] = useState(0);
     const [betSlipModalVisible, setBetSlipModalVisible] = useState(false);
     
@@ -150,12 +156,13 @@ export default function Group() {
     
 
     const placeBets = async () => {
-  setLoading(true);
+      setLoading(true);
 
   try {
     console.log("Placing bets...");
 
     let counter = 0;
+    let lockDates: Date[] = [];
     betSlip.forEach((bet) => {
       const eventId = bet.get("eventId");
       if (!eventId) return;
@@ -163,6 +170,14 @@ export default function Group() {
       const moneylineKey = `${eventId}-moneyline`;
       const spreadKey = `${eventId}-spread`;
       const overUnderKey = `${eventId}-overUnder`;
+      console.log(bet);
+      console.log("Lock Date for bet " + eventId + ": " + bet.get("lockDate"));
+      
+      const lockDateValue = bet.get("lockDate") as any;
+      if (lockDateValue?._seconds) {
+        console.log(lockDateValue?._seconds);
+        lockDates.push(new Date(lockDateValue._seconds * 1000));
+      }
 
       if (bet.has(moneylineKey)) {
         const value = bet.get(moneylineKey);
@@ -210,6 +225,7 @@ export default function Group() {
       multiplier: totalDecimalOdds,
       risk: wager,
       payout: Math.round(wager * totalDecimalOdds),
+      lockDates: lockDates,
 });
 
 
@@ -218,11 +234,13 @@ export default function Group() {
     fetchBalance();
 
   } catch (err) {
+    resetSlip();
     if (err instanceof Error) {
-      console.error("Error:", err.message);
+      console.log("Error:", err.message);
       Alert.alert("Error", err.message);
     } else {
-      console.error("Unknown error:", err);
+      Alert.alert("Error", String(err));
+      console.log("Unknown error:", err);
     }
   }
 
@@ -240,14 +258,16 @@ const resetSlip = () => {
 
     }
     const fetchEvents = async () => {
+        setLoadingEvents(true);
         try {
           console.log("Fetching events...");
           const events = await events_service.getEventsByGroupId({ groupId: groupId as string });
           const eventsList: Event[] = [];
           const propsList: Prop[] = [];
           events.forEach((eventData) => {
-            if(groupId == eventData.groupId)
-            {
+          if(!eventData.acceptingWagers && admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") !== true){
+              return; 
+            }
               if(eventData.type == "MSO")
               {
                 eventsList.push({
@@ -267,9 +287,11 @@ const resetSlip = () => {
                     overOdds: eventData.options.overOdds,
                     underOdds: eventData.options.underOdds,
                   },
+                  lockDate: eventData.lockDate,
                   createdAt: eventData.createdAt,
                   status: eventData.status,
                   results: eventData.results,
+                  acceptingWagers: eventData.acceptingWagers,
                 });
 
               } else if (eventData.type == "basic")
@@ -291,9 +313,11 @@ const resetSlip = () => {
                       overOdds: "N/A",
                       underOdds: "N/A",
                     },
+                    lockDate: eventData.lockDate,
                     createdAt: eventData.createdAt,
                     status: eventData.status,
                     results: eventData.results[0],
+                    acceptingWagers: eventData.acceptingWagers,
                   });
   
                 } else if(eventData.type == "prop")
@@ -309,21 +333,25 @@ const resetSlip = () => {
                   overUnder: eventData.options.overUnder,
                   createdAt: eventData.createdAt,
                   groupName: eventData.groupName,
+                  lockDate: eventData.lockDate,
                   result: eventData.results[0],
                   status: eventData.status,
+                  acceptingWagers: eventData.acceptingWagers,
 
                 });
               }
               
             }
-            
-          });
+          );
           setEvents(eventsList);
           setProps(propsList);
           setBetSlip([]);
           setBetSlipOdds(new Map<string, string>());
+          console.log(eventsList.length + " events fetched.");
         } catch (error) {
           console.error("Error fetching events:", error);
+        } finally {
+          setLoadingEvents(false);
         }
       };
 
@@ -388,10 +416,14 @@ const resetSlip = () => {
             </View>
           {(view === "events" || view === "props") && (
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
-                  {view === "events" && (
-                    // Shows all groups that the currect user is NOT currently in using filter
+                  {loadingEvents ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="large" color={Colors.primary} />
+                    </View>
+                  ) : (
+                  <>
+                  {view === "events" && 
                     events
-                          .filter((event) => (event.status == "open"))
                           .map((event) => {
                           if(event.type == "MSO") {
 
@@ -410,13 +442,18 @@ const resetSlip = () => {
                               overOdds={event.options.overOdds}
                               underOdds={event.options.underOdds}
                               eventId={event.id} 
+                              lockDate={event.lockDate}
                               createdAt={event.createdAt} 
                               fetchGroups={fetchEvents}
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               betSlip={betSlip}
                               isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
-                              
+                              acceptingWagers={event.acceptingWagers}
+                              onEventSettled={(eventId) => {
+                                // Remove event from your events array
+                                setEvents(prev => prev.filter(event => event.id !== eventId))
+                              }} 
                               >
                               
                             </EventCard>   
@@ -440,8 +477,14 @@ const resetSlip = () => {
                               fetchGroups={fetchEvents}
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
+                              lockDate={event.lockDate}
                               betSlip={betSlip}
                               isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
+                              acceptingWagers={event.acceptingWagers}
+                              onEventSettled={(eventId) => {
+                                // Remove event from your events array
+                                setEvents(prev => prev.filter(event => event.id !== eventId))
+                              }}  
                               >
                               
                             </BasicEventCard>  
@@ -450,12 +493,11 @@ const resetSlip = () => {
 
                           }}
                             
-                      ))
+                      )
                   }
-                  {view === "props" && (
+                  {view === "props" &&
           
-                    props 
-                          .filter((prop) => (prop.status == "open"))
+                    props
                           .map((prop) => (
                           
                             <PropCard 
@@ -472,11 +514,18 @@ const resetSlip = () => {
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               betSlip={betSlip}
+                              lockDate={prop.lockDate}
                               isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
-                              
+                              acceptingWagers={prop.acceptingWagers}
+                              onEventSettled={(eventId) => {
+                                // Remove event from your events array
+                                setProps(prev => prev.filter(event => event.id !== eventId))
+                              }} 
                               >
                             </PropCard>   
-                      ))
+                      )
+                  )}
+                  </>
                   )}
                   </ScrollView>
                   )}
@@ -776,5 +825,11 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
     
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 50,
   },
 });

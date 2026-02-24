@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, Modal, TextInput, View, Text } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
-import * as groups_service from '@/services/groups-service';
+import * as groups_service from '@/clients/groups-client';
 
 export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
   const [inviteCode, setInviteCode] = useState("");

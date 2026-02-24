@@ -2,7 +2,7 @@ import Colors from '@/assets/styles/colors';
 import React, { useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
-import { joinGroup } from '@/services/groups-service';
+import { joinGroup } from '@/clients/groups-client';
 
 
 export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId}) {

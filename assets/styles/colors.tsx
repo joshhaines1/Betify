@@ -3,7 +3,7 @@ const Colors = {
     primary: '#ff496b',
     textColor: 'white',
     background: 'black',
-    cardBackground: '#1c1619',
+    cardBackground: '#121212ff',
     border: '#7a7a7a',
     //border: 'white',
     propTextColor: 'white'

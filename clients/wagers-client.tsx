@@ -1,7 +1,7 @@
 import { FIREBASE_AUTH } from '@/.FirebaseConfig';
 import { BASE_API_ENDPOINT } from '../constants/api';
 
-export async function placeWager({ groupId, picks, eventIds, odds, multiplier, risk, payout}) {
+export async function placeWager({ groupId, picks, eventIds, odds, multiplier, risk, payout, lockDates}) {
   const user = FIREBASE_AUTH.currentUser;
     if (!user) {
       console.error("No logged-in user.");
@@ -18,7 +18,7 @@ export async function placeWager({ groupId, picks, eventIds, odds, multiplier, r
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ groupId, userId, picks, eventIds, odds, multiplier, risk, payout,}),
+    body: JSON.stringify({ groupId, userId, picks, eventIds, odds, multiplier, risk, payout, lockDates}),
   });
 
   const data = await res.json();

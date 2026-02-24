@@ -1,7 +1,7 @@
 import { FIREBASE_AUTH } from '@/.FirebaseConfig';
 import { BASE_API_ENDPOINT } from '../constants/api';
 
-export async function createEvent({ groupId, type, options}) {
+export async function createEvent({ groupId, type, options, lockDate}) {
   const token = await FIREBASE_AUTH.currentUser?.getIdToken();
   if (!token) throw new Error("User not authenticated");
 
@@ -11,8 +11,9 @@ export async function createEvent({ groupId, type, options}) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ groupId, type, options }),
+    body: JSON.stringify({ groupId, type, options, lockDate }),
   });
+
 
   const data = await res.json();
 

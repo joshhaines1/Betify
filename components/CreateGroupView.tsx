@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
-import * as groups_service from '../services/groups-service'
+import * as groups_service from '../clients/groups-client'
 
 export function CreateGroupView({setModalVisible, fetchGroups}) {
   

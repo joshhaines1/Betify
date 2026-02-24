@@ -47,6 +47,15 @@ import { Alert } from "react-native";
             return true;
         }
         
+      }
 
+      export const validDate = (date: Date) => {
 
+        const now = new Date();
+        if(date <= now){
+          Alert.alert("Invalid Date", "The lock date must be in the future.");
+          return false; // Invalid
+        }
+
+        return true; //Valid
       }

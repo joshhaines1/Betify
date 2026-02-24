@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import Colors from "@/assets/styles/colors";
 import { useFocusEffect } from "expo-router";
-import * as wagers_service from "../../services/wagers-service";
+import * as wagers_service from "../../clients/wagers-client";
 
 interface Bet {
   id: string;
@@ -201,21 +201,25 @@ export default function Bets() {
       )}
       </View>
 
-          {/* Global Loading Overlay */}
-      
       {/* FlatList for Bets */}
-      <FlatList
-        data={displayedBets}
-        renderItem={renderBetItem}
-        keyExtractor={(item) => `${view}-${item.id}`}
-        onEndReached={handleEndScroll}
-        onEndReachedThreshold={0.1}
-        showsVerticalScrollIndicator={false}
-        style={styles.scrollContainer}
-        ListEmptyComponent={renderEmptyComponent}
-        refreshing={false}
-        onRefresh={onRefresh}
-      />
+      {loading && displayedBets.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={displayedBets}
+          renderItem={renderBetItem}
+          keyExtractor={(item) => `${view}-${item.id}`}
+          onEndReached={handleEndScroll}
+          onEndReachedThreshold={0.1}
+          showsVerticalScrollIndicator={false}
+          style={styles.scrollContainer}
+          ListEmptyComponent={renderEmptyComponent}
+          refreshing={false}
+          onRefresh={onRefresh}
+        />
+      )}
 
       
     </View>
@@ -268,5 +272,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     width: '53%',
     
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 50,
   },
 });

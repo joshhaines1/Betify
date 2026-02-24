@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, Platform, TextInput, Alert, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
-import * as events_service from '../services/events-service';
+import * as events_service from '../clients/events-client';
 
 export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId}) {
   
@@ -14,6 +15,9 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
     const [overOdds, setOverOdds] = useState("");
     const [underOdds, setUnderOdds] = useState("");
     const [type, setType] = useState("prop");
+    const [lockDate, setLockDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
 
     useEffect(() => {
         resetFields();
@@ -31,16 +35,36 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
           return true; 
         }
       }
+
+  const handleDateClick = (choice) => {
+    if(choice == "date"){
+      if(!showDatePicker){
+        setShowDatePicker(true);
+        setShowTimePicker(false);
+      } else {
+        setShowDatePicker(false);
+        setShowTimePicker(false);
+      }
+    } else {
+      if(!showTimePicker){
+        setShowTimePicker(true);
+        setShowDatePicker(false);
+      } else {
+        setShowTimePicker(false);
+        setShowDatePicker(false);
+      }
+    }
+  }
     
     const createEvent = async () => {
 
         if(!validInputs()){
-          Alert.alert("Invalid Input", "Please ensure all fields are filled out correctly.");
           return;
         }
           events_service.createEvent({
           groupId: groupId,
           type: type,
+          lockDate: lockDate,
           options: {
             name: name,
             description: description,
@@ -73,7 +97,15 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
     return (
     
             <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoidingView}
+              >
+                <View style={styles.modalContent}>
+                  <ScrollView 
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
                 <Text style={styles.modalTitle}>Create a Prop</Text>
                 <Text style={styles.label}>Name:</Text>
                 <TextInput
@@ -128,6 +160,46 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
                     </View>
                     
                 </View>
+
+                <View style={{marginTop: 0, marginBottom: 10}}>
+                  <Text style={styles.label}>Event Lock Time:</Text>
+                  <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <TouchableOpacity 
+                      style={styles.datePickerButton} 
+                      onPress={() => handleDateClick("date")}
+                    >
+                      <Text style={styles.datePickerText}>
+                        {lockDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.datePickerButton} 
+                      onPress={() => handleDateClick("time")}
+                    >
+                      <Text style={styles.datePickerText}>
+                        {lockDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.helperText}>Event will lock and stop accepting wagers at this time</Text>
+                </View>
+
+                {(showDatePicker || showTimePicker) && (
+                  <DateTimePicker
+                    value={lockDate}
+                    mode={showDatePicker ? "date" : "time"}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    textColor={Colors.textColor}
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        setLockDate(selectedDate);
+                      }
+                    }}
+                    minimumDate={new Date()}
+                  />
+                )}
+                
                 
                 <View style={styles.buttonRow}>
                   <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createEvent()}>
@@ -138,7 +210,9 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
                   </TouchableOpacity>
                 </View>
 
+                </ScrollView>
               </View>
+              </KeyboardAvoidingView>
             </View>
           
   );
@@ -192,6 +266,12 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "rgba(0,0,0,0.75)",
+      },
+      keyboardAvoidingView: {
+        width: '100%',
+        height: '85%',
+        justifyContent: 'center',
+        alignItems: 'center',
       },
       modalContent: {
         backgroundColor: Colors.cardBackground,
@@ -318,5 +398,26 @@ const styles = StyleSheet.create({
       scrollContainer: {
         flex: 1,
         
+      },
+      datePickerButton: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        padding: 12,
+        borderRadius: 5,
+        backgroundColor: Colors.cardBackground,
+        flex: 1,
+        marginHorizontal: 5,
+        alignItems: 'center',
+      },
+      datePickerText: {
+        color: Colors.textColor,
+        fontSize: 14,
+        fontWeight: '600',
+      },
+      helperText: {
+        fontSize: 11,
+        color: '#999',
+        marginTop: 5,
+        fontStyle: 'italic',
       },
 });
