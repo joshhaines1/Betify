@@ -13,6 +13,7 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
     const [maxMembers, setMaxMembers] = useState("50");
     const [password, setPassword] = useState("");
     const [startingCurrency, setStartingCurrency] = useState("1000");
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         resetFields();
@@ -49,8 +50,13 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
     
   const createGroup = async () => {
     if (!validInputs()) return;
+    setLoading(true);
     setModalVisible(false);
-    groups_service.createGroup(groupName, visibility, startingCurrency, password);
+    groups_service.createGroup(groupName, visibility, startingCurrency, password).catch((error) => {
+      console.error("Error creating group:", error);
+    }).finally(() => {
+      setLoading(false);
+    });
     fetchGroups();
   };
     

@@ -73,10 +73,18 @@ export async function deleteEvent({ eventId}) {
   return data;
 }
 
+const cache = {};
+
 export async function getEventsByGroupId({ groupId }) {
   const token = await FIREBASE_AUTH.currentUser?.getIdToken();
   if (!token) throw new Error("User not authenticated");
 
+  // Check if the data is already in the cache
+  if (cache[groupId]) {
+    console.log(`Returning cached data for groupId: ${groupId}`);
+    return cache[groupId];
+  }
+  
   const res = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/events`, {
     method: "GET",
     headers: {
@@ -90,6 +98,9 @@ export async function getEventsByGroupId({ groupId }) {
   if (!res.ok) {
     throw new Error(data.error || data.message || "Failed to get events");
   }
+
+  // Store the response in the cache
+  cache[groupId] = data;
 
   return data;
 }

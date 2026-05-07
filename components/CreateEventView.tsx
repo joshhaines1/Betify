@@ -24,6 +24,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
     const [lockDate, setLockDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         resetFields();
@@ -70,6 +71,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         if(!validMSOInputs()){
           return;
         }
+        setLoading(true);
           events_client.createEvent({
           groupId: groupId,
           type: type,
@@ -93,6 +95,8 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
           setModalVisible(false);
         }).catch((error) => {
           console.error("Error creating event:", error);
+        }).finally(() => {
+          setLoading(false);
         });
 
         } else if(type == "basic"){
@@ -134,7 +138,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         setOverOdds("");
         setUnderOdds("");
         setType("basic");
-        setLockDate(new Date());
+        setLockDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
       };
       
     
@@ -389,10 +393,10 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
                 )}
                 
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => handleCreateEvent()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => handleCreateEvent()} disabled={loading}>
                     <Text style={styles.buttonText}>CREATE</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()} disabled={loading}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>
                   </TouchableOpacity>
                 </View>

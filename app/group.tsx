@@ -104,6 +104,18 @@ export default function Group() {
       }
     }, [betSlip]);
 
+    const onEventChanged = (eventId, shouldRemove) => {
+      if (shouldRemove) {
+        setEvents(prev => prev.filter(event => event.id !== eventId))
+      }
+    }
+
+    const onPropChanged = (propId, shouldRemove) => {
+      if (shouldRemove) {
+        setProps(prev => prev.filter(prop => prop.id !== propId))
+      }
+    }
+
     const calculateOdds = async () => {
 
       let decimalOdds: number[] = [];
@@ -231,7 +243,7 @@ export default function Group() {
 
     Alert.alert("Success!", "Your wager has been placed.");
     resetSlip();
-    fetchBalance();
+    setCurrentBalance(currentBalance - wager);
 
   } catch (err) {
     resetSlip();
@@ -415,7 +427,7 @@ const resetSlip = () => {
               </TouchableOpacity>
             </View>
           {(view === "events" || view === "props") && (
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
                   {loadingEvents ? (
                     <View style={styles.loadingContainer}>
                       <ActivityIndicator size="large" color={Colors.primary} />
@@ -450,10 +462,7 @@ const resetSlip = () => {
                               betSlip={betSlip}
                               isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
                               acceptingWagers={event.acceptingWagers}
-                              onEventSettled={(eventId) => {
-                                // Remove event from your events array
-                                setEvents(prev => prev.filter(event => event.id !== eventId))
-                              }} 
+                              onEventSettled={onEventChanged} 
                               >
                               
                             </EventCard>   
@@ -481,10 +490,7 @@ const resetSlip = () => {
                               betSlip={betSlip}
                               isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
                               acceptingWagers={event.acceptingWagers}
-                              onEventSettled={(eventId) => {
-                                // Remove event from your events array
-                                setEvents(prev => prev.filter(event => event.id !== eventId))
-                              }}  
+                              onEventSettled={onEventChanged}  
                               >
                               
                             </BasicEventCard>  
@@ -517,10 +523,7 @@ const resetSlip = () => {
                               lockDate={prop.lockDate}
                               isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
                               acceptingWagers={prop.acceptingWagers}
-                              onEventSettled={(eventId) => {
-                                // Remove event from your events array
-                                setProps(prev => prev.filter(event => event.id !== eventId))
-                              }} 
+                              onEventSettled={onPropChanged} 
                               >
                             </PropCard>   
                       )
@@ -658,6 +661,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
     marginBottom: 35,
 
+  },
+
+  scrollContent: {
+    paddingBottom: 100, 
   },
   
   betSlipButtonText: {

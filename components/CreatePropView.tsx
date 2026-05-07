@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
-import * as events_service from '../clients/events-client';
+import * as events_client from '../clients/events-client';
 
 export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId}) {
   
@@ -18,6 +18,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
     const [lockDate, setLockDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         resetFields();
@@ -57,27 +58,30 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
   }
     
     const createEvent = async () => {
-
         if(!validInputs()){
           return;
         }
-          events_service.createEvent({
+        setLoading(true);
+          events_client.createEvent({
           groupId: groupId,
           type: type,
           lockDate: lockDate,
           options: {
             name: name,
             description: description,
-            underOdds: underOdds,
-            overOdds: overOdds,
+            underOdds: (Number(underOdds) > 0 && !underOdds.includes("+")) ? "+" + underOdds : underOdds,
+            overOdds: (Number(overOdds) > 0 && !overOdds.includes("+")) ? "+" + overOdds : overOdds,
             overUnder: line,
           },
         }).then(() => {
           console.log("Event created successfully");
           setModalVisible(false);
           fetchGroups();
+          setLoading(false);
         }).catch((error) => {
           console.error("Error creating event:", error);
+        }).finally(() => {
+          setLoading(false);
         });
       };
     
@@ -87,6 +91,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
         setLine("");
         setOverOdds("");
         setUnderOdds("");
+        setLockDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
       };
     
       const cancelGroupCreation = () => {
@@ -202,10 +207,10 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
                 
                 
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createEvent()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createEvent()} disabled={loading}>
                     <Text style={styles.buttonText}>CREATE</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()} disabled={loading}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>
                   </TouchableOpacity>
                 </View>

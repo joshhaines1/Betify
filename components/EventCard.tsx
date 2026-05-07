@@ -32,6 +32,10 @@ export function EventCard({
   const [spreadSelection, setSpreadSelection] = useState('');
   const [overUnderSelection, setOverUnderSelection] = useState('');
 
+   const [closed, setClosed] = useState(false);
+  
+  useEffect(() => {}, [closed]);
+
   const settleBets = async () => {
       events_service.updateEvent({
         eventId: eventId,
@@ -39,7 +43,9 @@ export function EventCard({
         results: (moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") ? [moneylineSelection, overUnderSelection, spreadSelection] : [],
         acceptingWagers: false,
       }).then(() => {
-        console.log("Event settled successfully");
+        console.log("Event updated successfully");
+        setClosed(true);
+        onEventSettled(eventId, (moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") ? true : false);
         setMoneylineSelection('');  
         setSpreadSelection('');
         setOverUnderSelection('');
@@ -51,7 +57,6 @@ export function EventCard({
           newBetSlipOdds.delete(eventId);
           return newBetSlipOdds;
         });
-        onEventSettled(eventId);
       }).catch((error) => {
         console.error("Error settling event:", error);
       });
@@ -373,8 +378,13 @@ export function EventCard({
 
         {(isAdmin) && (
           <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
-            <Text style={(acceptingWagers || (moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "")) == true ? styles.settleBetsText : styles.lockedBetText}>
-              {(moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") ? "SETTLE" : (acceptingWagers ? "LOCK" : "LOCKED")}
+            <Text style={(!closed) || (moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") ? styles.settleBetsText : styles.lockedBetText}>
+              {(moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") 
+                ? "SETTLE" 
+                : (!closed) 
+                  ? "LOCK" 
+                  : "LOCKED"
+              }
             </Text>
           </TouchableOpacity>
         )}

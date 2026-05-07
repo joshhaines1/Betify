@@ -9,6 +9,9 @@ import * as events_service from '../clients/events-client';
 export function PropCard({name, description, lockDate, overOdds, underOdds, overUnder, fetchGroups, createdAt, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin, acceptingWagers, onEventSettled}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
+  const [closed, setClosed] = useState(!acceptingWagers);
+
+  useEffect(() => {}, [closed]);
 
   const settleBets = async () => {
         events_service.updateEvent({
@@ -18,6 +21,8 @@ export function PropCard({name, description, lockDate, overOdds, underOdds, over
           acceptingWagers: false,
         }).then(() => {
           console.log("Event settled successfully");
+          onEventSettled(eventId, bet != "" ? true : false);
+          setClosed(true);
           selectBet(''); 
           setBetSlip((prev: Map<string, string>[]) => {
             return prev.filter((betMap) => !betMap.has(eventId));
@@ -27,7 +32,6 @@ export function PropCard({name, description, lockDate, overOdds, underOdds, over
             newBetSlipOdds.delete(eventId);
             return newBetSlipOdds;
           });
-          onEventSettled(eventId);
         }).catch((error) => {
           console.error("Error settling event:", error);
         });
@@ -191,8 +195,16 @@ export function PropCard({name, description, lockDate, overOdds, underOdds, over
 
                   <TouchableOpacity style={styles.settleBetsButton} onPress={handleAdminButtonPress}>
                                   
-                    <Text style={(acceptingWagers || bet != "") == true ? styles.settleBetsText : styles.lockedBetText}>{bet != "" ? "SETTLE" : (acceptingWagers ? "LOCK" : "LOCKED")}</Text>
-
+                    <Text 
+                      style={(!closed) || bet != "" ? styles.settleBetsText : styles.lockedBetText}
+                    >
+                      {bet != "" 
+                        ? "SETTLE" 
+                        : (!closed) 
+                          ? "LOCK" 
+                          : "LOCKED"
+                      }
+                    </Text>
                   </TouchableOpacity>
 
                 )}                
