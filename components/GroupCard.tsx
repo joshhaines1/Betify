@@ -25,9 +25,14 @@ export function GroupCard({ name, members, adminName, admins, visibility, passwo
     
   };
 
+  const handleLongPress = () => {
+
+    
+  }
+
   return (
     <>
-    <TouchableOpacity style={styles.container} onPress={handlePress}>
+    <TouchableOpacity style={styles.container} onLongPress={handleLongPress} onPress={handlePress}>
       <Image
         source={require('@/assets/images/groupIcon.png')}
         style={styles.logo}
@@ -58,7 +63,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'stretch',
     width: '100%',
-    height: 100,
+    height: 90,
     borderWidth: 2,
     borderRadius: 20,
     borderColor: Colors.border,
@@ -92,19 +97,19 @@ const styles = StyleSheet.create({
     tintColor: Colors.textColor,
   },
   visibilityText: {
-    fontSize: 15,
+    fontSize: 13,
     marginTop: 3,
     marginLeft: 3,
     color: Colors.textColor,
   },
   groupName: {
-    fontSize: 25,
+    fontSize: 23,
     color: Colors.textColor, // Colors.light.tint is undefined, replaced with 'blue'
     fontWeight: '500',
     width: 225,
   },
   adminName: {
-    fontSize: 15,
+    fontSize: 13,
     color: 'gray',
     marginTop: 3,
     marginLeft: 3,
@@ -125,7 +130,7 @@ const styles = StyleSheet.create({
   },
   groupInfoContainer: {
     width: '52.5%',
-    marginTop: 5,
+    marginTop: 1,
     alignItems: 'flex-start',
   },
 });

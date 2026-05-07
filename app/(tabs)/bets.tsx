@@ -9,18 +9,11 @@ import {
 } from "react-native";
 import { BetCard } from "@/components/BetCard";
 import {
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  startAfter,
-  collection,
   DocumentSnapshot,
 } from "firebase/firestore";
-import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
 import Colors from "@/assets/styles/colors";
 import { useFocusEffect } from "expo-router";
+import * as wagers_service from "../../clients/wagers-client";
 
 interface Bet {
   id: string;
@@ -51,26 +44,6 @@ export default function Bets() {
 
   const getStatusFilter = () => (view === "active" ? "active" : "settled");
 
-  const buildQuery = (
-    statusFilter: string,
-    refresh = false,
-    lastVisible: DocumentSnapshot | null
-  ) => {
-    let betsQuery = query(
-      collection(FIRESTORE, "wagers"),
-      where("userId", "==", FIREBASE_AUTH.currentUser?.uid),
-      where("status", "==", statusFilter),
-      orderBy("date", "desc"),
-      limit(5)
-    );
-
-    if (!refresh && lastVisible) {
-      betsQuery = query(betsQuery, startAfter(lastVisible));
-    }
-
-    return betsQuery;
-  };
-
   const mapDocsToBets = (docs: any[]): Bet[] => {
     return docs.map((docSnap) => {
       const data = docSnap.data();
@@ -98,22 +71,26 @@ export default function Bets() {
       const lastVisible =
         statusFilter === "active" ? lastVisibleActive : lastVisibleSettled;
 
-      const querySnapshot = await getDocs(
-        buildQuery(statusFilter, refresh, lastVisible)
-      );
+      const { wagers, nextCursor } =
+        await wagers_service.getWagersByUser(
+          statusFilter,
+          lastVisible,
+          refresh
+        );
 
-      if (!querySnapshot.empty) {
-        const fetchedBets = mapDocsToBets(querySnapshot.docs);
-        const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
-
+      if (wagers.length > 0) {
         if (statusFilter === "active") {
-          setLastVisibleActive(lastDoc);
-          setHasMoreActiveBets(querySnapshot.docs.length === 5);
-          setActiveBets((prev) => (refresh ? fetchedBets : [...prev, ...fetchedBets]));
+          setLastVisibleActive(nextCursor);
+          setHasMoreActiveBets(wagers.length === 5);
+          setActiveBets((prev) =>
+            refresh ? wagers : [...prev, ...wagers]
+          );
         } else {
-          setLastVisibleSettled(lastDoc);
-          setHasMoreSettledBets(querySnapshot.docs.length === 5);
-          setSettledBets((prev) => (refresh ? fetchedBets : [...prev, ...fetchedBets]));
+          setLastVisibleSettled(nextCursor);
+          setHasMoreSettledBets(wagers.length === 5);
+          setSettledBets((prev) =>
+            refresh ? wagers : [...prev, ...wagers]
+          );
         }
       } else {
         console.log(`No more ${statusFilter} bets to load!`);
@@ -129,6 +106,7 @@ export default function Bets() {
       setLoading(false);
     }
   };
+
 
   const handleEndScroll = () => {
     if (!loading) {
@@ -147,7 +125,6 @@ export default function Bets() {
   };
 
   const onRefresh = async () => {
-    console.log("refreshing...");
     setRefreshing(true);
     if (view === "active") {
       setLastVisibleActive(null);
@@ -224,21 +201,25 @@ export default function Bets() {
       )}
       </View>
 
-          {/* Global Loading Overlay */}
-      
       {/* FlatList for Bets */}
-      <FlatList
-        data={displayedBets}
-        renderItem={renderBetItem}
-        keyExtractor={(item) => `${view}-${item.id}`}
-        onEndReached={handleEndScroll}
-        onEndReachedThreshold={0.1}
-        showsVerticalScrollIndicator={false}
-        style={styles.scrollContainer}
-        ListEmptyComponent={renderEmptyComponent}
-        refreshing={false}
-        onRefresh={onRefresh}
-      />
+      {loading && displayedBets.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={displayedBets}
+          renderItem={renderBetItem}
+          keyExtractor={(item) => `${view}-${item.id}`}
+          onEndReached={handleEndScroll}
+          onEndReachedThreshold={0.1}
+          showsVerticalScrollIndicator={false}
+          style={styles.scrollContainer}
+          ListEmptyComponent={renderEmptyComponent}
+          refreshing={false}
+          onRefresh={onRefresh}
+        />
+      )}
 
       
     </View>
@@ -291,5 +272,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     width: '53%',
     
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 50,
   },
 });

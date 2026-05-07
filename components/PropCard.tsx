@@ -1,43 +1,54 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Text, View } from 'react-native';
-import { Link, router } from 'expo-router';
-import { JoinGroupView } from './JoinGroupView';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
-import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
-import { FIRESTORE } from '@/.FirebaseConfig';
+import * as events_service from '../clients/events-client';
 
 
-export function PropCard({name, description, overOdds, underOdds, overUnder, fetchGroups, date, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin}) {
+export function PropCard({name, description, lockDate, overOdds, underOdds, overUnder, fetchGroups, createdAt, groupName, eventId, setBetSlip, setBetSlipOdds, betSlip, isAdmin, acceptingWagers, onEventSettled}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
+  const [closed, setClosed] = useState(!acceptingWagers);
+
+  useEffect(() => {}, [closed]);
 
   const settleBets = async () => {
-  
-        let eventDocRef = doc(FIRESTORE, "events", eventId);
-        await updateDoc(eventDocRef, {
-          result: bet,
-          status: "settled",
+        events_service.updateEvent({
+          eventId: eventId,
+          status: bet != "" ? "settled" : "closed",
+          results: bet != "" ? [bet] : [],
+          acceptingWagers: false,
+        }).then(() => {
+          console.log("Event settled successfully");
+          onEventSettled(eventId, bet != "" ? true : false);
+          setClosed(true);
+          selectBet(''); 
+          setBetSlip((prev: Map<string, string>[]) => {
+            return prev.filter((betMap) => !betMap.has(eventId));
+          });
+          setBetSlipOdds((prev) => {
+            const newBetSlipOdds = new Map(prev);
+            newBetSlipOdds.delete(eventId);
+            return newBetSlipOdds;
+          });
+        }).catch((error) => {
+          console.error("Error settling event:", error);
         });
-        
     }
   
-    const handleSettleButtonPress =  () => {
-  
+    const handleAdminButtonPress =  () => {
+      if(acceptingWagers === false && bet == ""){
+        return;
+      }
       Alert.alert(
-        "Settle Event?",
-        "Are you sure you want to settle this event with the selected outcome?",
+        bet != "" ? "Settle Event?" : "Manually Lock Event?",
+        bet != "" ? "Are you sure you want to settle this event with the selected outcome?" : "Are you sure you want to manually lock this event and stop accepting wagers?",
         [
           {
             text: "Yes",
-            onPress: () => {
-
-              fetchGroups();
-              selectBet('');  
+            onPress: () => { 
               settleBets();
-              console.log("Refresh events...");
-
             },
           },
           {
@@ -50,16 +61,20 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
       );
       
   
-    }
+    };
+  
 
   const handlePress = (type: string, odds: string, name: string, lineAndProp: string, header: string) => {
-      if (bet === type) {
+    if (bet === type) {
         selectBet("");
       } else {
         selectBet(type);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
     
+      if(!acceptingWagers){
+        return;
+      }
       setBetSlip((prev: Map<string, string>[]) => {
         // Find existing bet for this event
         if (!Array.isArray(prev)) {
@@ -82,6 +97,7 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
             newBetMap.set("lineAndProp", lineAndProp);
             newBetMap.set("name", name);
             newBetMap.set("odds", odds);
+            newBetMap.set("lockDate", lockDate);
             newBetSlip.push(newBetMap);
   
           } else {
@@ -98,6 +114,7 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
           newBetMap.set("lineAndProp", lineAndProp);
           newBetMap.set("name", name);
           newBetMap.set("odds", odds);
+          newBetMap.set("lockDate", lockDate);
           newBetSlip.push(newBetMap);
           
         }
@@ -136,11 +153,8 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
       <View style={[styles.eventInfoContainer, styles.topInfo]}>
         <View style={styles.eventDateContainer}>
                 
-            <Text style={styles.eventInfoText}>{date.toDate().toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                })}</Text>
+            <Text style={styles.eventInfoText}>{new Date(lockDate._seconds * 1000).toLocaleString("en-US", { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</Text>
+                  
       
             </View>
             <View style={styles.optionHeaderContainer}>
@@ -177,12 +191,20 @@ export function PropCard({name, description, overOdds, underOdds, overUnder, fet
       <View style={[styles.eventInfoContainer, styles.bottomInfo]}>
         <Text style={styles.eventInfoText}>{groupName}</Text>
 
-        {(isAdmin && bet != "")&& (
+        {(isAdmin)&& (
 
-                  <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
+                  <TouchableOpacity style={styles.settleBetsButton} onPress={handleAdminButtonPress}>
                                   
-                    <Text style={styles.settleBetsText}>SETTLE</Text>
-
+                    <Text 
+                      style={(!closed) || bet != "" ? styles.settleBetsText : styles.lockedBetText}
+                    >
+                      {bet != "" 
+                        ? "SETTLE" 
+                        : (!closed) 
+                          ? "LOCK" 
+                          : "LOCKED"
+                      }
+                    </Text>
                   </TouchableOpacity>
 
                 )}                
@@ -225,6 +247,13 @@ const styles = StyleSheet.create({
     backgroundColor: '',
     fontWeight: '800',
 
+  },
+lockedBetText: {
+    fontSize: 10,
+    color: "#8f8f8fff",
+    textAlign: 'right',
+    backgroundColor: '',
+    fontWeight: '800',
   },
   settleBetsButton: {
     backgroundColor: '',

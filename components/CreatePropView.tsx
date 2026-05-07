@@ -1,11 +1,11 @@
-import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
-import { collection, doc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, Platform, TextInput, Alert, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
+import * as events_client from '../clients/events-client';
 
 export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId}) {
   
@@ -15,6 +15,10 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
     const [overOdds, setOverOdds] = useState("");
     const [underOdds, setUnderOdds] = useState("");
     const [type, setType] = useState("prop");
+    const [lockDate, setLockDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         resetFields();
@@ -32,40 +36,53 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
           return true; 
         }
       }
+
+  const handleDateClick = (choice) => {
+    if(choice == "date"){
+      if(!showDatePicker){
+        setShowDatePicker(true);
+        setShowTimePicker(false);
+      } else {
+        setShowDatePicker(false);
+        setShowTimePicker(false);
+      }
+    } else {
+      if(!showTimePicker){
+        setShowTimePicker(true);
+        setShowDatePicker(false);
+      } else {
+        setShowTimePicker(false);
+        setShowDatePicker(false);
+      }
+    }
+  }
     
     const createEvent = async () => {
-        try {
-          if (!validInputs()) {
-            
-            return;
-          }
-          setModalVisible(false);
-          const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
-          const eventId = eventRef.id; // Get the auto-generated ID
-            const date = new Date();
-          // Step 1: Create the group document
-          await setDoc(eventRef, {
+        if(!validInputs()){
+          return;
+        }
+        setLoading(true);
+          events_client.createEvent({
+          groupId: groupId,
+          type: type,
+          lockDate: lockDate,
+          options: {
             name: name,
             description: description,
-            groupId: groupId,
-            groupName: groupName,
-            type: type,
-            underOdds: underOdds,
-            overOdds: overOdds,
+            underOdds: (Number(underOdds) > 0 && !underOdds.includes("+")) ? "+" + underOdds : underOdds,
+            overOdds: (Number(overOdds) > 0 && !overOdds.includes("+")) ? "+" + overOdds : overOdds,
             overUnder: line,
-            result: "",
-            status: "active", // Example field
-            date: new Date(),
-          });
-          
-      
-          
-        } catch (error) {
-          console.error("Error creating group:", error);
-        }
-    
-        
-        fetchGroups();
+          },
+        }).then(() => {
+          console.log("Event created successfully");
+          setModalVisible(false);
+          fetchGroups();
+          setLoading(false);
+        }).catch((error) => {
+          console.error("Error creating event:", error);
+        }).finally(() => {
+          setLoading(false);
+        });
       };
     
       const resetFields = () => {
@@ -74,6 +91,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
         setLine("");
         setOverOdds("");
         setUnderOdds("");
+        setLockDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
       };
     
       const cancelGroupCreation = () => {
@@ -84,7 +102,15 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
     return (
     
             <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoidingView}
+              >
+                <View style={styles.modalContent}>
+                  <ScrollView 
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
                 <Text style={styles.modalTitle}>Create a Prop</Text>
                 <Text style={styles.label}>Name:</Text>
                 <TextInput
@@ -139,17 +165,59 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
                     </View>
                     
                 </View>
+
+                <View style={{marginTop: 0, marginBottom: 10}}>
+                  <Text style={styles.label}>Event Lock Time:</Text>
+                  <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <TouchableOpacity 
+                      style={styles.datePickerButton} 
+                      onPress={() => handleDateClick("date")}
+                    >
+                      <Text style={styles.datePickerText}>
+                        {lockDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.datePickerButton} 
+                      onPress={() => handleDateClick("time")}
+                    >
+                      <Text style={styles.datePickerText}>
+                        {lockDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.helperText}>Event will lock and stop accepting wagers at this time</Text>
+                </View>
+
+                {(showDatePicker || showTimePicker) && (
+                  <DateTimePicker
+                    value={lockDate}
+                    mode={showDatePicker ? "date" : "time"}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    textColor={Colors.textColor}
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        setLockDate(selectedDate);
+                      }
+                    }}
+                    minimumDate={new Date()}
+                  />
+                )}
+                
                 
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createEvent()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createEvent()} disabled={loading}>
                     <Text style={styles.buttonText}>CREATE</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()} disabled={loading}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>
                   </TouchableOpacity>
                 </View>
 
+                </ScrollView>
               </View>
+              </KeyboardAvoidingView>
             </View>
           
   );
@@ -203,6 +271,12 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "rgba(0,0,0,0.75)",
+      },
+      keyboardAvoidingView: {
+        width: '100%',
+        height: '85%',
+        justifyContent: 'center',
+        alignItems: 'center',
       },
       modalContent: {
         backgroundColor: Colors.cardBackground,
@@ -329,5 +403,26 @@ const styles = StyleSheet.create({
       scrollContainer: {
         flex: 1,
         
+      },
+      datePickerButton: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        padding: 12,
+        borderRadius: 5,
+        backgroundColor: Colors.cardBackground,
+        flex: 1,
+        marginHorizontal: 5,
+        alignItems: 'center',
+      },
+      datePickerText: {
+        color: Colors.textColor,
+        fontSize: 14,
+        fontWeight: '600',
+      },
+      helperText: {
+        fontSize: 11,
+        color: '#999',
+        marginTop: 5,
+        fontStyle: 'italic',
       },
 });

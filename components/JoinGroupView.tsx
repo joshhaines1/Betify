@@ -1,45 +1,21 @@
-import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
 import Colors from '@/assets/styles/colors';
-import { arrayUnion, collection, doc, setDoc, updateDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
+import { joinGroup } from '@/clients/groups-client';
 
 
 export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId}) {
-  const groupDocRef = doc(FIRESTORE, "groups", groupId);
-
-
-
-    const [password, setPassword] = useState("");
-
-    const addMemberToGroup = async () => {
-      
-      await updateDoc(groupDocRef, {
-        members: arrayUnion(FIREBASE_AUTH.currentUser?.uid)
-      });
-      
-      //Add a new member to the members subcollection
-      const membersCollectionRef = collection(groupDocRef, "members");
-      const memberDocRef = doc(membersCollectionRef, FIREBASE_AUTH.currentUser?.uid);
-      await setDoc(memberDocRef, {
-        id: FIREBASE_AUTH.currentUser?.uid,
-        displayName: FIREBASE_AUTH.currentUser?.displayName,
-        joinedAt: new Date(),
-        balance: Number(startingCurrency),
-      });
-
-    }
+  const [password, setPassword] = useState("");
   
-    const joinGroup = async () => {
+    const addUserToGroup = async () => {
         try {
-
           if(visibility == "Private")
           {
             if(password == correctPassword)
             {
-              //setModalVisible(false);
-              addMemberToGroup();
+              setModalVisible(false);
+              await joinGroup(groupId);
 
             } else {
 
@@ -47,8 +23,8 @@ export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, c
             }
 
           } else {
-            //setModalVisible(false);
-            addMemberToGroup()
+            setModalVisible(false);
+            await joinGroup(groupId);
           }
       
           
@@ -88,7 +64,7 @@ export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, c
                 <Text style={styles.label}>Starting Currency:</Text>
                 <View style={styles.infoContainer}><Text style={styles.infoText}>{startingCurrency}</Text></View>
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => joinGroup()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => addUserToGroup()}>
                     <Text style={styles.buttonText}>JOIN</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupJoin()}>

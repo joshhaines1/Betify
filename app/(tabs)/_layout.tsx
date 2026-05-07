@@ -4,7 +4,7 @@ import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import React, { useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuth } from "firebase/auth";
-import { useAuth } from '../AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 
@@ -91,6 +91,17 @@ export default function TabLayout() {
           lazy: true,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} color={color} size={24}/>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="help"
+        options={{
+          title: 'Help',
+          lazy: true,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'help-circle' : 'help-circle-outline'} color={color} size={24}/>
           ),
         }}
       />

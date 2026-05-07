@@ -2,15 +2,16 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { GroupCard } from "@/components/GroupCard";
-import { getDocs, collection, limit, query, where } from "firebase/firestore";
-import { FIRESTORE, FIREBASE_AUTH } from "@/.FirebaseConfig";
+import { FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
-import { useFocusEffect } from "expo-router";
 import Colors from "@/assets/styles/colors";
 import { TextInput } from "react-native";
 import { JoinGroupWithCodeView } from "@/components/JoinGroupWithCodeView";
+import * as groups_service from "../../clients/groups-client";
 
 interface Group {
   id: string;
@@ -43,42 +44,15 @@ export default function GroupsScreen() {
   useEffect(() => {
     fetchGroups();
      }, []);
-
-     const buildQuery = (allGroups: boolean) => {
-      let betsQuery = allGroups
-        ? query(collection(FIRESTORE, "groups"),
-          limit(10)
-      ) 
-        : query(
-            collection(FIRESTORE, "groups"),
-            where("members", "array-contains", FIREBASE_AUTH.currentUser?.uid)
-          );
     
-      return betsQuery;
-    };
-    
-
   const fetchGroups = async () => {
-    try {
-      setLoading(true);
-      const querySnapshot = await getDocs(buildQuery(false));
-      const myGroupsList: Group[] = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Group[];
-      setMyGroups(myGroupsList);
-
-      const querySnapshot1 = await getDocs(buildQuery(true));
-      const otherGroupsList: Group[] = querySnapshot1.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Group[];
-      setOtherGroups(otherGroupsList);
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    } finally {
-      setLoading(false);
-    }
+    console.log("Fetching groups...");
+    setLoading(true);
+    const myGroups = await groups_service.getUsersGroups();
+    const otherGroups = await groups_service.getAllGroups();
+    setMyGroups(myGroups);
+    setOtherGroups(otherGroups.groups);
+    setLoading(false);
   };
 
   const onRefresh = async () => {
@@ -116,7 +90,7 @@ export default function GroupsScreen() {
         
         <TouchableOpacity 
           style={[styles.switchButton, view === "explore" && styles.activeSwitchButton]} 
-          onPress={() => {}}>
+          onPress={() => setView("explore")}>
           <Text style={styles.switchText}>Explore Groups</Text>
         </TouchableOpacity>
 
@@ -124,7 +98,7 @@ export default function GroupsScreen() {
           <TouchableOpacity 
           style={[styles.joinButton]} 
           onPress={() => setInviteCodeModalVisible(true)}>
-          <Text style={styles.switchText}>JOIN</Text>
+            <Text style={styles.switchText}>JOIN</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -133,7 +107,11 @@ export default function GroupsScreen() {
         <ActivityIndicator size="large" color="#ff496b" />
       )}
         <TextInput></TextInput>
-        {view === "joined" && myGroups.length === 0 ? (
+        {loading && myGroups.length === 0 && otherGroups.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : view === "joined" && myGroups.length === 0 ? (
   <View style={{ alignItems: 'center', marginTop: 50 }}>
     
     <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600'}}>
@@ -187,12 +165,23 @@ export default function GroupsScreen() {
         <Text style={styles.plusButtonText}>+</Text>
       </TouchableOpacity>
 
-      <Modal animationType="fade" transparent={true} visible={createModalVisible}>
-        <CreateGroupView fetchGroups={fetchGroups} setModalVisible={setCreateModalVisible}></CreateGroupView>
-      </Modal>
 
+      <Modal animationType="fade" transparent={true} visible={createModalVisible}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+        <CreateGroupView fetchGroups={fetchGroups} setModalVisible={setCreateModalVisible}></CreateGroupView>
+        </KeyboardAvoidingView>
+      </Modal>
+      
       <Modal animationType="fade" transparent={true} visible={inviteCodeModal}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
         <JoinGroupWithCodeView fetchGroups={fetchGroups} setModalVisible={setInviteCodeModalVisible}></JoinGroupWithCodeView>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -218,7 +207,8 @@ const styles = StyleSheet.create({
   },
   joinButtonContainer: {
     alignItems: 'flex-end',
-    flex: 1, 
+    width: "100%",
+    flex: 1,
     padding: 5,
     marginHorizontal: 5,
     borderBottomWidth: 0,
@@ -230,10 +220,10 @@ const styles = StyleSheet.create({
   joinButton: {
 
     backgroundColor: Colors.primary, 
-    width: '50%',
+    width: '75%',
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1, 
+    flex: 1,
     borderRadius: 5,
 
   },
@@ -262,5 +252,11 @@ const styles = StyleSheet.create({
     fontSize: 50,
     padding: 0,
     lineHeight: 52.5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 50,
   },
 });

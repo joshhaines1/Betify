@@ -1,11 +1,11 @@
-import { FIREBASE_AUTH, FIRESTORE } from '@/.FirebaseConfig';
-import { collection, doc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { Text, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
+import * as events_client from "../clients/events-client"
 
 export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}) {
   
@@ -21,6 +21,10 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
     const [underOdds, setUnderOdds] = useState("");
     const [type, setType] = useState("");
     const [spreadType, setSpreadType] = useState("Spread");
+    const [lockDate, setLockDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         resetFields();
@@ -38,6 +42,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
           !Utils.validOdds(overOdds) ||
           !Utils.validOdds(underOdds) ||
           !Utils.validOverUnder(overUnder) ||
+          !Utils.validDate(lockDate) ||
           !Utils.validSpread(spread, team1MoneylineOdds, team2MoneylineOdds) ||
           team1.trim() == "" || team2.trim() == ""
         ) {
@@ -51,6 +56,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         if (
           !Utils.validOdds(team1MoneylineOdds) ||
           !Utils.validOdds(team2MoneylineOdds) ||
+          !Utils.validDate(lockDate) ||
           team1.trim() == "" || team2.trim() == ""
         ) {
           return false; // Invalid inputs
@@ -60,33 +66,19 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
 
       const handleCreateEvent = async () => {
 
-        if(type == "basic"){
+        if(type == "MSO"){
 
-          createBasicEvent();
-
-        } else if(type == "MSO"){
-
-          createMSOEvent();
+        if(!validMSOInputs()){
+          return;
         }
-      }
-    
-    const createMSOEvent = async () => {
-        try {
-          if (!validMSOInputs()) {
-            
-            return;
-          }
-          setModalVisible(false);
-          const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
-          const eventId = eventRef.id; // Get the auto-generated ID
-            const date = new Date();
-          // Step 1: Create the group document
-          await setDoc(eventRef, {
+        setLoading(true);
+          events_client.createEvent({
+          groupId: groupId,
+          type: type,
+          lockDate: lockDate,
+          options: {
             team1: team1,
             team2: team2,
-            groupId: groupId,
-            groupName: groupName,
-            type: type,
             underOdds: (Number(underOdds) > 0 && !underOdds.includes("+")) ? "+" + underOdds : underOdds,
             overOdds: (Number(overOdds) > 0 && !overOdds.includes("+")) ? "+" + overOdds : overOdds,
             overUnder: overUnder,
@@ -95,54 +87,43 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
             spread: spreadType == "Spread" ? spread : "-" + spread,
             spreadOdds1: (Number(team1SpreadOdds) > 0 && !team1SpreadOdds.includes("+")) ? "+" + team1SpreadOdds : team1SpreadOdds,
             spreadOdds2: (Number(team2SpreadOdds) > 0 && !team2SpreadOdds.includes("+"))? "+" + team2SpreadOdds : team2SpreadOdds,
-            result: ["", "", ""],
-            status: "active", // Example field
-            date: new Date(),
-          });
-          
-      
-          
-        } catch (error) {
-          console.error("Error creating group:", error);
-        }
-    
-        
-        fetchGroups();
-      };
+          },
+        }).then(() => {
+          console.log("Event created successfully");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          fetchGroups(); 
+          setModalVisible(false);
+        }).catch((error) => {
+          console.error("Error creating event:", error);
+        }).finally(() => {
+          setLoading(false);
+        });
 
-      const createBasicEvent = async () => {
-        try {
-          if (!validBasicInputs()) {
-            
+        } else if(type == "basic"){
+
+          if(!validBasicInputs()){
             return;
           }
-          setModalVisible(false);
-          const eventRef = doc(collection(FIRESTORE, "events")); // Create a new group doc reference
-          const eventId = eventRef.id; // Get the auto-generated ID
-            const date = new Date();
-          // Step 1: Create the group document
-          await setDoc(eventRef, {
+          events_client.createEvent({
+          groupId: groupId,
+          type: type,
+          lockDate: lockDate,
+          options: {
             team1: team1,
             team2: team2,
-            groupId: groupId,
-            groupName: groupName,
-            type: type,
             moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
             moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
-            result: [""],
-            status: "active", // Example field
-            date: new Date(),
-          });
-          
-      
-          
-        } catch (error) {
-          console.error("Error creating group:", error);
+          },
+        }).then(() => {
+          console.log("Event created successfully");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          fetchGroups(); 
+          setModalVisible(false);
+        }).catch((error) => {
+          console.error("Error creating event:", error);
+        });
         }
-    
-        
-        fetchGroups();
-      };
+      }
     
     
       const resetFields = () => {
@@ -157,6 +138,7 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
         setOverOdds("");
         setUnderOdds("");
         setType("basic");
+        setLockDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
       };
       
     
@@ -170,7 +152,6 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
   }
 
   function handleSpreadButtonPress(): void {
-
     if(spreadType == "Spread") {
       setSpreadType("Reverse Spread");
     }else {
@@ -178,10 +159,38 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
     }
   }
 
+  const handleDateClick = (choice) => {
+    if(choice == "date"){
+      if(!showDatePicker){
+        setShowDatePicker(true);
+        setShowTimePicker(false);
+      } else {
+        setShowDatePicker(false);
+        setShowTimePicker(false);
+      }
+    } else {
+      if(!showTimePicker){
+        setShowTimePicker(true);
+        setShowDatePicker(false);
+      } else {
+        setShowTimePicker(false);
+        setShowDatePicker(false);
+      }
+    }
+  }
+
     return (
     
             <View style={styles.modalContainer}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoidingView}
+              >
               <View style={styles.modalContent}>
+                <ScrollView 
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
                 <Text style={styles.modalTitle}>Create an Event</Text>
                 <Text style={styles.label}>Teams:</Text>
                 <TextInput
@@ -344,16 +353,57 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
 
                 )}
                 
+                <View style={{marginTop: 10, marginBottom: 10}}>
+                  <Text style={styles.label}>Event Lock Time:</Text>
+                  <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <TouchableOpacity 
+                      style={styles.datePickerButton} 
+                      onPress={() => handleDateClick("date")}
+                    >
+                      <Text style={styles.datePickerText}>
+                        {lockDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.datePickerButton} 
+                      onPress={() => handleDateClick("time")}
+                    >
+                      <Text style={styles.datePickerText}>
+                        {lockDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.helperText}>Event will lock and stop accepting wagers at this time</Text>
+                </View>
+
+                {(showDatePicker || showTimePicker) && (
+                  <DateTimePicker
+                    value={lockDate}
+                    mode={showDatePicker ? "date" : "time"}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    textColor={Colors.textColor}
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        setLockDate(selectedDate);
+                      }
+                    }}
+                    minimumDate={new Date()}
+                  />
+                )}
+                
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => handleCreateEvent()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => handleCreateEvent()} disabled={loading}>
                     <Text style={styles.buttonText}>CREATE</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()} disabled={loading}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>
                   </TouchableOpacity>
                 </View>
 
+                </ScrollView>
               </View>
+              </KeyboardAvoidingView>
             </View>
           
   );
@@ -572,5 +622,32 @@ const styles = StyleSheet.create({
       scrollContainer: {
         flex: 1,
         
+      },
+      datePickerButton: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        padding: 12,
+        borderRadius: 5,
+        backgroundColor: Colors.cardBackground,
+        flex: 1,
+        marginHorizontal: 5,
+        alignItems: 'center',
+      },
+      datePickerText: {
+        color: Colors.textColor,
+        fontSize: 14,
+        fontWeight: '600',
+      },
+      helperText: {
+        fontSize: 11,
+        color: '#999',
+        marginTop: 5,
+        fontStyle: 'italic',
+      },
+      keyboardAvoidingView: {
+        width: '100%',
+        height: '85%',
+        justifyContent: 'center',
+        alignItems: 'center',
       },
 });
