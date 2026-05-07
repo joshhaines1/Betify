@@ -142,3 +142,23 @@ export const getUsersCurrency = async (groupId) => {
     return [];
   }
 };
+
+export const getGroupLeaderboard = async (groupId) => {
+  try {
+    const user = FIREBASE_AUTH.currentUser;
+    if (!user) {
+      console.error("No logged-in user.");
+      return [];
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/leaderboard`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    return data.leaderboard;
+  } catch (error) {
+    console.error("Error fetching group leaderboard:", error);
+    return [];
+  }
+};

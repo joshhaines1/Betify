@@ -16,7 +16,7 @@ import { BasicEventCard } from "@/components/BasicEventCard";
 import { BetSlipView } from "@/components/BetSlipView";
 import fetchGroups from "./(tabs)/index"
 import * as wagers_service from "../clients/wagers-client"
-import * as groups_service from "../clients/groups-client"
+import * as groups_client from "../clients/groups-client"
 import * as events_service from "../clients/events-client"
 
 
@@ -94,6 +94,7 @@ export default function Group() {
     const [loadingEvents, setLoadingEvents] = useState(false);
     const [currentBalance, setCurrentBalance] = useState(0);
     const [betSlipModalVisible, setBetSlipModalVisible] = useState(false);
+    const [leaderboard, setLeaderboard] = useState([]);
     
     useEffect(() => {
       if (betSlip.length > 0) {
@@ -265,10 +266,15 @@ const resetSlip = () => {
 };
     const fetchBalance = async () => {
 
-       const balance = await groups_service.getUsersCurrency(groupId as string);
+       const balance = await groups_client.getUsersCurrency(groupId as string);
         setCurrentBalance(balance);
 
     }
+    const fetchLeaderboard = async () => {
+      const leaderboard = await groups_client.getGroupLeaderboard(groupId as string);
+        setLeaderboard(leaderboard);
+        // TODO Finish implementing leaderboard 
+    }; 
     const fetchEvents = async () => {
         setLoadingEvents(true);
         try {
