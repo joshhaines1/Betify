@@ -8,21 +8,21 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true,
       "icons": {
         "dark": "./assets/icons/BetifyAppLogoDark.png",
         "light": "./assets/icons/BetifyAppLogoLight.png"
-      }
+      },
+      "bundleIdentifier": "com.anonymous.Betify"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.anonymous.Betify"
     },
-  
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -33,12 +33,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/icons/BetifyAppLogoLight.png",
+          "image": "./assets/icons/BetifyAppLogoDark.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "black"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

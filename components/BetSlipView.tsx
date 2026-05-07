@@ -1,134 +1,126 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
-import * as groups_service from '../clients/groups-client'
+import { JoinGroupView } from './JoinGroupView';
 
-export function CreateGroupView({setModalVisible, fetchGroups}) {
+export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, oddsToMultiplier, balance, placeBets, setWager, wager}) {
   
-    const [groupName, setGroupName] = useState("");
-    const [visibility, setVisibility] = useState("Public");
-    const [maxMembers, setMaxMembers] = useState("50");
-    const [password, setPassword] = useState("");
-    const [startingCurrency, setStartingCurrency] = useState("1000");
-    const [loading, setLoading] = useState(false);
+    const [inviteCode, setInviteCode] = useState("");
+    const [joinGroupModal, setJoinGroupModal] = useState(false);
+    const [password, setPassword] = useState("")
+    const [visibility, setVisibility] = useState("")
+    const [multiplier, setMultiplier] = useState(1);
+    let name: string | null = null;
+    let correctPassword: string | null = null;
+    let members: any[] | null = null;
+    let startingCurrency: number | null = null;
+    let groupId: string | null = null;
+    
 
     useEffect(() => {
         resetFields();
+        setMultiplier(oddsToMultiplier(odds));
         
       }, []);
-
-    const validInputs = () => {
-      if(visibility == "Private"){
-      if(!Utils.validInt(maxMembers)
-       || !Utils.validInt(startingCurrency)
-        || groupName.trim() == "" || password.trim() == ""
-      ){
-        return false;
-      } else {
-
-        return true; 
-
-      }
-    } else {
-
-      if(!Utils.validInt(maxMembers)
-        || !Utils.validInt(startingCurrency)
-         || groupName.trim() == "" 
-       ){
-         return false;
-       } else {
- 
-         return true; 
- 
-       }
-
-    }
-    }
     
-  const createGroup = async () => {
-    if (!validInputs()) return;
-    setLoading(true);
-    setModalVisible(false);
-    groups_service.createGroup(groupName, visibility, startingCurrency, password).catch((error) => {
-      console.error("Error creating group:", error);
-    }).finally(() => {
-      setLoading(false);
-    });
-    fetchGroups();
-  };
+      const submitBets = async () => {
+        if(wager <= 0){
+
+            return; 
+
+        }
+        if(wager <= balance){
+
+            placeBets();
+            setModalVisible(false);
+            
+        } else{
+            console.log(wager, balance);
+            console.log(wager <= balance)
+            Alert.alert("Insufficient Balance", "You do not have enough currency to place this bet.")
+
+        }
+      };
+      
+    
+    
     
       const resetFields = () => {
-        setGroupName(""); 
-        setVisibility("Public");
-        setMaxMembers("50");
-        setStartingCurrency("1000");
-        setPassword("");
+        setInviteCode("");
+        setWager(0);
       };
     
       const cancelGroupCreation = () => {
         setModalVisible(false);
       };
 
-      const handleVisiblityButton = (visibility) => {
-
-        setVisibility(visibility);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
 
     return (
     
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Create a Group</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Group Name"
-                  value={groupName}
-                  onChangeText={setGroupName}
-                  placeholderTextColor={"gray"}
-                />
-                <Text style={styles.label}>Visibility:</Text>
-                <View style={styles.visibilityRow}>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Public" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Public")}>
-                    <Text style={styles.visibilityButtonText}>PUBLIC</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, visibility === "Private" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("Private")}>
-                    <Text style={styles.visibilityButtonText}>PRIVATE</Text>
-                  </TouchableOpacity>
+                <Text style={styles.modalTitle}>Bet Slip</Text>
+                <View style={{flexDirection: 'row'}}>
+                    <Text style={[styles.betSlipText, {flex: 1, marginRight: 15}]}>
+                        Picks: {numberOfPicks}
+                    </Text>
+                    <Text style={[styles.betSlipText, {flex: 1}]}>
+                        Odds: {odds}
+                    </Text>
+
                 </View>
-                {visibility === "Private" && (
-                  <>
-                  <Text style={styles.label}>Password:</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder=""
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholderTextColor={"gray"}
-                  />
-                  </>
-                )}
-              
-                <Text style={styles.label}>Starting Currency:</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  value={startingCurrency}
-                  onChangeText={setStartingCurrency}
-                  placeholderTextColor={"gray"}
-                />
+                <View style={{flexDirection: 'row'}}>
+                    <Text style={[styles.riskPayoutText, {flex: 1, marginRight: 15}]}>
+                        Risk:
+                    </Text>
+                    <Text style={[styles.riskPayoutText, {flex: 1}]}>
+                        Payout:
+                    </Text>
+
+                </View>
+
+                <View style={{flexDirection: 'row'}}>
+                    <TextInput
+                        style={[styles.input, {flex: 1, marginRight: 15}]}
+                        placeholder="Ex: 100"
+                        value={wager}
+                        onChangeText={setWager}
+                        placeholderTextColor={"gray"}
+                    />
+                    <Text
+                        style={[styles.input, {flex: 1}]}
+                    >{Math.round(wager * multiplier)}</Text>
+
+                </View>
+                
+                
+            
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createGroup()}>
-                    <Text style={styles.buttonText}>CREATE</Text>
+                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => submitBets()}>
+                    <Text style={styles.buttonText}>PLACE BETS</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>
                   </TouchableOpacity>
                 </View>
               </View>
+
+              <Modal animationType="fade" transparent={true} visible={joinGroupModal}>
+                        {/** setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId */}
+                        <JoinGroupView
+                            fetchGroups={fetchGroups}
+                            setModalVisible={setJoinGroupModal}
+                            name={name}
+                            visibility={visibility}
+                            correctPassword={correctPassword}
+                            members={[1, 2, 3]}
+                            startingCurrency={1000}
+                            groupId={groupId}
+                        />
+                </Modal>
             </View>
           
   );
@@ -155,6 +147,16 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         width: 120,
         height: 50,
+      },
+      betSlipText:{
+
+        borderColor: "#ccc",
+        fontSize: 20,
+        borderRadius: 5,
+        marginBottom: 5,
+        color: Colors.primary,
+        fontWeight: '700'
+
       },
       createButton: {
         backgroundColor: "#ff496b",
@@ -200,6 +202,16 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         marginBottom: 10,
         color: Colors.textColor,
+      },
+      riskPayoutText: {
+
+        borderColor: "#ccc",
+        fontSize: 15,
+        borderRadius: 5,
+        color: Colors.textColor,
+        fontWeight: '700',
+        marginBottom: 10,
+
       },
       label: {
         fontSize: 16,

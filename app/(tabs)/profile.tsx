@@ -1,8 +1,9 @@
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import { useState } from "react";
 import { getAuth, updateProfile } from "firebase/auth";
 import { View, Text, TouchableOpacity, TextInput, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import Colors from "@/assets/styles/colors";
 
 export default function Profile() {
   const { user, setUser, logout } = useAuth(); // Get user & logout function from context
@@ -44,10 +45,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "white",
+    backgroundColor: Colors.background,
   },
   text: {
-    color: "#ff496b",
+    color: Colors.textColor,
+    fontSize: 24,
+    fontWeight: 600,
   },
   input: {
     borderWidth: 2,
