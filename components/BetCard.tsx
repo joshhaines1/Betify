@@ -11,10 +11,10 @@ export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}
 
   return (
     <>
-    <View style={[styles.container, payout > 0 && status == "settled" && styles.wonContainer]}>
+    <View style={[styles.container, payout > risk && status == "settled" && styles.wonContainer]}>
         {/*  Row 1  */}
       
-      <View style={[styles.row1, payout > 0 && status == "settled" && styles.wonBorder]}>
+      <View style={[styles.row1, payout > risk && status == "settled" && styles.wonBorder]}>
 
         <View style={styles.dateContainer}>
             <Text style={styles.dateText}>{new Date(date._seconds * 1000).toLocaleDateString("en-US")}</Text>         

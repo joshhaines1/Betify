@@ -33,7 +33,7 @@ export const createGroup = async (groupName, visibility, startingCurrency, passw
 };
 
 let usersGroupCache = []
-export const getUsersGroups = async () => {
+export const getUsersGroups = async ( forceRefresh = false ) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
@@ -42,7 +42,7 @@ export const getUsersGroups = async () => {
     }
 
     // Check if the data is already in the cache
-    if (usersGroupCache.length > 0) {
+    if (usersGroupCache.length > 0 && !forceRefresh) {
       console.log(`Returning cached data for user's groups}`);
       return usersGroupCache;
     }
@@ -81,7 +81,7 @@ export const getGroupById = async (groupId) => {
   }};
 
 let allGroupsCache = [];
-export const getAllGroups = async (limit = 0) => {
+export const getAllGroups = async ( limit = 0 , forceRefresh = false ) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
@@ -90,7 +90,7 @@ export const getAllGroups = async (limit = 0) => {
     }
 
     // Check if the data is already in the cache
-    if (allGroupsCache.length > 0) {
+    if (allGroupsCache.length > 0 && !forceRefresh) {
       console.log(`Returning cached data for user's groups}`);
       return allGroupsCache;
     }

@@ -24,7 +24,7 @@ export async function createEvent({ groupId, type, options, lockDate}) {
   return data;
 }
 
-export async function updateEvent({ status, results, acceptingWagers, eventId}) {
+export async function updateEvent({ status, results, acceptingWagers, eventId }) {
   const token = await FIREBASE_AUTH.currentUser?.getIdToken();
   if (!token) throw new Error("User not authenticated");
 
@@ -75,12 +75,12 @@ export async function deleteEvent({ eventId}) {
 
 const cache = {};
 
-export async function getEventsByGroupId({ groupId }) {
+export async function getEventsByGroupId({ groupId, forceRefresh = false }) {
   const token = await FIREBASE_AUTH.currentUser?.getIdToken();
   if (!token) throw new Error("User not authenticated");
 
   // Check if the data is already in the cache
-  if (cache[groupId]) {
+  if (cache[groupId] && !forceRefresh) {
     console.log(`Returning cached data for groupId: ${groupId}`);
     return cache[groupId];
   }

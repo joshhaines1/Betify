@@ -8,7 +8,7 @@ import Colors from '@/assets/styles/colors';
 import * as events_service from '../clients/events-client';
 
 
-export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fetchGroups, createdAt, groupName, eventId, setBetSlip, setBetSlipOdds, lockDate, betSlip, isAdmin, acceptingWagers, onEventSettled}) {
+export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, refreshEvents, createdAt, groupName, eventId, setBetSlip, setBetSlipOdds, lockDate, betSlip, isAdmin, acceptingWagers, onEventSettled}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [bet, selectBet] = useState("");
   const [closed, setClosed] = useState(!acceptingWagers);
@@ -34,10 +34,65 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, fe
           newBetSlipOdds.delete(eventId);
           return newBetSlipOdds;
         });
+        refreshEvents();
       }).catch((error) => {
         console.error("Error settling event:", error);
       });
-    }
+    };
+
+    const settleBetWithPush = async () => {
+      events_service.updateEvent({
+        eventId: eventId,
+        status: "settled",
+        results: ["push"],
+        acceptingWagers: false,
+      }).then(() => {
+        console.log("Event updated successfully");
+        onEventSettled(eventId, bet != "" ? true : false);
+        setClosed(true);
+        selectBet('');
+        setBetSlip((prev: Map<string, string>[]) => {
+          return prev.filter((betMap) => !betMap.has(eventId));
+        });
+        setBetSlipOdds((prev) => {
+          const newBetSlipOdds = new Map(prev);
+          newBetSlipOdds.delete(eventId);
+          return newBetSlipOdds;
+        });
+        refreshEvents();
+      }).catch((error) => {
+        console.error("Error settling event:", error);
+      });
+    };
+
+    const handlePushButtonPress =  () => {
+        if(acceptingWagers === false && bet != ""){
+          return;
+        }
+        Alert.alert(
+          ("Settle Event?"),
+          ("Are you sure you want to settle this event with a tie, refunding each wager placed on this event?"),
+          [
+            {
+              text: "Yes",
+              onPress: () => {
+    
+                settleBetWithPush();
+                console.log("Refresh events...");
+    
+              },
+            },
+            {
+              text: "No",
+              onPress: () => console.log("User answered: No"),
+              style: "cancel",
+            },
+          ],
+          { cancelable: false }
+        );
+        
+    
+      }
   
     const handleSettleButtonPress =  () => {
       if(acceptingWagers === false && bet == ""){
@@ -225,27 +280,30 @@ useEffect(() => {
       
       {/* Row 4 */}
       <View style={[styles.eventInfoContainer, styles.bottomInfo]}>
-        <Text style={styles.eventInfoText}>{groupName}</Text>
-
-        {(isAdmin) && (
-
-        <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
-                        
-          <Text 
-                                style={(!closed) || bet != "" ? styles.settleBetsText : styles.lockedBetText}
-                              >
-                                {bet != "" 
-                                  ? "SETTLE" 
-                                  : (!closed) 
-                                    ? "LOCK" 
-                                    : "LOCKED"
-                                }
-                              </Text>
-        </TouchableOpacity>
-
-        )}
-                
-      </View>
+          <Text style={[styles.eventInfoText, styles.groupNameText]}>{groupName}</Text>
+  
+          {(isAdmin) && (
+            <View style={styles.adminActionsContainer}>
+              {(closed && bet == "") && (
+                <TouchableOpacity style={styles.pushBetsButton} onPress={handlePushButtonPress} disabled={!closed}>
+                  <Text style={styles.settleBetsText}>
+                    PUSH
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
+                <Text style={(!closed) || (bet != "") ? styles.settleBetsText : styles.lockedBetText}>
+                  {(bet != "" && closed) 
+                    ? "SETTLE" 
+                    : (!closed) 
+                      ? "LOCK" 
+                      : "LOCKED"
+                  }
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
       
     </View>
@@ -286,7 +344,6 @@ const styles = StyleSheet.create({
   },
   settleBetsButton: {
     backgroundColor: '',
-    flex: 1,
     marginRight: 5,
   },
   column: {
@@ -315,6 +372,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flex: 1,
 
+  },
+  pushBetsButton: {
+    backgroundColor: '',
+    marginRight: 10,
+    
+  },
+  adminActionsContainer: {
+    flexDirection: 'row',
+  },
+  groupNameText: {
+    flex: 1,
   },
   topInfo: {
     

@@ -236,7 +236,7 @@ export default function Group() {
       eventIds: betSlipObjectArray.map(b => b.eventId),
       odds: liveSlipOdds,
       multiplier: totalDecimalOdds,
-      risk: wager,
+      risk: Number(wager),
       payout: Math.round(wager * totalDecimalOdds),
       lockDates: lockDates,
 });
@@ -275,11 +275,15 @@ const resetSlip = () => {
         setLeaderboard(leaderboard);
         // TODO Finish implementing leaderboard 
     }; 
-    const fetchEvents = async () => {
+    const refreshEvents = () => {
+      console.log("Refreshing events...");
+      fetchEvents(true);
+    }; 
+    const fetchEvents = async (forceRefresh = false) => {
         setLoadingEvents(true);
         try {
           console.log("Fetching events...");
-          const events = await events_service.getEventsByGroupId({ groupId: groupId as string });
+          const events = await events_service.getEventsByGroupId({ groupId: groupId as string, forceRefresh });
           const eventsList: Event[] = [];
           const propsList: Prop[] = [];
           events.forEach((eventData) => {
@@ -462,7 +466,7 @@ const resetSlip = () => {
                               eventId={event.id} 
                               lockDate={event.lockDate}
                               createdAt={event.createdAt} 
-                              fetchGroups={fetchEvents}
+                              refreshEvents={refreshEvents}
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               betSlip={betSlip}
@@ -489,7 +493,7 @@ const resetSlip = () => {
                               moneylineOdds2={event.options.moneylineOdds2} 
                               eventId={event.id} 
                               createdAt={event.createdAt} 
-                              fetchGroups={fetchEvents}
+                              refreshEvents={refreshEvents}
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               lockDate={event.lockDate}
@@ -522,7 +526,7 @@ const resetSlip = () => {
                               underOdds={prop.underOdds}
                               eventId={prop.id} 
                               createdAt={prop.createdAt} 
-                              fetchGroups={fetchEvents}
+                              refreshEvents={refreshEvents}
                               setBetSlip={setBetSlip}
                               setBetSlipOdds={setBetSlipOdds}
                               betSlip={betSlip}
@@ -570,15 +574,15 @@ const resetSlip = () => {
                 
 
                 <Modal animationType="fade" transparent={true} visible={createPropModalVisible}>
-                    <CreatePropView fetchGroups={fetchEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name}></CreatePropView>
+                    <CreatePropView fetchGroups={refreshEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name}></CreatePropView>
                 </Modal>
 
                 <Modal animationType="fade" transparent={true} visible={createEventModalVisible}>
-                    <CreateMSOView fetchGroups={fetchEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name}></CreateMSOView>
+                    <CreateMSOView fetchGroups={refreshEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name}></CreateMSOView>
                 </Modal>
 
                 <Modal animationType="fade" transparent={true} visible={betSlipModalVisible}>
-                    <BetSlipView fetchGroups={fetchEvents} setModalVisible={setBetSlipModalVisible} numberOfPicks={betSlip.length} odds={liveSlipOdds} oddsToMultiplier={oddsToMultiplier} balance={currentBalance} setWager={setWager} wager={wager} placeBets={placeBets}></BetSlipView>
+                    <BetSlipView fetchGroups={refreshEvents} setModalVisible={setBetSlipModalVisible} numberOfPicks={betSlip.length} odds={liveSlipOdds} oddsToMultiplier={oddsToMultiplier} balance={currentBalance} setWager={setWager} wager={wager} placeBets={placeBets}></BetSlipView>
                 </Modal>
 
                 <View style={styles.betSlipAndCreateButton}>

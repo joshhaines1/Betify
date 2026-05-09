@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as events_service from '../clients/events-client';
+import { push } from 'expo-router/build/global-state/routing';
 
 export function EventCard({
   groupName,
@@ -17,7 +18,7 @@ export function EventCard({
   overUnder,
   overOdds,
   underOdds,
-  fetchGroups,
+  refreshEvents,
   createdAt,
   eventId,
   setBetSlip,
@@ -32,7 +33,7 @@ export function EventCard({
   const [spreadSelection, setSpreadSelection] = useState('');
   const [overUnderSelection, setOverUnderSelection] = useState('');
 
-   const [closed, setClosed] = useState(false);
+  const [closed, setClosed] = useState(!acceptingWagers);
   
   useEffect(() => {}, [closed]);
 
@@ -57,9 +58,66 @@ export function EventCard({
           newBetSlipOdds.delete(eventId);
           return newBetSlipOdds;
         });
+        refreshEvents();
       }).catch((error) => {
         console.error("Error settling event:", error);
       });
+  }
+
+  const settleBetWithPush = async () => {
+      events_service.updateEvent({
+        eventId: eventId,
+        status: "settled",
+        results: ["push"],
+        acceptingWagers: false,
+      }).then(() => {
+        console.log("Event updated successfully");
+        setClosed(true);
+        onEventSettled(eventId, (moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") ? true : false);
+        setMoneylineSelection('');  
+        setSpreadSelection('');
+        setOverUnderSelection('');
+        setBetSlip((prev: Map<string, string>[]) => {
+          return prev.filter((betMap) => !betMap.has(eventId));
+        });
+        setBetSlipOdds((prev) => {
+          const newBetSlipOdds = new Map(prev);
+          newBetSlipOdds.delete(eventId);
+          return newBetSlipOdds;
+        });
+        refreshEvents();
+      }).catch((error) => {
+        console.error("Error settling event:", error);
+      });
+  }
+
+  const handlePushButtonPress =  () => {
+    if(acceptingWagers === false && !(moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "")){
+      return;
+    }
+    Alert.alert(
+      ("Settle Event?"),
+      ("Are you sure you want to settle this event with a tie, refunding each wager placed on this event?"),
+      [
+        {
+          text: "Yes",
+          onPress: () => {
+
+            settleBetWithPush();
+            console.log("Refresh events...");
+
+          },
+        },
+        {
+          text: "No",
+          onPress: () => console.log("User answered: No"),
+          style: "cancel",
+        },
+      ],
+      { cancelable: false }
+    );
+    
+
   }
 
   const handleSettleButtonPress =  () => {
@@ -132,7 +190,7 @@ export function EventCard({
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if(!acceptingWagers){
+    if(closed){
       return;
     }
 
@@ -374,19 +432,28 @@ export function EventCard({
 
       {/* Footer */}
       <View style={[styles.eventInfoContainer, styles.bottomInfo]}>
-        <Text style={styles.eventInfoText}>{groupName}</Text>
+        <Text style={[styles.eventInfoText, styles.groupNameText]}>{groupName}</Text>
 
         {(isAdmin) && (
-          <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
-            <Text style={(!closed) || (moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") ? styles.settleBetsText : styles.lockedBetText}>
-              {(moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") 
-                ? "SETTLE" 
-                : (!closed) 
-                  ? "LOCK" 
-                  : "LOCKED"
-              }
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.adminActionsContainer}>
+            {(closed && moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") && (
+              <TouchableOpacity style={styles.pushBetsButton} onPress={handlePushButtonPress} disabled={!closed}>
+                <Text style={styles.settleBetsText}>
+                  PUSH
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.settleBetsButton} onPress={handleSettleButtonPress}>
+              <Text style={(!closed) || (moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "") ? styles.settleBetsText : styles.lockedBetText}>
+                {(moneylineSelection != "" && spreadSelection != "" && overUnderSelection != "" && closed) 
+                  ? "SETTLE" 
+                  : (!closed) 
+                    ? "LOCK" 
+                    : "LOCKED"
+                }
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>
@@ -436,9 +503,19 @@ const styles = StyleSheet.create({
   },
   settleBetsButton: {
     backgroundColor: '',
-    flex: 1,
     marginRight: 5,
     
+  },
+  pushBetsButton: {
+    backgroundColor: '',
+    marginRight: 10,
+    
+  },
+  adminActionsContainer: {
+    flexDirection: 'row',
+  },
+  groupNameText: {
+    flex: 1,
   },
   logo: {
     width: '100%',
