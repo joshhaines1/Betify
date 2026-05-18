@@ -123,7 +123,8 @@ export const joinGroup = async (groupId) => {
     return await response.json();
 }
 
-export const getUsersCurrency = async (groupId) => {
+let balanceCache = {};
+export const getUsersCurrency = async (groupId, forceRefresh = false) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
@@ -131,17 +132,27 @@ export const getUsersCurrency = async (groupId) => {
       return [];
     }
 
+    if (balanceCache[groupId] && !forceRefresh) {
+      console.log(`Returning cached balance for group ${groupId}`);
+      return balanceCache[groupId];
+    }
     const token = await user.getIdToken();
     const response = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/members/${user.uid}/balance`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await response.json();
+    balanceCache[groupId] = data.balance;
     return data.balance;
   } catch (error) {
     console.error("Error fetching user's currency:", error);
     return [];
   }
 };
+
+export const clearBalanceCache = (groupId) => {
+  console.log("Clearing balance cache for group " + groupId);
+  balanceCache[groupId] = null;
+}
 
 export const getGroupLeaderboard = async (groupId) => {
   try {

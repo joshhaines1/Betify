@@ -7,7 +7,7 @@ import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
 import * as events_client from "../clients/events-client"
 
-export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}) {
+export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId}) {
   
     const [team1, setTeam1] = useState("");
     const [team2, setTeam2] = useState("");
@@ -72,26 +72,26 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
           return;
         }
         setLoading(true);
-          events_client.createEvent({
-          groupId: groupId,
-          type: type,
-          lockDate: lockDate,
-          options: {
-            team1: team1,
-            team2: team2,
-            underOdds: (Number(underOdds) > 0 && !underOdds.includes("+")) ? "+" + underOdds : underOdds,
-            overOdds: (Number(overOdds) > 0 && !overOdds.includes("+")) ? "+" + overOdds : overOdds,
-            overUnder: overUnder,
-            moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
-            moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
-            spread: spreadType == "Spread" ? spread : "-" + spread,
-            spreadOdds1: (Number(team1SpreadOdds) > 0 && !team1SpreadOdds.includes("+")) ? "+" + team1SpreadOdds : team1SpreadOdds,
-            spreadOdds2: (Number(team2SpreadOdds) > 0 && !team2SpreadOdds.includes("+"))? "+" + team2SpreadOdds : team2SpreadOdds,
-          },
-        }).then(() => {
-          console.log("Event created successfully");
+          let eventToCreate = {
+            groupId: groupId,
+            type: type,
+            lockDate: lockDate,
+            options: {
+              team1: team1,
+              team2: team2,
+              underOdds: (Number(underOdds) > 0 && !underOdds.includes("+")) ? "+" + underOdds : underOdds,
+              overOdds: (Number(overOdds) > 0 && !overOdds.includes("+")) ? "+" + overOdds : overOdds,
+              overUnder: overUnder,
+              moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
+              moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
+              spread: spreadType == "Spread" ? spread : "-" + spread,
+              spreadOdds1: (Number(team1SpreadOdds) > 0 && !team1SpreadOdds.includes("+")) ? "+" + team1SpreadOdds : team1SpreadOdds,
+              spreadOdds2: (Number(team2SpreadOdds) > 0 && !team2SpreadOdds.includes("+"))? "+" + team2SpreadOdds : team2SpreadOdds,
+            },
+          }
+          events_client.createEvent(eventToCreate).then((response) => {
+          fetchEvents()
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          fetchGroups(); 
           setModalVisible(false);
         }).catch((error) => {
           console.error("Error creating event:", error);
@@ -104,20 +104,21 @@ export function CreateMSOView({setModalVisible, fetchGroups, groupName, groupId}
           if(!validBasicInputs()){
             return;
           }
-          events_client.createEvent({
-          groupId: groupId,
-          type: type,
-          lockDate: lockDate,
-          options: {
-            team1: team1,
-            team2: team2,
-            moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
-            moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
-          },
-        }).then(() => {
-          console.log("Event created successfully");
+          let eventToCreate = {
+            groupId: groupId,
+            type: type,
+            lockDate: lockDate,
+            options: {
+              team1: team1,
+              team2: team2,
+              moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
+              moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
+            },
+        }
+          events_client.createEvent(eventToCreate).then((response) => {
+          console.log("2.  " + response.eventId);
+          fetchEvents();
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          fetchGroups(); 
           setModalVisible(false);
         }).catch((error) => {
           console.error("Error creating event:", error);

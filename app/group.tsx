@@ -3,21 +3,22 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { getAuth, updateProfile } from "firebase/auth";
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { EventCard } from "@/components/EventCard";
+import { EventCard } from "@/components/EventCardNEW";
 import { arrayRemove, doc, updateDoc } from "firebase/firestore";
 import { FIREBASE_AUTH, FIRESTORE } from "@/.FirebaseConfig";
 import { useNavigation } from '@react-navigation/native';
-import { PropCard } from "@/components/PropCard";
+import { PropCard } from "@/components/PropCardNEW";
 import { CreatePropView } from "@/components/CreatePropView";
 import Colors from "@/assets/styles/colors";
 import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import { CreateMSOView } from "@/components/CreateEventView";
-import { BasicEventCard } from "@/components/BasicEventCard";
+import { BasicEventCard } from "@/components/BasicEventCardNEW";
 import { BetSlipView } from "@/components/BetSlipView";
 import fetchGroups from "./(tabs)/index"
 import * as wagers_service from "../clients/wagers-client"
 import * as groups_client from "../clients/groups-client"
-import * as events_service from "../clients/events-client"
+import * as events_client from "../clients/events-client"
+import Leaderboard from "@/components/Leaderboard";
 
 
 interface Event {
@@ -109,12 +110,26 @@ export default function Group() {
       if (shouldRemove) {
         setEvents(prev => prev.filter(event => event.id !== eventId))
       }
+      invalidateEventsCache();
     }
 
     const onPropChanged = (propId, shouldRemove) => {
       if (shouldRemove) {
-        setProps(prev => prev.filter(prop => prop.id !== propId))
+        setProps(prev => prev.filter(prop => prop.id !== propId));
       }
+      invalidateEventsCache();
+    }
+
+    const invalidateEventsCache = () => {
+      console.log("Invalidating events cache for group " + groupId);
+      // This will force a refresh from the server next time events are fetched
+      events_client.clearEventsCache(groupId as string);
+    }
+
+    const invalidateBalanceCache = () => {
+      console.log("Invalidating balance cache for group " + groupId);
+      // This will force a refresh from the server next time events are fetched
+      groups_client.clearBalanceCache(groupId as string);
     }
 
     const calculateOdds = async () => {
@@ -245,6 +260,8 @@ export default function Group() {
     Alert.alert("Success!", "Your wager has been placed.");
     resetSlip();
     setCurrentBalance(currentBalance - wager);
+    // Invalidate cache
+    invalidateBalanceCache();
 
   } catch (err) {
     resetSlip();
@@ -270,10 +287,10 @@ const resetSlip = () => {
         setCurrentBalance(balance);
 
     }
+
     const fetchLeaderboard = async () => {
       const leaderboard = await groups_client.getGroupLeaderboard(groupId as string);
         setLeaderboard(leaderboard);
-        // TODO Finish implementing leaderboard 
     }; 
     const refreshEvents = () => {
       console.log("Refreshing events...");
@@ -282,8 +299,7 @@ const resetSlip = () => {
     const fetchEvents = async (forceRefresh = false) => {
         setLoadingEvents(true);
         try {
-          console.log("Fetching events...");
-          const events = await events_service.getEventsByGroupId({ groupId: groupId as string, forceRefresh });
+          const events = await events_client.getEventsByGroupId({ groupId: groupId as string, forceRefresh });
           const eventsList: Event[] = [];
           const propsList: Prop[] = [];
           events.forEach((eventData) => {
@@ -369,7 +385,6 @@ const resetSlip = () => {
           setProps(propsList);
           setBetSlip([]);
           setBetSlipOdds(new Map<string, string>());
-          console.log(eventsList.length + " events fetched.");
         } catch (error) {
           console.error("Error fetching events:", error);
         } finally {
@@ -380,6 +395,7 @@ const resetSlip = () => {
       useEffect(() => {
           fetchEvents();
           fetchBalance();
+          fetchLeaderboard();
            }, []);
 
       useLayoutEffect(() => {
@@ -545,12 +561,7 @@ const resetSlip = () => {
 
                   {view == "leaderboard" && (
 
-                    //Add leaderboard here
-                    <>
-                    <View style={{alignItems: 'center', justifyContent: 'center', backgroundColor: '', flex: 1}}>
-                      <Text style={{color: Colors.textColor, fontSize: 30, fontWeight: 'bold'}}>COMING SOON</Text>
-                    </View>
-                    </>
+                   <Leaderboard data={leaderboard} />
 
                   )}
 
@@ -574,11 +585,11 @@ const resetSlip = () => {
                 
 
                 <Modal animationType="fade" transparent={true} visible={createPropModalVisible}>
-                    <CreatePropView fetchGroups={refreshEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name}></CreatePropView>
+                    <CreatePropView fetchEvents={refreshEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name}></CreatePropView>
                 </Modal>
 
                 <Modal animationType="fade" transparent={true} visible={createEventModalVisible}>
-                    <CreateMSOView fetchGroups={refreshEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name}></CreateMSOView>
+                    <CreateMSOView fetchEvents={refreshEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name}></CreateMSOView>
                 </Modal>
 
                 <Modal animationType="fade" transparent={true} visible={betSlipModalVisible}>

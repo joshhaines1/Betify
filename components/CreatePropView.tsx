@@ -7,7 +7,7 @@ import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
 import * as events_client from '../clients/events-client';
 
-export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId}) {
+export function CreatePropView({setModalVisible, fetchEvents, groupName, groupId}) {
   
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -62,7 +62,7 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
           return;
         }
         setLoading(true);
-          events_client.createEvent({
+        let eventToCreate = {
           groupId: groupId,
           type: type,
           lockDate: lockDate,
@@ -73,10 +73,11 @@ export function CreatePropView({setModalVisible, fetchGroups, groupName, groupId
             overOdds: (Number(overOdds) > 0 && !overOdds.includes("+")) ? "+" + overOdds : overOdds,
             overUnder: line,
           },
-        }).then(() => {
-          console.log("Event created successfully");
+        };
+          events_client.createEvent(eventToCreate).then((response) => {
+          console.log(response);
+          fetchEvents();
           setModalVisible(false);
-          fetchGroups();
           setLoading(false);
         }).catch((error) => {
           console.error("Error creating event:", error);

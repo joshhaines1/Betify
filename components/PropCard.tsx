@@ -32,7 +32,6 @@ export function PropCard({name, description, lockDate, overOdds, underOdds, over
             newBetSlipOdds.delete(eventId);
             return newBetSlipOdds;
           });
-          refreshEvents();
         }).catch((error) => {
           console.error("Error settling event:", error);
         });
@@ -46,7 +45,7 @@ export function PropCard({name, description, lockDate, overOdds, underOdds, over
           acceptingWagers: false,
         }).then(() => {
           console.log("Event settled successfully");
-          onEventSettled(eventId, bet != "" ? true : false);
+          onEventSettled(eventId, true);
           setClosed(true);
           selectBet(''); 
           setBetSlip((prev: Map<string, string>[]) => {
@@ -57,14 +56,13 @@ export function PropCard({name, description, lockDate, overOdds, underOdds, over
             newBetSlipOdds.delete(eventId);
             return newBetSlipOdds;
           });
-          refreshEvents();
         }).catch((error) => {
           console.error("Error settling event:", error);
         });
     }
   
     const handleSettleButtonPress =  () => {
-      if(acceptingWagers === false && bet == ""){
+      if(closed === true && bet == ""){
         return;
       }
       Alert.alert(
@@ -90,7 +88,7 @@ export function PropCard({name, description, lockDate, overOdds, underOdds, over
     };
 
     const handlePushButtonPress =  () => {
-            if(acceptingWagers === false && bet != ""){
+            if(closed === true && bet != ""){
               return;
             }
             Alert.alert(
@@ -127,7 +125,7 @@ export function PropCard({name, description, lockDate, overOdds, underOdds, over
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
     
-      if(!acceptingWagers){
+      if(closed){
         return;
       }
       setBetSlip((prev: Map<string, string>[]) => {

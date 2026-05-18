@@ -34,7 +34,6 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, re
           newBetSlipOdds.delete(eventId);
           return newBetSlipOdds;
         });
-        refreshEvents();
       }).catch((error) => {
         console.error("Error settling event:", error);
       });
@@ -48,7 +47,7 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, re
         acceptingWagers: false,
       }).then(() => {
         console.log("Event updated successfully");
-        onEventSettled(eventId, bet != "" ? true : false);
+        onEventSettled(eventId, true);
         setClosed(true);
         selectBet('');
         setBetSlip((prev: Map<string, string>[]) => {
@@ -59,14 +58,13 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, re
           newBetSlipOdds.delete(eventId);
           return newBetSlipOdds;
         });
-        refreshEvents();
       }).catch((error) => {
         console.error("Error settling event:", error);
       });
     };
 
     const handlePushButtonPress =  () => {
-        if(acceptingWagers === false && bet != ""){
+        if(closed === true && bet != ""){
           return;
         }
         Alert.alert(
@@ -95,7 +93,7 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, re
       }
   
     const handleSettleButtonPress =  () => {
-      if(acceptingWagers === false && bet == ""){
+      if(closed === true && bet == ""){
         return;
       }
       Alert.alert(
@@ -131,7 +129,7 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, re
         selectBet(type);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-      if(!acceptingWagers){
+      if(closed){
         return;
       }
     

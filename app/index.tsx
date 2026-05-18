@@ -24,9 +24,7 @@ const Index = () => {
     
     const prepare = async () => {
       // Simulate loading
-      console.log("Waiting...");
       await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log("Start splash screen fade...");
       setAppReady(true);
 
       // Start fade-out animation
@@ -36,7 +34,6 @@ const Index = () => {
         useNativeDriver: true,
       }).start(async () => {
         //await SplashScreen.hideAsync(); // hide after animation
-        console.log("Hide");
         setIsMounted(true);
       });
     };
@@ -51,10 +48,8 @@ const Index = () => {
     
     if (!isMounted) return; // Prevent navigation before mount
     if (isLoggedIn) {
-      console.log("Logged in");
       router.replace('/(tabs)'); // Navigate to tabs if logged in
     } else {
-      console.log("Not logged in");
       router.replace('/login'); // Navigate to login if not logged in
     }
   }, [isLoggedIn, isMounted]); // Triggered only after `isMounted` is true

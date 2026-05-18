@@ -73,17 +73,40 @@ export async function deleteEvent({ eventId}) {
   return data;
 }
 
-const cache = {};
+export async function getEventById({ eventId }) {
+  const token = await FIREBASE_AUTH.currentUser?.getIdToken();
+  if (!token) throw new Error("User not authenticated");
 
+  console.log("1.  " + eventId);
+  const res = await fetch(`${BASE_API_ENDPOINT}/events/${eventId}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || data.message || "Failed to get event");
+  }
+
+  return data;
+}
+
+const cache = {};
 export async function getEventsByGroupId({ groupId, forceRefresh = false }) {
   const token = await FIREBASE_AUTH.currentUser?.getIdToken();
   if (!token) throw new Error("User not authenticated");
 
   // Check if the data is already in the cache
   if (cache[groupId] && !forceRefresh) {
-    console.log(`Returning cached data for groupId: ${groupId}`);
+    console.log(`Using CACHED data`);
     return cache[groupId];
   }
+
+  console.log("Using FRESH data");
   
   const res = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/events`, {
     method: "GET",
@@ -105,3 +128,6 @@ export async function getEventsByGroupId({ groupId, forceRefresh = false }) {
   return data;
 }
 
+export async function clearEventsCache(groupId: string) {
+  delete cache[groupId];
+}
