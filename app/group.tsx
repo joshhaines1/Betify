@@ -1,31 +1,25 @@
-
 import { useEffect, useLayoutEffect, useState } from "react";
-import { getAuth, updateProfile } from "firebase/auth";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { EventCard } from "@/components/EventCardNEW";
 import { arrayRemove, doc, updateDoc } from "firebase/firestore";
 import { FIREBASE_AUTH, FIRESTORE } from "@/.FirebaseConfig";
 import { useNavigation } from '@react-navigation/native';
-import { PropCard } from "@/components/PropCardNEW";
+import { UnifiedCard } from "@/components/UnifiedCard";
 import { CreatePropView } from "@/components/CreatePropView";
 import Colors from "@/assets/styles/colors";
-import { get } from "react-native/Libraries/TurboModule/TurboModuleRegistry";
 import { CreateMSOView } from "@/components/CreateEventView";
-import { BasicEventCard } from "@/components/BasicEventCardNEW";
 import { BetSlipView } from "@/components/BetSlipView";
-import fetchGroups from "./(tabs)/index"
-import * as wagers_service from "../clients/wagers-client"
-import * as groups_client from "../clients/groups-client"
-import * as events_client from "../clients/events-client"
+import * as wagers_service from "../clients/wagers-client";
+import * as groups_client from "../clients/groups-client";
+import * as events_client from "../clients/events-client";
 import Leaderboard from "@/components/Leaderboard";
 
-
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Event {
   id: string;
   groupId: string;
   groupName: string;
-  type: string; 
+  type: string;
   options: {
     team1: string;
     team2: string;
@@ -37,18 +31,16 @@ interface Event {
     overUnder: string;
     overOdds: string;
     underOdds: string;
-  }
+  };
   lockDate: Date;
   createdAt: Date;
   status: string;
   results: string[];
   acceptingWagers: boolean;
-
 }
 
 interface Prop {
-
-  id: string; 
+  id: string;
   groupId: string;
   name: string;
   description: string;
@@ -57,585 +49,432 @@ interface Prop {
   overUnder: string;
   createdAt: Date;
   groupName: string;
-  result: string; 
+  result: string;
   status: string;
   lockDate: Date;
   acceptingWagers: boolean;
-
-
 }
 
-interface Bet {
-
-  amount: number;
-  groupId: string;
-  odds: string;
-  picks: Map<string, any>,
-  status: string;
-  userId: string;
-  lockDate: Date;
-
-}
-
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function Group() {
-    const { name, groupId, admins} = useLocalSearchParams();
-    const [view, setView] = useState("events");
-    const [events, setEvents] = useState<Event[]>([]);
-    const [props, setProps] = useState<Prop[]>([]);
-    const navigation = useNavigation(); 
-    const [createPropModalVisible, setCreatePropModalVisible] = useState(false);
-    const [createEventModalVisible, setCreateEventModalVisible] = useState(false);
-    const [betSlipOdds, setBetSlipOdds] = useState(new Map<string, string>());
-    const [betSlip, setBetSlip] = useState<Map<string, string>[]>([]);
-    const [createButtonBottomMargin, setCreateButtonBottomMargin] = useState(50);
-    const [liveSlipOdds, setLiveSlipOdds] = useState("");
-    const [wager, setWager] = useState(100);
-    const [totalDecimalOdds, setTotalDecimalOdds] = useState(1.0);
-    const [loading, setLoading] = useState(false);
-    const [loadingEvents, setLoadingEvents] = useState(false);
-    const [currentBalance, setCurrentBalance] = useState(0);
-    const [betSlipModalVisible, setBetSlipModalVisible] = useState(false);
-    const [leaderboard, setLeaderboard] = useState([]);
-    
-    useEffect(() => {
-      if (betSlip.length > 0) {
-        setCreateButtonBottomMargin(0); // Push above bet slip button
-        calculateOdds();
-      } else {
-        setCreateButtonBottomMargin(50); // Default position
-      }
-    }, [betSlip]);
+  const { name, groupId, admins } = useLocalSearchParams();
+  const [view, setView] = useState("events");
+  const [events, setEvents] = useState<Event[]>([]);
+  const [props, setProps] = useState<Prop[]>([]);
+  const navigation = useNavigation();
+  const [createPropModalVisible, setCreatePropModalVisible] = useState(false);
+  const [createEventModalVisible, setCreateEventModalVisible] = useState(false);
+  const [betSlipOdds, setBetSlipOdds] = useState(new Map<string, string>());
+  const [betSlip, setBetSlip] = useState<Map<string, string>[]>([]);
+  const [liveSlipOdds, setLiveSlipOdds] = useState("");
+  const [wager, setWager] = useState(100);
+  const [totalDecimalOdds, setTotalDecimalOdds] = useState(1.0);
+  const [loading, setLoading] = useState(false);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [currentBalance, setCurrentBalance] = useState(0);
+  const [betSlipModalVisible, setBetSlipModalVisible] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
 
-    const onEventChanged = (eventId, shouldRemove) => {
-      if (shouldRemove) {
-        setEvents(prev => prev.filter(event => event.id !== eventId))
-      }
-      invalidateEventsCache();
-    }
+  const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
 
-    const onPropChanged = (propId, shouldRemove) => {
-      if (shouldRemove) {
-        setProps(prev => prev.filter(prop => prop.id !== propId));
-      }
-      invalidateEventsCache();
-    }
+  // ── Bet slip side effects ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (betSlip.length > 0) calculateOdds();
+  }, [betSlip]);
 
-    const invalidateEventsCache = () => {
-      console.log("Invalidating events cache for group " + groupId);
-      // This will force a refresh from the server next time events are fetched
-      events_client.clearEventsCache(groupId as string);
-    }
+  // ── Cache helpers ──────────────────────────────────────────────────────────
+  const invalidateEventsCache = () => {
+    events_client.clearEventsCache(groupId as string);
+  };
 
-    const invalidateBalanceCache = () => {
-      console.log("Invalidating balance cache for group " + groupId);
-      // This will force a refresh from the server next time events are fetched
-      groups_client.clearBalanceCache(groupId as string);
-    }
+  const invalidateBalanceCache = () => {
+    groups_client.clearBalanceCache(groupId as string);
+  };
 
-    const calculateOdds = async () => {
+  const onEventChanged = (eventId: string, shouldRemove: boolean) => {
+    if (shouldRemove) setEvents((prev) => prev.filter((e) => e.id !== eventId));
+    invalidateEventsCache();
+  };
 
-      let decimalOdds: number[] = [];
-      for(const odds_string of betSlipOdds.values()){
+  const onPropChanged = (propId: string, shouldRemove: boolean) => {
+    if (shouldRemove) setProps((prev) => prev.filter((p) => p.id !== propId));
+    invalidateEventsCache();
+  };
 
-        let americanOdds = +(odds_string);
-        if(americanOdds < 0){
-
-          decimalOdds.push((100 / Math.abs(americanOdds)) + 1);
-
-        } else {
-
-          decimalOdds.push((americanOdds / 100) + 1);
-
-        }
-        
-      }
-
-      let parlayDecimalOdds = (decimalOdds[0]);
-      for(let i = decimalOdds.length - 1; i > 0; i--){
-
-        parlayDecimalOdds += decimalOdds[i];
-
-      }
-
-      if(parlayDecimalOdds >= 2){
-
-        setLiveSlipOdds("+" +(Math.round((parlayDecimalOdds - 1) * 100)).toString());
-
-      } else {
-
-        setLiveSlipOdds(Math.round((-100 / (parlayDecimalOdds - 1))).toString());
-
-      }
-
-      setTotalDecimalOdds(parlayDecimalOdds);
-
-    }
-
-    function oddsToMultiplier(odds: number): number {
-      if (odds > 0) {
-        return +(odds / 100 + 1).toFixed(2);
-      } else if (odds < 0) {
-        return +(100 / Math.abs(odds) + 1).toFixed(2);
-      } else {
-        return 1; 
-      }
-    }
-
-    
-
-    const placeBets = async () => {
-      setLoading(true);
-
-  try {
-    console.log("Placing bets...");
-
-    let counter = 0;
-    let lockDates: Date[] = [];
-    betSlip.forEach((bet) => {
-      const eventId = bet.get("eventId");
-      if (!eventId) return;
-
-      const moneylineKey = `${eventId}-moneyline`;
-      const spreadKey = `${eventId}-spread`;
-      const overUnderKey = `${eventId}-overUnder`;
-      console.log(bet);
-      console.log("Lock Date for bet " + eventId + ": " + bet.get("lockDate"));
-      
-      const lockDateValue = bet.get("lockDate") as any;
-      if (lockDateValue?._seconds) {
-        console.log(lockDateValue?._seconds);
-        lockDates.push(new Date(lockDateValue._seconds * 1000));
-      }
-
-      if (bet.has(moneylineKey)) {
-        const value = bet.get(moneylineKey);
-        if (value !== undefined) {
-          bet.set(eventId, value);
-          bet.delete(moneylineKey);
-          counter++;
-        }
-      }
-
-      else if (bet.has(spreadKey)) {
-        const value = bet.get(spreadKey);
-        if (value !== undefined) {
-          bet.set(eventId, value);
-          bet.delete(spreadKey);
-          counter++;
-        }
-      }
-
-      else if (bet.has(overUnderKey)) {
-        const value = bet.get(overUnderKey);
-        if (value !== undefined) {
-          bet.set(eventId, value);
-          bet.delete(overUnderKey);
-          counter++;
-        }
-      }
+  // ── Odds calculation ───────────────────────────────────────────────────────
+  const calculateOdds = () => {
+    const decimalOdds = [...betSlipOdds.values()].map((o) => {
+      const american = +o;
+      return american < 0 ? 100 / Math.abs(american) + 1 : american / 100 + 1;
     });
 
-    if (counter > 1) {
-      Alert.alert("Error", "You cannot parlay bets from the same event.");
-      resetSlip();
-      return;
-    }
+    const parlay = decimalOdds.reduce((acc, o, i) => (i === 0 ? o : acc + o), 0);
 
-    const betSlipObjectArray = betSlip.map((betMap) =>
-      Object.fromEntries(betMap)
+    setLiveSlipOdds(
+      parlay >= 2
+        ? `+${Math.round((parlay - 1) * 100)}`
+        : `${Math.round(-100 / (parlay - 1))}`
     );
+    setTotalDecimalOdds(parlay);
+  };
 
-    await wagers_service.placeWager({
-      groupId,
-      picks: betSlipObjectArray,
-      eventIds: betSlipObjectArray.map(b => b.eventId),
-      odds: liveSlipOdds,
-      multiplier: totalDecimalOdds,
-      risk: Number(wager),
-      payout: Math.round(wager * totalDecimalOdds),
-      lockDates: lockDates,
-});
+  const oddsToMultiplier = (odds: number): number => {
+    if (odds > 0) return +(odds / 100 + 1).toFixed(2);
+    if (odds < 0) return +(100 / Math.abs(odds) + 1).toFixed(2);
+    return 1;
+  };
 
+  // ── Place bets ─────────────────────────────────────────────────────────────
+  const placeBets = async () => {
+    setLoading(true);
+    try {
+      let counter = 0;
+      const lockDates: Date[] = [];
 
-    Alert.alert("Success!", "Your wager has been placed.");
-    resetSlip();
-    setCurrentBalance(currentBalance - wager);
-    // Invalidate cache
-    invalidateBalanceCache();
+      betSlip.forEach((bet) => {
+        const eventId = bet.get("eventId");
+        if (!eventId) return;
 
-  } catch (err) {
-    resetSlip();
-    if (err instanceof Error) {
-      console.log("Error:", err.message);
-      Alert.alert("Error", err.message);
-    } else {
-      Alert.alert("Error", String(err));
-      console.log("Unknown error:", err);
-    }
-  }
+        const lockDateValue = bet.get("lockDate") as any;
+        if (lockDateValue?._seconds) lockDates.push(new Date(lockDateValue._seconds * 1000));
 
-  setLoading(false);
-};
-
-const resetSlip = () => {
-  setBetSlip([]);
-  setBetSlipOdds(new Map());
-};
-    const fetchBalance = async () => {
-
-       const balance = await groups_client.getUsersCurrency(groupId as string);
-        setCurrentBalance(balance);
-
-    }
-
-    const fetchLeaderboard = async () => {
-      const leaderboard = await groups_client.getGroupLeaderboard(groupId as string);
-        setLeaderboard(leaderboard);
-    }; 
-    const refreshEvents = () => {
-      console.log("Refreshing events...");
-      fetchEvents(true);
-    }; 
-    const fetchEvents = async (forceRefresh = false) => {
-        setLoadingEvents(true);
-        try {
-          const events = await events_client.getEventsByGroupId({ groupId: groupId as string, forceRefresh });
-          const eventsList: Event[] = [];
-          const propsList: Prop[] = [];
-          events.forEach((eventData) => {
-          if(!eventData.acceptingWagers && admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") !== true){
-              return; 
+        for (const suffix of ["moneyline", "spread", "overUnder"]) {
+          const key = `${eventId}-${suffix}`;
+          if (bet.has(key)) {
+            const value = bet.get(key);
+            if (value !== undefined) {
+              bet.set(eventId, value);
+              bet.delete(key);
+              counter++;
             }
-              if(eventData.type == "MSO")
-              {
-                eventsList.push({
-                  id: eventData.id,
-                  groupId: eventData.groupId,
-                  groupName: eventData.groupName,
-                  type: eventData.type, 
-                  options: {
-                    team1: eventData.options.team1,
-                    team2: eventData.options.team2,
-                    moneylineOdds1: eventData.options.moneylineOdds1,
-                    moneylineOdds2: eventData.options.moneylineOdds2,
-                    spread: eventData.options.spread,
-                    spreadOdds1: eventData.options.spreadOdds1,
-                    spreadOdds2: eventData.options.spreadOdds2,
-                    overUnder: eventData.options.overUnder,
-                    overOdds: eventData.options.overOdds,
-                    underOdds: eventData.options.underOdds,
-                  },
-                  lockDate: eventData.lockDate,
-                  createdAt: eventData.createdAt,
-                  status: eventData.status,
-                  results: eventData.results,
-                  acceptingWagers: eventData.acceptingWagers,
-                });
-
-              } else if (eventData.type == "basic")
-                {
-                  eventsList.push({
-                    id: eventData.id,
-                    groupId: eventData.groupId,
-                    groupName: eventData.groupName,
-                    type: eventData.type, 
-                    options: {
-                      team1: eventData.options.team1,
-                      team2: eventData.options.team2,
-                      moneylineOdds1: eventData.options.moneylineOdds1,
-                      moneylineOdds2: eventData.options.moneylineOdds2,
-                      spread: "N/A",
-                      spreadOdds1: "N/A",
-                      spreadOdds2: "N/A",
-                      overUnder: "N/A",
-                      overOdds: "N/A",
-                      underOdds: "N/A",
-                    },
-                    lockDate: eventData.lockDate,
-                    createdAt: eventData.createdAt,
-                    status: eventData.status,
-                    results: eventData.results[0],
-                    acceptingWagers: eventData.acceptingWagers,
-                  });
-  
-                } else if(eventData.type == "prop")
-              {
-                propsList.push({
-
-                  id: eventData.id,
-                  groupId: eventData.groupId,
-                  name: eventData.options.name,
-                  description: eventData.options.description,
-                  overOdds: eventData.options.overOdds,
-                  underOdds: eventData.options.underOdds,
-                  overUnder: eventData.options.overUnder,
-                  createdAt: eventData.createdAt,
-                  groupName: eventData.groupName,
-                  lockDate: eventData.lockDate,
-                  result: eventData.results[0],
-                  status: eventData.status,
-                  acceptingWagers: eventData.acceptingWagers,
-
-                });
-              }
-              
-            }
-          );
-          setEvents(eventsList);
-          setProps(propsList);
-          setBetSlip([]);
-          setBetSlipOdds(new Map<string, string>());
-        } catch (error) {
-          console.error("Error fetching events:", error);
-        } finally {
-          setLoadingEvents(false);
+            break;
+          }
         }
-      };
+      });
 
-      useEffect(() => {
-          fetchEvents();
-          fetchBalance();
-          fetchLeaderboard();
-           }, []);
+      if (counter > 1) {
+        Alert.alert("Error", "You cannot parlay bets from the same event.");
+        resetSlip();
+        return;
+      }
 
-      useLayoutEffect(() => {
-        navigation.setOptions({ title: `${name}` });
-      }, [navigation, name]);
+      const betSlipObjectArray = betSlip.map((m) => Object.fromEntries(m));
 
-      const handleLeaveButtonPress = async () => {
-        try {
+      await wagers_service.placeWager({
+        groupId,
+        picks: betSlipObjectArray,
+        eventIds: betSlipObjectArray.map((b) => b.eventId),
+        odds: liveSlipOdds,
+        multiplier: totalDecimalOdds,
+        risk: Number(wager),
+        payout: Math.round(wager * totalDecimalOdds),
+        lockDates,
+      });
 
-          // Call API here instead
-          const groupRef = doc(FIRESTORE, "groups", groupId as string);
-          await updateDoc(groupRef, {
-            members: arrayRemove(FIREBASE_AUTH.currentUser?.uid),
+      Alert.alert("Success!", "Your wager has been placed.");
+      resetSlip();
+      setCurrentBalance((prev) => prev - wager);
+      invalidateBalanceCache();
+    } catch (err) {
+      resetSlip();
+      Alert.alert("Error", err instanceof Error ? err.message : String(err));
+    }
+    setLoading(false);
+  };
+
+  const resetSlip = () => {
+    setBetSlip([]);
+    setBetSlipOdds(new Map());
+  };
+
+  // ── Fetch helpers ──────────────────────────────────────────────────────────
+  const fetchBalance = async () => {
+    const balance = await groups_client.getUsersCurrency(groupId as string);
+    setCurrentBalance(balance);
+  };
+
+  const fetchLeaderboard = async () => {
+    const data = await groups_client.getGroupLeaderboard(groupId as string);
+    setLeaderboard(data);
+  };
+
+  const refreshEvents = () => fetchEvents(true);
+
+  const fetchEvents = async (forceRefresh = false) => {
+    setLoadingEvents(true);
+    try {
+      const rawEvents = await events_client.getEventsByGroupId({ groupId: groupId as string, forceRefresh });
+      const eventsList: Event[] = [];
+      const propsList: Prop[] = [];
+
+      rawEvents.forEach((eventData) => {
+        if (!eventData.acceptingWagers && !isAdmin) return;
+
+        if (eventData.type === "MSO") {
+          eventsList.push({
+            id: eventData.id,
+            groupId: eventData.groupId,
+            groupName: eventData.groupName,
+            type: eventData.type,
+            options: {
+              team1: eventData.options.team1,
+              team2: eventData.options.team2,
+              moneylineOdds1: eventData.options.moneylineOdds1,
+              moneylineOdds2: eventData.options.moneylineOdds2,
+              spread: eventData.options.spread,
+              spreadOdds1: eventData.options.spreadOdds1,
+              spreadOdds2: eventData.options.spreadOdds2,
+              overUnder: eventData.options.overUnder,
+              overOdds: eventData.options.overOdds,
+              underOdds: eventData.options.underOdds,
+            },
+            lockDate: eventData.lockDate,
+            createdAt: eventData.createdAt,
+            status: eventData.status,
+            results: eventData.results,
+            acceptingWagers: eventData.acceptingWagers,
           });
-          console.log(`User ${FIREBASE_AUTH.currentUser?.uid} removed from group ${groupId}`);
-          //
-
-          router.replace('/(tabs)');
-        } catch (error) {
-          console.error("Error removing user:", error);
+        } else if (eventData.type === "basic") {
+          eventsList.push({
+            id: eventData.id,
+            groupId: eventData.groupId,
+            groupName: eventData.groupName,
+            type: eventData.type,
+            options: {
+              team1: eventData.options.team1,
+              team2: eventData.options.team2,
+              moneylineOdds1: eventData.options.moneylineOdds1,
+              moneylineOdds2: eventData.options.moneylineOdds2,
+              spread: "N/A",
+              spreadOdds1: "N/A",
+              spreadOdds2: "N/A",
+              overUnder: "N/A",
+              overOdds: "N/A",
+              underOdds: "N/A",
+            },
+            lockDate: eventData.lockDate,
+            createdAt: eventData.createdAt,
+            status: eventData.status,
+            results: eventData.results,
+            acceptingWagers: eventData.acceptingWagers,
+          });
+        } else if (eventData.type === "prop") {
+          propsList.push({
+            id: eventData.id,
+            groupId: eventData.groupId,
+            name: eventData.options.name,
+            description: eventData.options.description,
+            overOdds: eventData.options.overOdds,
+            underOdds: eventData.options.underOdds,
+            overUnder: eventData.options.overUnder,
+            createdAt: eventData.createdAt,
+            groupName: eventData.groupName,
+            lockDate: eventData.lockDate,
+            result: eventData.results[0],
+            status: eventData.status,
+            acceptingWagers: eventData.acceptingWagers,
+          });
         }
-      };
+      });
 
+      setEvents(eventsList);
+      setProps(propsList);
+      setBetSlip([]);
+      setBetSlipOdds(new Map());
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+    fetchBalance();
+    fetchLeaderboard();
+  }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: `${name}` });
+  }, [navigation, name]);
+
+  const handleLeaveButtonPress = async () => {
+    try {
+      const groupRef = doc(FIRESTORE, "groups", groupId as string);
+      await updateDoc(groupRef, { members: arrayRemove(FIREBASE_AUTH.currentUser?.uid) });
+      router.replace("/(tabs)");
+    } catch (error) {
+      console.error("Error removing user:", error);
+    }
+  };
+
+  // ── Shared props passed to every UnifiedCard ───────────────────────────────
+  const sharedCardProps = {
+    groupId: groupId as string,
+    betSlip,
+    setBetSlip,
+    setBetSlipOdds,
+    isAdmin,
+    refreshEvents,
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
 
+      {/* ── Tab bar ── */}
       <View style={styles.switchContainer}>
-              <TouchableOpacity 
-                style={[styles.switchButton, view === "events" && styles.activeSwitchButton]} 
-                onPress={() => setView("events")}>
-                <Text style={styles.switchText}>Games</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.switchButton, view === "props" && styles.activeSwitchButton]} 
-                onPress={() => setView("props")}>
-                <Text style={styles.switchText}>Props</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.switchButton, view === "leaderboard" && styles.activeSwitchButton]} 
-                onPress={() => setView("leaderboard")}>
-                <Text style={styles.switchText}>Leaderboard</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.switchButton, view === "info" && styles.activeSwitchButton]} 
-                onPress={() => setView("info")}>
-                <Text style={styles.switchText}>Info</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.switchButton, styles.balance]}>
-                <Text ellipsizeMode="clip" style={styles.currencyText}>
-                  {currentBalance <= 9999 
-                    ? currentBalance 
-                    : (currentBalance / 1000).toFixed(1).replace(/\.0$/, '') + 'K'}
-                </Text>
-              </TouchableOpacity>
+        {(["events", "props", "leaderboard", "info"] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.switchButton, view === tab && styles.activeSwitchButton]}
+            onPress={() => setView(tab)}
+          >
+            <Text style={styles.switchText}>
+              {tab === "events" ? "Games" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity style={[styles.switchButton, styles.balance]}>
+          <Text ellipsizeMode="clip" style={styles.currencyText}>
+            {currentBalance <= 9999
+              ? currentBalance
+              : (currentBalance / 1000).toFixed(1).replace(/\.0$/, "") + "K"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Events + Props scroll ── */}
+      {(view === "events" || view === "props") && (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {loadingEvents ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
             </View>
-          {(view === "events" || view === "props") && (
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
-                  {loadingEvents ? (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="large" color={Colors.primary} />
-                    </View>
-                  ) : (
-                  <>
-                  {view === "events" && 
-                    events
-                          .map((event) => {
-                          if(event.type == "MSO") {
+          ) : (
+            <>
+              {view === "events" &&
+                events.map((event) => (
+                  <UnifiedCard
+                    key={event.id}
+                    type={event.type === "MSO" ? "event" : "basic"}
+                    eventId={event.id}
+                    groupName={event.groupName}
+                    lockDate={event.lockDate as any}
+                    createdAt={event.createdAt}
+                    acceptingWagers={event.acceptingWagers}
+                    onEventSettled={onEventChanged}
+                    // team fields
+                    team1={event.options.team1}
+                    team2={event.options.team2}
+                    moneylineOdds1={event.options.moneylineOdds1}
+                    moneylineOdds2={event.options.moneylineOdds2}
+                    // MSO-only fields (ignored by basic layout)
+                    spread={event.options.spread}
+                    spreadOdds1={event.options.spreadOdds1}
+                    spreadOdds2={event.options.spreadOdds2}
+                    overUnder={event.options.overUnder}
+                    overOdds={event.options.overOdds}
+                    underOdds={event.options.underOdds}
+                    {...sharedCardProps}
+                  />
+                ))}
 
-                            return (
+              {view === "props" &&
+                props.map((prop) => (
+                  <UnifiedCard
+                    key={prop.id}
+                    type="prop"
+                    eventId={prop.id}
+                    groupName={prop.groupName}
+                    lockDate={prop.lockDate as any}
+                    createdAt={prop.createdAt}
+                    acceptingWagers={prop.acceptingWagers}
+                    onEventSettled={onPropChanged}
+                    // prop fields
+                    name={prop.name}
+                    description={prop.description}
+                    overUnder={prop.overUnder}
+                    overOdds={prop.overOdds}
+                    underOdds={prop.underOdds}
+                    {...sharedCardProps}
+                  />
+                ))}
+            </>
+          )}
+        </ScrollView>
+      )}
 
-                              <EventCard 
-                              key={event.id} 
-                              groupName={event.groupName} 
-                              team1={event.options.team1} 
-                              team2={event.options.team2} 
-                              moneylineOdds1={event.options.moneylineOdds1} moneylineOdds2={event.options.moneylineOdds2} 
-                              spread={event.options.spread}
-                              spreadOdds1={event.options.spreadOdds1}
-                              spreadOdds2={event.options.spreadOdds2}
-                              overUnder={event.options.overUnder}
-                              overOdds={event.options.overOdds}
-                              underOdds={event.options.underOdds}
-                              eventId={event.id} 
-                              lockDate={event.lockDate}
-                              createdAt={event.createdAt} 
-                              refreshEvents={refreshEvents}
-                              setBetSlip={setBetSlip}
-                              setBetSlipOdds={setBetSlipOdds}
-                              betSlip={betSlip}
-                              isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
-                              acceptingWagers={event.acceptingWagers}
-                              onEventSettled={onEventChanged} 
-                              >
-                              
-                            </EventCard>   
+      {/* ── Leaderboard ── */}
+      {view === "leaderboard" && <Leaderboard data={leaderboard} />}
 
-                            )
-
-                          } else if(event.type == "basic")
-                          {
-
-                            return (
-
-                              <BasicEventCard 
-                              key={event.id} 
-                              groupName={event.groupName} 
-                              team1={event.options.team1} 
-                              team2={event.options.team2} 
-                              moneylineOdds1={event.options.moneylineOdds1} 
-                              moneylineOdds2={event.options.moneylineOdds2} 
-                              eventId={event.id} 
-                              createdAt={event.createdAt} 
-                              refreshEvents={refreshEvents}
-                              setBetSlip={setBetSlip}
-                              setBetSlipOdds={setBetSlipOdds}
-                              lockDate={event.lockDate}
-                              betSlip={betSlip}
-                              isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
-                              acceptingWagers={event.acceptingWagers}
-                              onEventSettled={onEventChanged}  
-                              >
-                              
-                            </BasicEventCard>  
-
-                            )
-
-                          }}
-                            
-                      )
-                  }
-                  {view === "props" &&
-          
-                    props
-                          .map((prop) => (
-                          
-                            <PropCard 
-                              key={prop.id} 
-                              groupName={prop.groupName} 
-                              description={prop.description}
-                              name={prop.name} 
-                              overUnder={prop.overUnder}
-                              overOdds={prop.overOdds}
-                              underOdds={prop.underOdds}
-                              eventId={prop.id} 
-                              createdAt={prop.createdAt} 
-                              refreshEvents={refreshEvents}
-                              setBetSlip={setBetSlip}
-                              setBetSlipOdds={setBetSlipOdds}
-                              betSlip={betSlip}
-                              lockDate={prop.lockDate}
-                              isAdmin={admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true}
-                              acceptingWagers={prop.acceptingWagers}
-                              onEventSettled={onPropChanged} 
-                              >
-                            </PropCard>   
-                      )
-                  )}
-                  </>
-                  )}
-                  </ScrollView>
-                  )}
-
-                  {view == "leaderboard" && (
-
-                   <Leaderboard data={leaderboard} />
-
-                  )}
-
-                  {view == "info" && (
-
-                  //Add group info here
-                  <>
-
-                    <View style={{alignItems: 'center', justifyContent: 'center', backgroundColor: '', flex: 1}}>
-                      <Text style={{color: Colors.textColor, fontSize: 30, fontWeight: 'bold'}}>Invite Code: {(groupId.toString().substring(groupId.toString().length - 6)).toUpperCase()}</Text>
-                      <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveButtonPress}>
-
-                        <Text style={{color: Colors.textColor, fontWeight: 700, fontSize: 16}}>Leave Group</Text>
-
-                      </TouchableOpacity>
-                    </View>
-                    
-                  </>
-
-                  )}
-                
-
-                <Modal animationType="fade" transparent={true} visible={createPropModalVisible}>
-                    <CreatePropView fetchEvents={refreshEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name}></CreatePropView>
-                </Modal>
-
-                <Modal animationType="fade" transparent={true} visible={createEventModalVisible}>
-                    <CreateMSOView fetchEvents={refreshEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name}></CreateMSOView>
-                </Modal>
-
-                <Modal animationType="fade" transparent={true} visible={betSlipModalVisible}>
-                    <BetSlipView fetchGroups={refreshEvents} setModalVisible={setBetSlipModalVisible} numberOfPicks={betSlip.length} odds={liveSlipOdds} oddsToMultiplier={oddsToMultiplier} balance={currentBalance} setWager={setWager} wager={wager} placeBets={placeBets}></BetSlipView>
-                </Modal>
-
-                <View style={styles.betSlipAndCreateButton}>
-    
-                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "props" && betSlip.length == 0) && (
-
-                  <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreatePropModalVisible(true)}}>
-                    <Text style={styles.plusButtonText}>+</Text>
-                  </TouchableOpacity>
-
-                  )}
-
-                  {(admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true && view == "events" && betSlip.length == 0) && (
-
-                  <TouchableOpacity style={styles.plusButtonStyle} onPress={() => {setCreateEventModalVisible(true)}}>
-                    <Text style={styles.plusButtonText}>+</Text>
-                  </TouchableOpacity>
-
-                  )}
-
-                  {betSlip.length > 0 && (
-
-                    <View style={styles.betSlipButtonContainer}>
-                      <TouchableOpacity disabled={loading} onPress={() => {setBetSlipModalVisible(true)}}>
-                          <Text style={styles.betSlipButtonText}>
-                            {loading ? "PLACING BETS...": "OPEN BET SLIP (" + liveSlipOdds + ")"}
-                            </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                  )}
-
-                </View>
-        
-
-          
-          
-      
+      {/* ── Info ── */}
+      {view === "info" && (
+        <View style={{ alignItems: "center", justifyContent: "center", flex: 1 }}>
+          <Text style={{ color: Colors.textColor, fontSize: 30, fontWeight: "bold" }}>
+            Invite Code: {(groupId.toString().substring(groupId.toString().length - 6)).toUpperCase()}
+          </Text>
+          <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveButtonPress}>
+            <Text style={{ color: Colors.textColor, fontWeight: "700", fontSize: 16 }}>Leave Group</Text>
+          </TouchableOpacity>
         </View>
+      )}
+
+      {/* ── Modals ── */}
+      <Modal animationType="fade" transparent visible={createPropModalVisible}>
+        <CreatePropView fetchEvents={refreshEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name} />
+      </Modal>
+      <Modal animationType="fade" transparent visible={createEventModalVisible}>
+        <CreateMSOView fetchEvents={refreshEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name} />
+      </Modal>
+      <Modal animationType="fade" transparent visible={betSlipModalVisible}>
+        <BetSlipView
+          fetchGroups={refreshEvents}
+          setModalVisible={setBetSlipModalVisible}
+          numberOfPicks={betSlip.length}
+          odds={liveSlipOdds}
+          oddsToMultiplier={oddsToMultiplier}
+          balance={currentBalance}
+          setWager={setWager}
+          wager={wager}
+          placeBets={placeBets}
+        />
+      </Modal>
+
+      {/* ── FAB / Bet slip button ── */}
+      <View style={styles.betSlipAndCreateButton}>
+        {isAdmin && view === "props" && betSlip.length === 0 && (
+          <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreatePropModalVisible(true)}>
+            <Text style={styles.plusButtonText}>+</Text>
+          </TouchableOpacity>
+        )}
+        {isAdmin && view === "events" && betSlip.length === 0 && (
+          <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreateEventModalVisible(true)}>
+            <Text style={styles.plusButtonText}>+</Text>
+          </TouchableOpacity>
+        )}
+        {betSlip.length > 0 && (
+          <View style={styles.betSlipButtonContainer}>
+            <TouchableOpacity disabled={loading} onPress={() => setBetSlipModalVisible(true)}>
+              <Text style={styles.betSlipButtonText}>
+                {loading ? "PLACING BETS..." : `OPEN BET SLIP (${liveSlipOdds})`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+    </View>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -644,153 +483,38 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   balance: {
-
     maxWidth: 75,
-
   },
   leaveButton: {
-
     backgroundColor: Colors.primary,
     width: 120,
     height: 35,
     borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 10, 
-
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#ff496b",
-    textAlign: "center",
-    marginBottom: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    margin: 10,
   },
   betSlipButtonContainer: {
-
     width: "100%",
     borderRadius: 25,
     alignSelf: "center",
     justifyContent: "center",
     height: 55,
     backgroundColor: "#ff496b",
-    
-
   },
   betSlipAndCreateButton: {
-
     marginHorizontal: 10,
     marginBottom: 35,
-
   },
-
   scrollContent: {
-    paddingBottom: 100, 
+    paddingBottom: 100,
   },
-  
   betSlipButtonText: {
-
-    textAlign: 'center',
-    fontSize: 28,
-    color: 'white',
-    fontWeight: '700',
-
-  },
-  buttonStyle: {
-    paddingVertical: 12,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 120,
-    height: 50,
-  },
-  createButton: {
-    backgroundColor: Colors.primary,
-  },
-  cancelButton: {
-    backgroundColor: "#ccc",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  cancelButtonText: {
-    color: "#000",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    padding: 20,
-    width: "90%",
-    borderRadius: 10,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 15,
     textAlign: "center",
+    fontSize: 28,
+    color: "white",
+    fontWeight: "700",
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  picker: {
-    height: 50,
-    marginBottom: 10,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  visibilityRow: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    marginTop: 5,
-    marginBottom: 10,
-  },
-  selectedVisibilityButton: {
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 120,
-    height: 35,
-    marginRight: 10,
-    backgroundColor: "#ff496b",
-  },
-
-  deselectedVisibilityButton: {
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 120,
-    height: 35,
-    marginRight: 10,
-    backgroundColor: "#ccc",
-  },
-
-  visibilityButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-
   plusButtonText: {
     color: "#fff",
     fontWeight: "bold",
@@ -805,34 +529,18 @@ const styles = StyleSheet.create({
     width: 55,
     height: 55,
     backgroundColor: "#ff496b",
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     bottom: 20,
-    position: 'absolute',
-  },
-
-  scrollView: {
-    maxHeight: 200,
-    marginBottom: 20,
-  },
-  visibilityButton: {
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 120,
-    height: 35,
-    marginRight: 10,
-    backgroundColor: "#ccc",
+    position: "absolute",
   },
   switchContainer: {
     flexDirection: "row",
     justifyContent: "center",
     marginBottom: 10,
-    backgroundColor: '',
   },
   switchButton: {
     padding: 10,
-    alignItems: 'center',
-    backgroundColor: '',
+    alignItems: "center",
     marginHorizontal: 3,
     borderBottomWidth: 2,
     borderColor: "transparent",
@@ -852,12 +560,11 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingTop: 50,
   },
 });

@@ -96,35 +96,36 @@ export async function getEventById({ eventId }) {
 }
 
 const cache = {};
+async function lockExpiredEvents(events) {
+  for (const event of events) {
+    if (event.lockDate._seconds * 1000 < Date.now() && event.status === "open") {
+      await updateEvent({ eventId: event.id, status: "closed", acceptingWagers: false, results: [] });
+      event.status = "closed";
+      event.acceptingWagers = false;
+    }
+  }
+}
+
 export async function getEventsByGroupId({ groupId, forceRefresh = false }) {
   const token = await FIREBASE_AUTH.currentUser?.getIdToken();
   if (!token) throw new Error("User not authenticated");
 
-  // Check if the data is already in the cache
   if (cache[groupId] && !forceRefresh) {
-    console.log(`Using CACHED data`);
+    console.log("Using CACHED data");
+    await lockExpiredEvents(cache[groupId]);
     return cache[groupId];
   }
 
   console.log("Using FRESH data");
-  
   const res = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/events`, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
   });
-
   const data = await res.json();
+  if (!res.ok) throw new Error(data.error || data.message || "Failed to get events");
 
-  if (!res.ok) {
-    throw new Error(data.error || data.message || "Failed to get events");
-  }
-
-  // Store the response in the cache
+  await lockExpiredEvents(data);
   cache[groupId] = data;
-
   return data;
 }
 

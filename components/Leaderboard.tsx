@@ -44,7 +44,9 @@ const Colors = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatBalance = (amount: number): string => {
   const abs = Math.abs(amount);
-  if (abs >= 9999) return `${(abs / 1000).toFixed(1)}k`;
+  if (abs >= 9999 && abs < 1000000) return `${(abs / 1000).toFixed(1)}k`;
+  if (abs >= 1000000 && abs < 1000000000) return `${(abs / 1000000).toFixed(1)}M`;
+  if (abs >= 1000000000) return `${(abs / 1000000000).toFixed(1)}B`;
   return `${abs.toFixed(0)}`;
 };
 

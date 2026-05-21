@@ -154,6 +154,7 @@ export const clearBalanceCache = (groupId) => {
   balanceCache[groupId] = null;
 }
 
+let leaderboardCache = {};
 export const getGroupLeaderboard = async (groupId) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
@@ -162,11 +163,17 @@ export const getGroupLeaderboard = async (groupId) => {
       return [];
     }
 
+    if (leaderboardCache[groupId]) {
+      console.log(`Returning cached leaderboard for group ${groupId}`);
+      return leaderboardCache[groupId];
+    }
+
     const token = await user.getIdToken();
     const response = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/leaderboard`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await response.json();
+    leaderboardCache[groupId] = data.leaderboard;
     return data.leaderboard;
   } catch (error) {
     console.error("Error fetching group leaderboard:", error);
