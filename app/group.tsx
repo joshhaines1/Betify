@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator, Pressable } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { arrayRemove, doc, updateDoc } from "firebase/firestore";
 import { FIREBASE_AUTH, FIRESTORE } from "@/.FirebaseConfig";
@@ -55,6 +55,35 @@ interface Prop {
   acceptingWagers: boolean;
 }
 
+const EVENT_TYPES = [
+  {
+    key: "basic",
+    label: "Basic Event",
+    description: "Simple Win/Loss Event",
+    onSelect: (setters) => {
+      setters.setModalState("event");
+      setters.setEventType("basic");
+    },
+  },
+  {
+    key: "advanced",
+    label: "Advanced Event",
+    description: "Moneyline, Spread, and Over/Under",
+    onSelect: (setters) => {
+      setters.setModalState("event");
+      setters.setEventType("MSO");
+    },
+  },
+  {
+    key: "prop",
+    label: "Prop Bet",
+    description: "Over or Under bets on a specific stat or outcome",
+    onSelect: (setters) => {
+      setters.setModalState("prop");
+    },
+  },
+];
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Group() {
   const { name, groupId, admins } = useLocalSearchParams();
@@ -62,8 +91,9 @@ export default function Group() {
   const [events, setEvents] = useState<Event[]>([]);
   const [props, setProps] = useState<Prop[]>([]);
   const navigation = useNavigation();
-  const [createPropModalVisible, setCreatePropModalVisible] = useState(false);
-  const [createEventModalVisible, setCreateEventModalVisible] = useState(false);
+  const [eventType, setEventType] = useState("none");
+  // Replace your two modal booleans + eventTypeSelectorVisible with one state:
+  const [modalState, setModalState] = useState<"none" | "selector" | "event" | "prop">("none");
   const [betSlipOdds, setBetSlipOdds] = useState(new Map<string, string>());
   const [betSlip, setBetSlip] = useState<Map<string, string>[]>([]);
   const [liveSlipOdds, setLiveSlipOdds] = useState("");
@@ -74,6 +104,7 @@ export default function Group() {
   const [currentBalance, setCurrentBalance] = useState(0);
   const [betSlipModalVisible, setBetSlipModalVisible] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [groupInfo, setGroupInfo] = useState({ memberCount: 0, totalWagered: 0 });
 
   const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
 
@@ -198,6 +229,10 @@ export default function Group() {
     setLeaderboard(data);
   };
 
+  const fetchGroupInfo = async () => {
+    
+  };
+
   const refreshEvents = () => fetchEvents(true);
 
   const fetchEvents = async (forceRefresh = false) => {
@@ -292,6 +327,7 @@ export default function Group() {
     fetchEvents();
     fetchBalance();
     fetchLeaderboard();
+    fetchGroupInfo();
   }, []);
 
   useLayoutEffect(() => {
@@ -333,7 +369,7 @@ export default function Group() {
             onPress={() => setView(tab)}
           >
             <Text style={styles.switchText}>
-              {tab === "events" ? "Games" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === "events" ? "Events" : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -416,23 +452,88 @@ export default function Group() {
 
       {/* ── Info ── */}
       {view === "info" && (
-        <View style={{ alignItems: "center", justifyContent: "center", flex: 1 }}>
-          <Text style={{ color: Colors.textColor, fontSize: 30, fontWeight: "bold" }}>
-            Invite Code: {(groupId.toString().substring(groupId.toString().length - 6)).toUpperCase()}
-          </Text>
-          <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveButtonPress}>
-            <Text style={{ color: Colors.textColor, fontWeight: "700", fontSize: 16 }}>Leave Group</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+  <ScrollView contentContainerStyle={infoStyles.container}>
+
+    <View style={infoStyles.headerTop}>
+      <Text style={infoStyles.headerTitle}>GROUP DETAILS</Text>
+    </View>
+
+    <View style={infoStyles.columnLabels}>
+      <Text style={infoStyles.columnLabel}>VALUE</Text>
+    </View>
+
+    {[
+      { label: "INVITE CODE", value: groupId.toString().slice(-6).toUpperCase() },
+      { label: "MEMBERS",     value: String(groupInfo.memberCount) },
+      { label: "TOTAL WAGERED", value: groupInfo.totalWagered.toLocaleString() },
+    ].map((row, i) => (
+      <View
+        key={row.label}
+        style={[infoStyles.row, i === 0 && infoStyles.rowFirst]}
+      >
+        <Text style={infoStyles.label}>{row.label}</Text>
+        <Text style={infoStyles.value}>{row.value}</Text>
+      </View>
+    ))}
+
+    <TouchableOpacity style={infoStyles.leaveButton} onPress={handleLeaveButtonPress}>
+      <Text style={infoStyles.leaveText}>LEAVE GROUP</Text>
+    </TouchableOpacity>
+
+  </ScrollView>
+)}
 
       {/* ── Modals ── */}
-      <Modal animationType="fade" transparent visible={createPropModalVisible}>
-        <CreatePropView fetchEvents={refreshEvents} setModalVisible={setCreatePropModalVisible} groupId={groupId} groupName={name} />
-      </Modal>
-      <Modal animationType="fade" transparent visible={createEventModalVisible}>
-        <CreateMSOView fetchEvents={refreshEvents} setModalVisible={setCreateEventModalVisible} groupId={groupId} groupName={name} />
-      </Modal>
+        <Modal animationType="fade" transparent visible={modalState === "prop"}>
+          <CreatePropView fetchEvents={refreshEvents} setModalVisible={() => setModalState("none")} groupId={groupId} groupName={name} />
+        </Modal>
+    
+        <Modal animationType="fade" transparent visible={modalState === "event"}>
+          <CreateMSOView fetchEvents={refreshEvents} setModalVisible={() => setModalState("none")} groupId={groupId} groupName={name} eventType={eventType}/>
+        </Modal>
+      <Modal
+    visible={modalState === "selector"}
+    transparent
+    animationType="fade"
+    onRequestClose={() => setModalState("none")}
+  >
+    <Pressable
+      style={styles.eventTypeOverlay}
+      onPress={() => setModalState("none")}
+    >
+      <Pressable style={styles.eventTypeSheet} onPress={(e) => e.stopPropagation()}>
+        <Text style={styles.eventTypeTitle}>Create Event</Text>
+        <Text style={styles.eventTypeSubtitle}>What type of event?</Text>
+
+        {EVENT_TYPES.map((type) => (
+          <TouchableOpacity
+            key={type.key}
+            style={styles.eventTypeOption}
+            onPress={() => {
+              // Pass all your modal setters here — add new ones as you build them
+              type.onSelect({
+                setModalState,
+                setEventType,
+              });
+            }}
+          >
+            <View style={styles.eventTypeTextBlock}>
+              <Text style={styles.eventTypeLabel}>{type.label}</Text>
+              <Text style={styles.eventTypeDescription}>{type.description}</Text>
+            </View>
+            <Text style={styles.eventTypeChevron}>›</Text>
+          </TouchableOpacity>
+        ))}
+
+        <TouchableOpacity
+          style={styles.eventTypeCancelButton}
+          onPress={() => setModalState("none")}
+        >
+          <Text style={styles.eventTypeCancelText}>Cancel</Text>
+        </TouchableOpacity>
+      </Pressable>
+    </Pressable>
+  </Modal>
       <Modal animationType="fade" transparent visible={betSlipModalVisible}>
         <BetSlipView
           fetchGroups={refreshEvents}
@@ -449,16 +550,15 @@ export default function Group() {
 
       {/* ── FAB / Bet slip button ── */}
       <View style={styles.betSlipAndCreateButton}>
-        {isAdmin && view === "props" && betSlip.length === 0 && (
-          <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreatePropModalVisible(true)}>
+        {isAdmin && betSlip.length === 0 && (
+          <TouchableOpacity
+            style={styles.plusButtonStyle}
+            onPress={() => setModalState("selector")}
+          >
             <Text style={styles.plusButtonText}>+</Text>
           </TouchableOpacity>
         )}
-        {isAdmin && view === "events" && betSlip.length === 0 && (
-          <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreateEventModalVisible(true)}>
-            <Text style={styles.plusButtonText}>+</Text>
-          </TouchableOpacity>
-        )}
+
         {betSlip.length > 0 && (
           <View style={styles.betSlipButtonContainer}>
             <TouchableOpacity disabled={loading} onPress={() => setBetSlipModalVisible(true)}>
@@ -484,15 +584,6 @@ const styles = StyleSheet.create({
   },
   balance: {
     maxWidth: 75,
-  },
-  leaveButton: {
-    backgroundColor: Colors.primary,
-    width: 120,
-    height: 35,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    margin: 10,
   },
   betSlipButtonContainer: {
     width: "100%",
@@ -566,5 +657,153 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingTop: 50,
+  },
+  eventTypeOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  eventTypeSheet: {
+    backgroundColor: "#121112",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 24,
+    paddingBottom: 36,
+  },
+  eventTypeTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 4,
+    color: Colors.textColor,
+  },
+  eventTypeSubtitle: {
+    fontSize: 14,
+    color: "#888",
+    marginBottom: 20,
+  },
+  eventTypeOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    color: Colors.textColor,
+  },
+  eventTypeIcon: {
+    fontSize: 24,
+    marginRight: 14,
+  },
+  eventTypeTextBlock: {
+    flex: 1,
+  },
+  eventTypeLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.textColor,
+  },
+  eventTypeDescription: {
+    fontSize: 13,
+    color: "#888",
+    marginTop: 2,
+  },
+  eventTypeChevron: {
+    fontSize: 22,
+    color: "#ff496b",
+  },
+  eventTypeCancelButton: {
+    marginTop: 16,
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  eventTypeCancelText: {
+    fontSize: 16,
+    color: "#888",
+  },
+});
+
+const infoStyles = StyleSheet.create({
+  container: {
+    paddingHorizontal: 16,
+    paddingTop: 0,
+    paddingBottom: 100,
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 3,
+    color: "#FFFFFF",
+  },
+  headerSub: {
+    fontSize: 12,
+    color: "#7A8499",
+    letterSpacing: 0.5,
+    marginBottom: 16,
+  },
+  columnLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 4,
+    marginBottom: 8,
+  },
+  columnLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    color: "#7A8499",
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#1d1a1c",
+    borderRadius: 12,
+    marginBottom: 8,
+    paddingVertical: 18,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#252B38",
+  },
+  rowFirst: {
+    borderColor: "#ff496b55",
+    shadowColor: "#ff496b",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    color: "#7A8499",
+  },
+  value: {
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    color: "#FFFFFF",
+  },
+  leaveButton: {
+    marginTop: 16,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ff496b55",
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  leaveText: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 2,
+    color: "white",
   },
 });

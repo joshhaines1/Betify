@@ -29,7 +29,7 @@ interface LeaderboardHeaderProps {
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const Colors = {
   background: '#0b0b0b73',
-  surface: '#161A22',
+  surface: '#1d1a1c',
   surfaceHighlight: '#1d1a1c',
   border: '#252B38',
   gold: '#ff496b',
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 32,
+    paddingBottom: 100,
   },
 
   // Header

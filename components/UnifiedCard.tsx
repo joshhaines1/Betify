@@ -533,6 +533,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 5,
   },
   groupName: {
     fontSize: 9,
@@ -652,18 +653,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 0,
   },
   teamBlock: {
     flex: 1,
     alignItems: 'center',
-    gap: 6,
+    gap: 0,
   },
   logo: {
     width: 40,
     height: 40,
     tintColor: Colors.textSecondary,
     opacity: 1,
+    padding: 4,
   },
   teamName: {
     fontSize: 14,

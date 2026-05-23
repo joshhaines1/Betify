@@ -7,7 +7,7 @@ import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
 import * as events_client from "../clients/events-client"
 
-export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId}) {
+export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId, eventType}) {
   
     const [team1, setTeam1] = useState("");
     const [team2, setTeam2] = useState("");
@@ -19,7 +19,7 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId}
     const [overUnder, setOverUnder] = useState("");
     const [overOdds, setOverOdds] = useState("");
     const [underOdds, setUnderOdds] = useState("");
-    const [type, setType] = useState("");
+    const [type, setType] = useState(eventType);
     const [spreadType, setSpreadType] = useState("Spread");
     const [lockDate, setLockDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -28,7 +28,6 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId}
 
     useEffect(() => {
         resetFields();
-        
       }, []);
 
       
@@ -138,7 +137,6 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId}
         setOverUnder("");
         setOverOdds("");
         setUnderOdds("");
-        setType("basic");
         setLockDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
       };
       
@@ -205,23 +203,13 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId}
                 />
                 <TextInput
                 keyboardType='ascii-capable'
-                  style={styles.input}
+                  style={[styles.input, {marginBottom: 10}]}
                   placeholder="Team 2"
                   value={team2}
                   onChangeText={setTeam2}
                   maxLength={25}
                   placeholderTextColor={"gray"}
                 />
-                <View style={styles.visibilityRow}>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, type === "basic" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("basic")}>
-                    <Text style={styles.visibilityButtonText}>BASIC</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.deselectedVisibilityButton, type === "MSO" && styles.selectedVisibilityButton]} onPress={() => handleVisiblityButton("MSO")}>
-                    <Text style={styles.visibilityButtonText}>ADVANCED</Text>
-                  </TouchableOpacity>
-                </View>                
-
-
                 <View style={{alignItems: 'flex-start'}}>
                   <Text style={styles.header}>Moneyline</Text>
                   <View style={styles.moneylineRow}>
