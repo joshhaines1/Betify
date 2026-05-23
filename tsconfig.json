@@ -2,6 +2,8 @@
   "extends": "expo/tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
+    "moduleResolution": "bundler",
+    "ignoreDeprecations": "6.0",
     "strict": true,
     "noImplicitAny": false,
     "paths": {
