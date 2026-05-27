@@ -12,6 +12,7 @@ import Colors from "@/assets/styles/colors";
 import { TextInput } from "react-native";
 import { JoinGroupWithCodeView } from "@/components/JoinGroupWithCodeView";
 import * as groups_service from "../../clients/groups-client";
+import { useFocusEffect } from "@react-navigation/core";
 
 interface Group {
   id: string;
@@ -35,23 +36,18 @@ export default function GroupsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  //Refresh on refocus
-  /* useFocusEffect(
-    useCallback(() => {
-      fetchGroups();
-    }, [])
-  ); */
-  useEffect(() => {
-    fetchGroups();
-     }, []);
+  useFocusEffect(
+  useCallback(() => {
+    fetchGroups(false);
+  }, [])
+);
     
-  const fetchGroups = async () => {
-    console.log("Fetching groups...");
+  const fetchGroups = async (forceRefresh: boolean = false) => {
     setLoading(true);
-    const myGroups = await groups_service.getUsersGroups();
-    const otherGroups = await groups_service.getAllGroups();
+    const myGroups = await groups_service.getUsersGroups(forceRefresh);
+    const otherGroups = await groups_service.getAllGroups(0, forceRefresh);
     setMyGroups(myGroups);
-    setOtherGroups(otherGroups.groups);
+    setOtherGroups(otherGroups);
     setLoading(false);
   };
 
@@ -59,7 +55,7 @@ export default function GroupsScreen() {
     console.log("Refresh..");
     setRefreshing(true);
     await sleep(1000);
-    await fetchGroups();
+    await fetchGroups(true);
     setRefreshing(false);
   };
 
@@ -106,8 +102,7 @@ export default function GroupsScreen() {
       {refreshing && (
         <ActivityIndicator size="large" color="#ff496b" />
       )}
-        <TextInput></TextInput>
-        {loading && myGroups.length === 0 && otherGroups.length === 0 ? (
+        {loading && myGroups?.length === 0 && otherGroups?.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>

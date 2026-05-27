@@ -16,7 +16,7 @@ export default function RootLayout() {
         name="group" 
         options={{ 
           animation: "flip", 
-          headerShown: true, 
+          headerShown: false, 
           headerBackButtonDisplayMode: "minimal",
           headerTitleStyle: styles.headerText,
           headerTintColor: Colors.textColor, // Back arrow color

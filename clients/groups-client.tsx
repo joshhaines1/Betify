@@ -32,6 +32,31 @@ export const createGroup = async (groupName, visibility, startingCurrency, passw
   }
 };
 
+export const leaveGroup = async (groupId) => {
+  const API_ENDPOINT = `${BASE_API_ENDPOINT}/groups/${groupId}/leave`;
+  try {
+    const user = FIREBASE_AUTH.currentUser;
+    if (!user) {
+      console.error("No logged-in user.");
+      return;
+    }
+
+    const token = await user.getIdToken();
+
+    const response = await fetch(API_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error leaving group:", error);
+  }
+};
+
 let usersGroupCache = []
 export const getUsersGroups = async ( forceRefresh = false ) => {
   try {
@@ -42,8 +67,9 @@ export const getUsersGroups = async ( forceRefresh = false ) => {
     }
 
     // Check if the data is already in the cache
+    console.log("Checking cache for users groups. Cache length:", usersGroupCache.length);
     if (usersGroupCache.length > 0 && !forceRefresh) {
-      console.log(`Returning cached data for user's groups}`);
+      console.log(`Returning cached data for user's groups`);
       return usersGroupCache;
     }
 
@@ -90,8 +116,9 @@ export const getAllGroups = async ( limit = 0 , forceRefresh = false ) => {
     }
 
     // Check if the data is already in the cache
+    console.log("Checking cache for all groups. Cache length:", allGroupsCache.length);
     if (allGroupsCache.length > 0 && !forceRefresh) {
-      console.log(`Returning cached data for user's groups}`);
+      console.log(`Returning cached data for all groups`);
       return allGroupsCache;
     }
 
@@ -101,8 +128,9 @@ export const getAllGroups = async ( limit = 0 , forceRefresh = false ) => {
     });
 
     const data = await response.json();
-    allGroupsCache = data; // Store the response in the cache
-    return data;
+    allGroupsCache = data.groups; // Store the response in the cache
+    console.log("Fetched all groups from API. Number of groups:", data.groups.length);
+    return data.groups;
   } catch (error) {
     console.error("Error fetching all groups:", error);
     return [];
@@ -152,6 +180,12 @@ export const getUsersCurrency = async (groupId, forceRefresh = false) => {
 export const clearBalanceCache = (groupId) => {
   console.log("Clearing balance cache for group " + groupId);
   balanceCache[groupId] = null;
+}
+
+export const clearGroupsCache = () => {
+  console.log("Clearing groups cache");
+  usersGroupCache = [];
+  allGroupsCache = [];
 }
 
 let leaderboardCache = {};

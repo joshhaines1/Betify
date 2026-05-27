@@ -14,14 +14,15 @@
         "dark": "./assets/icons/BetifyAppLogoDark.png",
         "light": "./assets/icons/BetifyAppLogoLight.png"
       },
-      "bundleIdentifier": "com.anonymous.Betify"
+      "bundleIdentifier": "com.joshhaines.Betify",
+    "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.Betify"
+      "package": "com.joshhaines.Betify"
     },
     "web": {
       "bundler": "metro",

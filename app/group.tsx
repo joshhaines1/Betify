@@ -13,6 +13,8 @@ import * as wagers_service from "../clients/wagers-client";
 import * as groups_client from "../clients/groups-client";
 import * as events_client from "../clients/events-client";
 import Leaderboard from "@/components/Leaderboard";
+import fetchGroups  from "./(tabs)/index";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Event {
@@ -104,6 +106,7 @@ export default function Group() {
   const [currentBalance, setCurrentBalance] = useState(0);
   const [betSlipModalVisible, setBetSlipModalVisible] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [leaving, setLeaving] = useState(false);
   const [groupInfo, setGroupInfo] = useState({ memberCount: 0, totalWagered: 0 });
 
   const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
@@ -336,9 +339,30 @@ export default function Group() {
 
   const handleLeaveButtonPress = async () => {
     try {
-      const groupRef = doc(FIRESTORE, "groups", groupId as string);
-      await updateDoc(groupRef, { members: arrayRemove(FIREBASE_AUTH.currentUser?.uid) });
-      router.replace("/(tabs)");
+      Alert.alert(
+            "Leave Group?",
+            "Are you sure you want to leave this group?",
+            [
+              {
+                text: "Yes",
+                onPress: async () => {
+                  setLeaving(true);
+                  await groups_client.leaveGroup(groupId);
+                  await groups_client.getAllGroups(0, true); // Invalidate cache on leave
+                  await groups_client.getUsersGroups(true);
+                  router.dismissAll();
+                
+                },
+              },
+              {
+                text: "No",
+                onPress: () => console.log("User answered: No"),
+                style: "cancel",
+              },
+            ],
+            { cancelable: false }
+          );
+      
     } catch (error) {
       console.error("Error removing user:", error);
     }
@@ -358,8 +382,19 @@ export default function Group() {
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.container}>
-
+    <SafeAreaView style={styles.container}>
+      <Modal animationType="fade" transparent visible={leaving}>
+        <View style={styles.leavingOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      </Modal>
+      {/* ── Header ── */}
+        <View style={styles.header}>
+           <TouchableOpacity onPress={() => router.replace("/(tabs)")} style={styles.headerBackButton}>
+            <Text style={styles.headerBackArrow}>‹</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerGroupName}>{name}</Text>
+        </View>
       {/* ── Tab bar ── */}
       <View style={styles.switchContainer}>
         {(["events", "props", "leaderboard", "info"] as const).map((tab) => (
@@ -570,7 +605,7 @@ export default function Group() {
         )}
       </View>
 
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -582,6 +617,12 @@ const styles = StyleSheet.create({
     padding: 10,
     paddingTop: 0,
   },
+  leavingOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+},
   balance: {
     maxWidth: 75,
   },
@@ -715,9 +756,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
   },
-  eventTypeCancelText: {
+   eventTypeCancelText: {
     fontSize: 16,
     color: "#888",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",  // centers the title
+    paddingHorizontal: 4,
+    paddingVertical: 12,
+  },
+  headerGroupName: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: Colors.textColor,
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+  headerBackButton: {
+    position: "absolute",
+    left: 4,
+    padding: 4,
+    zIndex: 1,
+  },
+  headerBackArrow: {
+    fontSize: 38,
+    color: Colors.textColor,
+    lineHeight: 38,
+    fontWeight: "300",
+  },
+  headerBalancePill: {
+    position: "absolute",
+    right: 4,
+    backgroundColor: "#1d1a1c",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#ff496b55",
+  },
+  headerBalanceText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.primary,
   },
 });
 
@@ -806,4 +888,5 @@ const infoStyles = StyleSheet.create({
     letterSpacing: 2,
     color: "white",
   },
+  
 });

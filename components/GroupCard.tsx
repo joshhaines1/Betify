@@ -41,7 +41,9 @@ export function GroupCard({ name, members, adminName, admins, visibility, passwo
       <View style={styles.groupInfoContainer}>
         <Text style={styles.groupName}>{name}</Text>
         <Text style={styles.visibilityText}>{visibility} Group</Text>
-        <Text style={styles.adminName}>Created by: {adminName}</Text>
+        <Text style={styles.adminName} numberOfLines={1} ellipsizeMode="tail">
+          Created by: {adminName}
+        </Text>
       </View>
       <View style={styles.memberCountContainer}>
         <Text style={styles.memberCountText}>
@@ -102,12 +104,6 @@ const styles = StyleSheet.create({
     marginLeft: 3,
     color: Colors.textColor,
   },
-  groupName: {
-    fontSize: 23,
-    color: Colors.textColor, // Colors.light.tint is undefined, replaced with 'blue'
-    fontWeight: '500',
-    width: 225,
-  },
   adminName: {
     fontSize: 13,
     color: 'gray',
@@ -122,15 +118,21 @@ const styles = StyleSheet.create({
     fontSize: 25,
     textAlign: 'center',
   },
-  memberCountContainer: {
-    padding: 8,
-    flex: 1,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
   groupInfoContainer: {
-    width: '52.5%',
-    marginTop: 1,
-    alignItems: 'flex-start',
-  },
+  flex: 1,  // takes remaining space after logo
+  marginTop: 1,
+  alignItems: 'flex-start',
+},
+groupName: {
+  fontSize: 23,
+  color: Colors.textColor,
+  fontWeight: '500',
+  // remove the fixed width: 225
+},
+memberCountContainer: {
+  padding: 8,
+  alignItems: 'flex-end',
+  justifyContent: 'center',
+  // remove flex: 1 so it only takes as much space as it needs
+},
 });

@@ -4,20 +4,10 @@ import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
-import { JoinGroupView } from './JoinGroupView';
 
 export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, oddsToMultiplier, balance, placeBets, setWager, wager}) {
   
-    const [inviteCode, setInviteCode] = useState("");
-    const [joinGroupModal, setJoinGroupModal] = useState(false);
-    const [password, setPassword] = useState("")
-    const [visibility, setVisibility] = useState("")
     const [multiplier, setMultiplier] = useState(1);
-    let name: string | null = null;
-    let correctPassword: string | null = null;
-    let members: any[] | null = null;
-    let startingCurrency: number | null = null;
-    let groupId: string | null = null;
     
 
     useEffect(() => {
@@ -49,7 +39,6 @@ export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, 
     
     
       const resetFields = () => {
-        setInviteCode("");
         setWager(0);
       };
     
@@ -107,22 +96,7 @@ export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, 
                   </TouchableOpacity>
                 </View>
               </View>
-
-              <Modal animationType="fade" transparent={true} visible={joinGroupModal}>
-                        {/** setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId */}
-                        <JoinGroupView
-                            fetchGroups={fetchGroups}
-                            setModalVisible={setJoinGroupModal}
-                            name={name}
-                            visibility={visibility}
-                            correctPassword={correctPassword}
-                            members={[1, 2, 3]}
-                            startingCurrency={1000}
-                            groupId={groupId}
-                        />
-                </Modal>
-            </View>
-          
+            </View>    
   );
 }
 

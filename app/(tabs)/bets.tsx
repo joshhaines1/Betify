@@ -33,7 +33,8 @@ export default function Bets() {
   const [view, setView] = useState<ViewType>("active");
   const [activeBets, setActiveBets] = useState<Bet[]>([]);
   const [settledBets, setSettledBets] = useState<Bet[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingActive, setLoadingActive] = useState(false);
+  const [loadingSettled, setLoadingSettled] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastVisibleActive, setLastVisibleActive] = useState<DocumentSnapshot | null>(null);
   const [lastVisibleSettled, setLastVisibleSettled] = useState<DocumentSnapshot | null>(null);
@@ -62,10 +63,11 @@ export default function Bets() {
   };
 
   const fetchBets = async (statusFilter: string, refresh = false) => {
-    if (loading) return;
+    const isActive = statusFilter === "active";
+    if (isActive ? loadingActive : loadingSettled) return;
 
     try {
-      setLoading(true);
+      isActive ? setLoadingActive(true) : setLoadingSettled(true);
       console.log(`Fetching ${statusFilter} bets...`);
 
       const lastVisible =
@@ -103,18 +105,17 @@ export default function Bets() {
     } catch (error) {
       console.error("Error fetching bets:", error);
     } finally {
-      setLoading(false);
+     isActive ? setLoadingActive(false) : setLoadingSettled(false);
     }
   };
 
 
   const handleEndScroll = () => {
-    if (!loading) {
-      if (view === "active" && hasMoreActiveBets) {
-        fetchBets("active");
-      } else if (view === "settled" && hasMoreSettledBets) {
-        fetchBets("settled");
-      }
+    const isActive = view === "active";
+    if (isActive && !loadingActive && hasMoreActiveBets) {
+      fetchBets("active");
+    } else if (!isActive && !loadingSettled && hasMoreSettledBets) {
+      fetchBets("settled");
     }
   };
 
@@ -143,7 +144,6 @@ export default function Bets() {
  
   const renderBetItem = ({ item }: { item: Bet }) => (
     <BetCard
-      key={`${view}-${item.id}`}
       date={item.date}
       status={item.status}
       risk={item.risk}
@@ -202,7 +202,7 @@ export default function Bets() {
       </View>
 
       {/* FlatList for Bets */}
-      {loading && displayedBets.length === 0 ? (
+      {(loadingActive || loadingSettled) && displayedBets.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>

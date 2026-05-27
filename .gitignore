@@ -39,3 +39,8 @@ yarn-error.*
 ios
 android
 .firebaserc
+
+google-services.json
+GoogleService-Info.plist
+*.keystore
+.env

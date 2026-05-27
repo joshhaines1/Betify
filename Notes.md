@@ -1,5 +1,3 @@
 To Do:
 
-leaderboards
-
-Whne event is locked due to date, have the user lock it lazily
+group name overflow control on group list

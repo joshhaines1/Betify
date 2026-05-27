@@ -1,41 +1,59 @@
 import { useAuth } from "../../context/AuthContext";
-import { useState } from "react";
-import { getAuth, updateProfile } from "firebase/auth";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/assets/styles/colors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function Profile() {
-  const { user, setUser, logout } = useAuth(); // Get user & logout function from context
-  const [userName, setUserName] = useState(user?.displayName || "");
-
-  const updateUserName = async () => {
-    if (!user) {
-      console.error("No user is signed in.");
-      return;
-    }
-
-    try {
-      await updateProfile(user, { displayName: userName });
-      setUser({ ...user, displayName: userName }); // Update context with new username
-      console.log("Profile updated successfully.");
-    } catch (error) {
-      console.error("Error updating profile:", error);
-    }
-  };
+  const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const handleSignOut = async () => {
-    console.log("Signing out...");
-    await logout(); // Sign out from Firebase
-    router.replace("/login"); // Redirect to login screen
+    await logout();
+    router.replace("/login");
   };
 
+  const initials = user?.displayName
+    ? user.displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : user?.email?.[0].toUpperCase() ?? "?";
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Profile</Text>
-      <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
-        <Text style={styles.signOutText}>SIGN OUT</Text>
-      </TouchableOpacity>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Profile</Text>
+        </View>
+
+        {/* Avatar */}
+        <View style={styles.avatarWrap}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          {user?.displayName && (
+            <Text style={styles.displayName}>{user.displayName}</Text>
+          )}
+        </View>
+
+        {/* Account Section */}
+        <Text style={styles.sectionLabel}>Account</Text>
+
+        <View style={[styles.card, styles.cardFirst]}>
+          <Text style={styles.cardLabel}>Email</Text>
+          <Text style={styles.cardValue} numberOfLines={1}>{user?.email ?? "—"}</Text>
+        </View>
+
+        {user?.displayName && (
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Username</Text>
+            <Text style={styles.cardValue}>{user.displayName}</Text>
+          </View>
+        )}
+
+        {/* Sign Out */}
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>SIGN OUT</Text>
+        </TouchableOpacity>
     </View>
   );
 }
@@ -43,32 +61,102 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.background,
+    padding: 15,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 60,
+  },
+  header: {
+    alignItems: "center",
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: Colors.textColor,
+    letterSpacing: 0.5,
+  },
+  avatarWrap: {
+    alignItems: "center",
+    paddingVertical: 24,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#1d1a1c",
+    borderWidth: 2,
+    borderColor: "#ff496b55",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.background,
   },
-  text: {
+  avatarText: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#ff496b",
+  },
+  displayName: {
+    marginTop: 12,
+    fontSize: 18,
+    fontWeight: "800",
     color: Colors.textColor,
-    fontSize: 24,
-    fontWeight: 600,
+    letterSpacing: 0.3,
   },
-  input: {
-    borderWidth: 2,
-    padding: 8,
-    margin: 5,
-    borderRadius: 10,
-    width: "80%",
-    height: 45,
-    borderColor: "black",
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    color: "#7A8499",
+    textTransform: "uppercase",
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  card: {
+    backgroundColor: "#1d1a1c",
+    borderRadius: 12,
+    marginBottom: 10,
+    paddingVertical: 18,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "#252B38",
+  },
+  cardFirst: {
+    borderColor: "#ff496b55",
+    shadowColor: "#ff496b",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  cardLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    color: "#7A8499",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  cardValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   signOutButton: {
-    marginTop: 20,
-    padding: 10,
+    marginTop: 8,
     backgroundColor: "#ff496b",
-    borderRadius: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ff496b55",
+    paddingVertical: 16,
+    alignItems: "center",
   },
   signOutText: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 2,
     color: "white",
-    fontWeight: "bold",
   },
 });
