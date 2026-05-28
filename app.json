@@ -7,15 +7,14 @@
     "icon": "./assets/icons/BetifyAppLogoLight.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
-      "icons": {
-        "dark": "./assets/icons/BetifyAppLogoDark.png",
-        "light": "./assets/icons/BetifyAppLogoLight.png"
-      },
       "bundleIdentifier": "com.joshhaines.Betify",
-    "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -37,13 +36,29 @@
           "image": "./assets/icons/BetifyAppLogoDark.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "black"
+          "backgroundColor": "#000000"
         }
       ],
-      "expo-font"
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-6556472355461472~2293982262",
+          "iosAppId": "ca-app-pub-6556472355461472~6447334325"
+        }
+      ],
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a1020746-0640-4cd8-b708-a88a30461c31"
+      }
     }
   }
 }

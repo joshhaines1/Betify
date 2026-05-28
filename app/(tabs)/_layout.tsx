@@ -105,6 +105,16 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="shop"
+        options={{
+          title: 'Shop',
+          lazy: true,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'cart' : 'cart-outline'} color={color} size={24}/>
+          ),
+        }}
+      />
     </Tabs>
 
     </>

@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { BannerAd, BannerAdSize, TestIds } from "react-native-google-mobile-ads";
+import { useAds } from "../../context/AdsContext";
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator,
   Modal,
@@ -9,10 +11,15 @@ import { GroupCard } from "@/components/GroupCard";
 import { FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
 import Colors from "@/assets/styles/colors";
-import { TextInput } from "react-native";
 import { JoinGroupWithCodeView } from "@/components/JoinGroupWithCodeView";
 import * as groups_service from "../../clients/groups-client";
 import { useFocusEffect } from "@react-navigation/core";
+
+const BANNER_AD_UNIT_ID = __DEV__
+  ? TestIds.BANNER
+  : Platform.OS === "ios"
+    ? process.env.EXPO_PUBLIC_ADMOB_BANNER_IOS!
+    : process.env.EXPO_PUBLIC_ADMOB_BANNER_ANDROID!;
 
 interface Group {
   id: string;
@@ -35,6 +42,8 @@ export default function GroupsScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const { adsEnabled } = useAds();
+  
 
   useFocusEffect(
   useCallback(() => {
@@ -99,6 +108,13 @@ export default function GroupsScreen() {
         </View>
       </View>
 
+      {adsEnabled && (
+        <BannerAd
+          unitId={BANNER_AD_UNIT_ID}
+          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+          requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+        />
+      )}
       {refreshing && (
         <ActivityIndicator size="large" color="#ff496b" />
       )}
