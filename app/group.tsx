@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator, Pressable } from "react-native";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator, Pressable, Platform } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { arrayRemove, doc, updateDoc } from "firebase/firestore";
 import { FIREBASE_AUTH, FIRESTORE } from "@/.FirebaseConfig";
@@ -13,8 +13,17 @@ import * as wagers_service from "../clients/wagers-client";
 import * as groups_client from "../clients/groups-client";
 import * as events_client from "../clients/events-client";
 import Leaderboard from "@/components/Leaderboard";
-import fetchGroups  from "./(tabs)/index";
+import { useAds } from "@/context/PurchasesContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+//Ad
+import { InterstitialAd, AdEventType, TestIds } from "react-native-google-mobile-ads";
+
+//Ad
+const INTERSTITIAL_AD_UNIT_ID = __DEV__
+  ? TestIds.INTERSTITIAL
+  : Platform.OS === "ios"
+    ? process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_IOS!
+    : process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_ANDROID!;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Event {
@@ -111,6 +120,42 @@ export default function Group() {
 
   const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
 
+  const interstitialAdRef = useRef<InterstitialAd | null>(null);
+  const adLoadedRef = useRef(false);
+  const { adsEnabled } = useAds();
+
+  // AD
+  const loadInterstitialAd = () => {
+    const ad = InterstitialAd.createForAdRequest(INTERSTITIAL_AD_UNIT_ID, {
+      requestNonPersonalizedAdsOnly: true,
+    });
+
+    ad.addAdEventListener(AdEventType.LOADED, () => {
+      console.log("Interstitial ad loaded");
+      adLoadedRef.current = true;
+    });
+
+    ad.addAdEventListener(AdEventType.ERROR, (error) => {
+      console.log("Interstitial ad failed to load:", error);
+      adLoadedRef.current = false;
+    });
+
+    ad.addAdEventListener(AdEventType.CLOSED, () => {
+      // Preload next ad as soon as current one is dismissed
+      adLoadedRef.current = false;
+      loadInterstitialAd();
+    });
+
+    ad.load();
+    interstitialAdRef.current = ad;
+  };
+
+useEffect(() => {
+    if (adsEnabled) {
+      loadInterstitialAd();
+    }
+}, [adsEnabled]);
+
   // ── Bet slip side effects ──────────────────────────────────────────────────
   useEffect(() => {
     if (betSlip.length > 0) calculateOdds();
@@ -205,13 +250,21 @@ export default function Group() {
         lockDates,
       });
 
-      Alert.alert("Success!", "Your wager has been placed.");
       resetSlip();
       setCurrentBalance((prev) => prev - wager);
       invalidateBalanceCache();
+      Alert.alert("Success", "Your bet has been placed!");
     } catch (err) {
       resetSlip();
       Alert.alert("Error", err instanceof Error ? err.message : String(err));
+    } finally {
+        setBetSlipModalVisible(false);
+        if (adsEnabled && adLoadedRef.current && interstitialAdRef.current) {
+          setTimeout(() => {
+            interstitialAdRef.current?.show();
+          }, 500);
+        }
+        setLoading(false);
     }
     setLoading(false);
   };
@@ -223,13 +276,23 @@ export default function Group() {
 
   // ── Fetch helpers ──────────────────────────────────────────────────────────
   const fetchBalance = async () => {
+    try {
     const balance = await groups_client.getUsersCurrency(groupId as string);
     setCurrentBalance(balance);
+    } catch (error) {
+      setCurrentBalance(0);
+      Alert.alert("Error", "Failed to load balance. Please try again later.");
+    }
   };
 
   const fetchLeaderboard = async () => {
+    try {
     const data = await groups_client.getGroupLeaderboard(groupId as string);
     setLeaderboard(data);
+    } catch (error) {
+      setLeaderboard([]);
+      Alert.alert("Error", "Failed to load leaderboard. Please try again later.");
+    }
   };
 
   const fetchGroupInfo = async () => {
@@ -320,7 +383,11 @@ export default function Group() {
       setBetSlip([]);
       setBetSlipOdds(new Map());
     } catch (error) {
-      console.error("Error fetching events:", error);
+      setEvents([]);
+      setProps([]);
+      setBetSlip([]);
+      setBetSlipOdds(new Map());
+      Alert.alert("Error", "Failed to load events. Please try again later.");
     } finally {
       setLoadingEvents(false);
     }
@@ -364,7 +431,7 @@ export default function Group() {
           );
       
     } catch (error) {
-      console.error("Error removing user:", error);
+      Alert.alert("Error", "Failed to leave group. Please try again later.");
     }
   };
 
@@ -418,10 +485,10 @@ export default function Group() {
       </View>
 
       {/* ── Events + Props scroll ── */}
-      {(view === "events" || view === "props") && (
+      <>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          style={styles.scrollContainer}
+          style={[styles.scrollContainer, view !== "events" && { display: "none" }]}
           contentContainerStyle={styles.scrollContent}
         >
           {loadingEvents ? (
@@ -429,58 +496,64 @@ export default function Group() {
               <ActivityIndicator size="large" color={Colors.primary} />
             </View>
           ) : (
-            <>
-              {view === "events" &&
-                events.map((event) => (
-                  <UnifiedCard
-                    key={event.id}
-                    type={event.type === "MSO" ? "event" : "basic"}
-                    eventId={event.id}
-                    groupName={event.groupName}
-                    lockDate={event.lockDate as any}
-                    createdAt={event.createdAt}
-                    acceptingWagers={event.acceptingWagers}
-                    onEventSettled={onEventChanged}
-                    // team fields
-                    team1={event.options.team1}
-                    team2={event.options.team2}
-                    moneylineOdds1={event.options.moneylineOdds1}
-                    moneylineOdds2={event.options.moneylineOdds2}
-                    // MSO-only fields (ignored by basic layout)
-                    spread={event.options.spread}
-                    spreadOdds1={event.options.spreadOdds1}
-                    spreadOdds2={event.options.spreadOdds2}
-                    overUnder={event.options.overUnder}
-                    overOdds={event.options.overOdds}
-                    underOdds={event.options.underOdds}
-                    {...sharedCardProps}
-                  />
-                ))}
-
-              {view === "props" &&
-                props.map((prop) => (
-                  <UnifiedCard
-                    key={prop.id}
-                    type="prop"
-                    eventId={prop.id}
-                    groupName={prop.groupName}
-                    lockDate={prop.lockDate as any}
-                    createdAt={prop.createdAt}
-                    acceptingWagers={prop.acceptingWagers}
-                    onEventSettled={onPropChanged}
-                    // prop fields
-                    name={prop.name}
-                    description={prop.description}
-                    overUnder={prop.overUnder}
-                    overOdds={prop.overOdds}
-                    underOdds={prop.underOdds}
-                    {...sharedCardProps}
-                  />
-                ))}
-            </>
+            events.map((event) => (
+              <UnifiedCard
+                key={event.id}
+                type={event.type === "MSO" ? "event" : "basic"}
+                eventId={event.id}
+                groupName={event.groupName}
+                lockDate={event.lockDate as any}
+                createdAt={event.createdAt}
+                acceptingWagers={event.acceptingWagers}
+                onEventSettled={onEventChanged}
+                team1={event.options.team1}
+                team2={event.options.team2}
+                moneylineOdds1={event.options.moneylineOdds1}
+                moneylineOdds2={event.options.moneylineOdds2}
+                spread={event.options.spread}
+                spreadOdds1={event.options.spreadOdds1}
+                spreadOdds2={event.options.spreadOdds2}
+                overUnder={event.options.overUnder}
+                overOdds={event.options.overOdds}
+                underOdds={event.options.underOdds}
+                {...sharedCardProps}
+              />
+            ))
           )}
         </ScrollView>
-      )}
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={[styles.scrollContainer, view !== "props" && { display: "none" }]}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {loadingEvents ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : (
+            props.map((prop) => (
+              <UnifiedCard
+                key={prop.id}
+                type="prop"
+                eventId={prop.id}
+                groupName={prop.groupName}
+                lockDate={prop.lockDate as any}
+                createdAt={prop.createdAt}
+                acceptingWagers={prop.acceptingWagers}
+                onEventSettled={onPropChanged}
+                name={prop.name}
+                description={prop.description}
+                overUnder={prop.overUnder}
+                overOdds={prop.overOdds}
+                underOdds={prop.underOdds}
+                {...sharedCardProps}
+              />
+            ))
+          )}
+        </ScrollView>
+        </>
+      
 
       {/* ── Leaderboard ── */}
       {view === "leaderboard" && <Leaderboard data={leaderboard} />}

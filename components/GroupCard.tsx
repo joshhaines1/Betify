@@ -5,7 +5,7 @@ import { Link, router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 import Colors from '@/assets/styles/colors';
 
-
+const groupCard = require('@/assets/images/groupIcon.png');
 export function GroupCard({ name, members, adminName, admins, visibility, password, startingCurrency, groupId, fetchGroups, joined}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
 
@@ -34,7 +34,7 @@ export function GroupCard({ name, members, adminName, admins, visibility, passwo
     <>
     <TouchableOpacity style={styles.container} onLongPress={handleLongPress} onPress={handlePress}>
       <Image
-        source={require('@/assets/images/groupIcon.png')}
+        source={groupCard}
         style={styles.logo}
         resizeMode="contain"
       />

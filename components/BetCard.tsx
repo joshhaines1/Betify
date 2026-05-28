@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Modal, Alert } from 'react-native';
 import { Text, View } from 'react-native';
-import { Link, router } from 'expo-router';
-import { JoinGroupView } from './JoinGroupView';
 import Colors from '@/assets/styles/colors';
 import { BetPropCard } from './BetPropCard';
 
-
+const groupIcon = require('@/assets/images/groupIcon.png');
 export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}) {
 
   return (
@@ -56,7 +54,7 @@ export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}
             <View style={styles.logoContainer}>
                 {/* Add money image here */}
                 <Image
-                        source={require('@/assets/images/groupIcon.png')}
+                        source={groupIcon}
                         style={styles.logo}
                         resizeMode="contain"
                     />                

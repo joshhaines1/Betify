@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BannerAd, BannerAdSize, TestIds } from "react-native-google-mobile-ads";
-import { useAds } from "../../context/AdsContext";
+// ADS
+import { useAds } from "../../context/PurchasesContext";
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator,
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { GroupCard } from "@/components/GroupCard";
 import { FIREBASE_AUTH } from "@/.FirebaseConfig";
@@ -15,11 +17,13 @@ import { JoinGroupWithCodeView } from "@/components/JoinGroupWithCodeView";
 import * as groups_service from "../../clients/groups-client";
 import { useFocusEffect } from "@react-navigation/core";
 
+// ADS
 const BANNER_AD_UNIT_ID = __DEV__
   ? TestIds.BANNER
   : Platform.OS === "ios"
     ? process.env.EXPO_PUBLIC_ADMOB_BANNER_IOS!
     : process.env.EXPO_PUBLIC_ADMOB_BANNER_ANDROID!;
+    
 
 interface Group {
   id: string;
@@ -52,13 +56,22 @@ export default function GroupsScreen() {
 );
     
   const fetchGroups = async (forceRefresh: boolean = false) => {
+    try {
     setLoading(true);
     const myGroups = await groups_service.getUsersGroups(forceRefresh);
     const otherGroups = await groups_service.getAllGroups(0, forceRefresh);
     setMyGroups(myGroups);
     setOtherGroups(otherGroups);
+    console.log("No error");
+    
+  } catch (error) {
+    setMyGroups([]);
+    setOtherGroups([]);
+    Alert.alert("Error", "Failed to load groups. Please try again later.");
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
   const onRefresh = async () => {
     console.log("Refresh..");
@@ -108,69 +121,87 @@ export default function GroupsScreen() {
         </View>
       </View>
 
+      
+        {/* ADS */}
       {adsEnabled && (
+      <View style={{ marginBottom: 10, alignItems: 'center' }}>
         <BannerAd
           unitId={BANNER_AD_UNIT_ID}
           size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
           requestOptions={{ requestNonPersonalizedAdsOnly: true }}
         />
-      )}
+      </View>
+    )}
       {refreshing && (
         <ActivityIndicator size="large" color="#ff496b" />
       )}
-        {loading && myGroups?.length === 0 && otherGroups?.length === 0 ? (
+      {loading && myGroups?.length === 0 && otherGroups?.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : view === "joined" && myGroups.length === 0 ? (
-  <View style={{ alignItems: 'center', marginTop: 50 }}>
-    
-    <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600'}}>
-      You haven't joined any groups yet.
-    </Text>
-    
-      <View style={{flexDirection: "row"}}>
-        <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
-        <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
-          Create{' '}
-        </Text>
-        </TouchableOpacity>
-
-        <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
-          or{' '}
-        </Text>
-
-        <TouchableOpacity onPress={() => setInviteCodeModalVisible(true)}>
-        <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
-          join{' '}
-        </Text>
-        </TouchableOpacity>
-
-        <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
-          a group now!
-        </Text>
-      </View>
-    
-  </View>
-) : (
-  <FlatList
-    data={
-      view == "joined"
-        ? myGroups
-        : otherGroups.filter(
-            (group) =>
-              !group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? "")
-          )
-    }
-    keyExtractor={(item) => item.id}
-    renderItem={renderGroup}
-    refreshing={refreshing}
-    onRefresh={onRefresh}
-    showsVerticalScrollIndicator={false}
-  />
-)}
-
-      
+        <View style={{ alignItems: 'center', marginTop: 50 }}>
+          <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600'}}>
+            You haven't joined any groups yet.
+          </Text>
+          <View style={{flexDirection: "row"}}>
+            <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
+              <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
+                Create{' '}
+              </Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
+              or{' '}
+            </Text>
+            <TouchableOpacity onPress={() => setInviteCodeModalVisible(true)}>
+              <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
+                join{' '}
+              </Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>
+              a group now!
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <>
+          <FlatList
+            data={myGroups}
+            keyExtractor={(item) => item.id}
+            renderItem={renderGroup}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            showsVerticalScrollIndicator={false}
+            style={[{ flex: 1 }, view !== "joined" && { display: "none" }]}
+            ListEmptyComponent={
+              <View style={{ alignItems: 'center', marginTop: 50 }}>
+                <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600' }}>
+                  You haven't joined any groups yet.
+                </Text>
+                <View style={{ flexDirection: "row" }}>
+                  <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
+                    <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>Create </Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>or </Text>
+                  <TouchableOpacity onPress={() => setInviteCodeModalVisible(true)}>
+                    <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>join </Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>a group now!</Text>
+                </View>
+              </View>
+            }
+          />
+          <FlatList
+            data={otherGroups.filter((group) => !group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))}
+            keyExtractor={(item) => item.id}
+            renderItem={renderGroup}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            showsVerticalScrollIndicator={false}
+            style={[{ flex: 1 }, view !== "explore" && { display: "none" }]}
+          />
+        </>
+      )}
 
       <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreateModalVisible(true)}>
         <Text style={styles.plusButtonText}>+</Text>

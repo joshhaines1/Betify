@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { BetCard } from "@/components/BetCard";
 import {
@@ -103,21 +104,31 @@ export default function Bets() {
         }
       }
     } catch (error) {
-      console.error("Error fetching bets:", error);
+      // Stop further fetch attempts after a failure
+      if (isActive) {
+        setHasMoreActiveBets(false);
+      } else {
+        setHasMoreSettledBets(false);
+      }
+      throw new Error("Failed to fetch bets. Please try again later.");
     } finally {
      isActive ? setLoadingActive(false) : setLoadingSettled(false);
     }
   };
 
 
-  const handleEndScroll = () => {
-    const isActive = view === "active";
+ const handleEndScroll = async () => {
+  const isActive = view === "active";
+  try {
     if (isActive && !loadingActive && hasMoreActiveBets) {
-      fetchBets("active");
+      await fetchBets("active");
     } else if (!isActive && !loadingSettled && hasMoreSettledBets) {
-      fetchBets("settled");
+      await fetchBets("settled");
     }
-  };
+  } catch (error) {
+    Alert.alert("Error", "Failed to load bets. Please try again later.");
+  }
+};
 
   const handleSwitchView = (newView: ViewType) => {
     if (view !== newView) {
@@ -125,8 +136,9 @@ export default function Bets() {
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
+const onRefresh = async () => {
+  setRefreshing(true);
+  try {
     if (view === "active") {
       setLastVisibleActive(null);
       setHasMoreActiveBets(true);
@@ -137,9 +149,13 @@ export default function Bets() {
       setHasMoreSettledBets(true);
       await fetchBets("settled", true);
     }
+  } catch (error) {
+    Alert.alert("Error", "Failed to refresh bets. Please try again later.");
+  } finally {
     await sleep(1000);
     setRefreshing(false);
-  };
+  }
+};
 
  
   const renderBetItem = ({ item }: { item: Bet }) => (
@@ -164,8 +180,17 @@ export default function Bets() {
   );
 
   useEffect(() => {
-    fetchBets("active", true);
-    fetchBets("settled", true);
+    const load = async () => {
+    try {
+      console.log("Fetching bets on initial load...");
+      await fetchBets("active", true);
+      await fetchBets("settled", true);
+    } catch (error) {
+      Alert.alert("Error", "Failed to load bets. Please try again later.");
+    }
+  };
+
+  load();
   }, []);
 
   const displayedBets = view === "active" ? activeBets : settledBets;
@@ -202,23 +227,37 @@ export default function Bets() {
       </View>
 
       {/* FlatList for Bets */}
-      {(loadingActive || loadingSettled) && displayedBets.length === 0 ? (
+      {(loadingActive && activeBets.length === 0) || (loadingSettled && settledBets.length === 0) ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : (
-        <FlatList
-          data={displayedBets}
-          renderItem={renderBetItem}
-          keyExtractor={(item) => `${view}-${item.id}`}
-          onEndReached={handleEndScroll}
-          onEndReachedThreshold={0.1}
-          showsVerticalScrollIndicator={false}
-          style={styles.scrollContainer}
-          ListEmptyComponent={renderEmptyComponent}
-          refreshing={false}
-          onRefresh={onRefresh}
-        />
+        <>
+          <FlatList
+            data={activeBets}
+            renderItem={renderBetItem}
+            keyExtractor={(item) => `active-${item.id}`}
+            style={[styles.scrollContainer, view !== "active" && { display: "none" }]}
+            onEndReached={handleEndScroll}
+            onEndReachedThreshold={0.1}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={renderEmptyComponent}
+            refreshing={false}
+            onRefresh={onRefresh}
+          />
+          <FlatList
+            data={settledBets}
+            renderItem={renderBetItem}
+            keyExtractor={(item) => `settled-${item.id}`}
+            style={[styles.scrollContainer, view !== "settled" && { display: "none" }]}
+            onEndReached={handleEndScroll}
+            onEndReachedThreshold={0.1}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={renderEmptyComponent}
+            refreshing={false}
+            onRefresh={onRefresh}
+          />
+        </>
       )}
 
       

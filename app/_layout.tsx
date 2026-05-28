@@ -1,11 +1,44 @@
 import { AuthProvider } from '@/context/AuthContext';
 import Colors from '@/assets/styles/colors';
 import { Slot, Stack } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
+import { AdsProvider } from '@/context/PurchasesContext';
+import Purchases from 'react-native-purchases';
+import { useEffect, useState } from 'react';
 
 export default function RootLayout() {
+const [adsRemoved, setAdsRemoved] = useState(false);
+const [isPro, setIsPro] = useState(false);
+
+  useEffect(() => {
+    const setup = async () => {
+      try {
+        if (Platform.OS === 'ios') {
+          await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY! });
+        } else {
+          await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY! });
+        }
+
+        const customerInfo = await Purchases.getCustomerInfo();
+        setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined);
+        setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
+
+        Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+          setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined);
+          setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
+        });
+
+      } catch (error) {
+        console.error("Error setting up purchases:", error);
+      }
+    };
+
+    setup();
+  }, []);
+
   return (
     <AuthProvider>
+      <AdsProvider adsRemoved={adsRemoved} isPro={isPro}>
 
       <Stack>
         <Stack.Screen name="(tabs)" options={{ animation: "fade", headerShown: false }} />
@@ -27,7 +60,7 @@ export default function RootLayout() {
         }} 
       /></Stack>
       
-
+      </AdsProvider>
     </AuthProvider>
     
   );

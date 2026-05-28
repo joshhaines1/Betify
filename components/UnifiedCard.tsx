@@ -20,7 +20,7 @@ const Colors = {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type CardType = 'basic' | 'event' | 'prop';
-
+const groupIcon = require('@/assets/images/groupIcon.png');
 export interface UnifiedCardProps {
   type: CardType;
 
@@ -349,7 +349,7 @@ export function UnifiedCard(props: UnifiedCardProps) {
         <View style={styles.teamsRow}>
           {/* Team 1 */}
           <View style={styles.teamBlock}>
-            <Image source={require('@/assets/images/groupIcon.png')} style={styles.logo} resizeMode="contain" />
+            <Image source={groupIcon} style={styles.logo} resizeMode="contain" />
             <Text style={styles.teamName} numberOfLines={2}>{team1}</Text>
             <TouchableOpacity
               style={[styles.oddsButton, bet === 'moneyline1' && styles.oddsButtonSelected]}
@@ -371,7 +371,7 @@ export function UnifiedCard(props: UnifiedCardProps) {
 
           {/* Team 2 */}
           <View style={styles.teamBlock}>
-            <Image source={require('@/assets/images/groupIcon.png')} style={styles.logo} resizeMode="contain" />
+            <Image source={groupIcon} style={styles.logo} resizeMode="contain" />
             <Text style={styles.teamName} numberOfLines={2}>{team2}</Text>
             <TouchableOpacity
               style={[styles.oddsButton, bet === 'moneyline2' && styles.oddsButtonSelected]}
@@ -403,7 +403,7 @@ export function UnifiedCard(props: UnifiedCardProps) {
     ) => (
       <View style={styles.teamRow}>
         <View style={styles.logoContainer}>
-          <Image source={require('@/assets/images/groupIcon.png')} style={styles.teamRowLogo} resizeMode="contain" />
+          <Image source={groupIcon} style={styles.teamRowLogo} resizeMode="contain" />
         </View>
         <View style={styles.teamNameContainer}>
           <Text style={styles.teamRowName} numberOfLines={1}>{team}</Text>

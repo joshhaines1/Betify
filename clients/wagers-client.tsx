@@ -6,7 +6,7 @@ export async function placeWager({ groupId, picks, eventIds, odds, multiplier, r
   const user = FIREBASE_AUTH.currentUser;
     if (!user) {
       console.error("No logged-in user.");
-      return [];
+      throw new Error("User not authenticated");
     }
     
   const userId = user.uid;
@@ -42,7 +42,7 @@ export async function getWagersByUser(statusFilter, lastVisible, refresh: boolea
   const user = FIREBASE_AUTH.currentUser;
   if (!user) {
     console.error("No logged-in user.");
-    return [];
+    throw new Error("User not authenticated");
   }
 
   const token = await user.getIdToken();
@@ -74,5 +74,6 @@ export async function getWagersByUser(statusFilter, lastVisible, refresh: boolea
     throw new Error(data.error || data.message || "Failed to fetch wagers");
   }
 
+  console.log("Fetched wagers:", data);
   return data;
 }

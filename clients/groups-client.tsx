@@ -6,8 +6,7 @@ export const createGroup = async (groupName, visibility, startingCurrency, passw
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
-      console.error("No logged-in user.");
-      return;
+      throw new Error("User not authenticated");
     }
 
     const token = await user.getIdToken();
@@ -28,7 +27,7 @@ export const createGroup = async (groupName, visibility, startingCurrency, passw
 
     return await response.json();
   } catch (error) {
-    console.error("Error creating group:", error);
+    throw new Error("Failed to create group. Please try again later.");
   }
 };
 
@@ -37,8 +36,7 @@ export const leaveGroup = async (groupId) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
-      console.error("No logged-in user.");
-      return;
+      throw new Error("User not authenticated");
     }
 
     const token = await user.getIdToken();
@@ -53,7 +51,7 @@ export const leaveGroup = async (groupId) => {
 
     return await response.json();
   } catch (error) {
-    console.error("Error leaving group:", error);
+    throw new Error("Failed to leave group. Please try again later.");
   }
 };
 
@@ -62,12 +60,10 @@ export const getUsersGroups = async ( forceRefresh = false ) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
-      console.error("No logged-in user.");
-      return [];
+      throw new Error("User not authenticated");
     }
 
     // Check if the data is already in the cache
-    console.log("Checking cache for users groups. Cache length:", usersGroupCache.length);
     if (usersGroupCache.length > 0 && !forceRefresh) {
       console.log(`Returning cached data for user's groups`);
       return usersGroupCache;
@@ -82,8 +78,7 @@ export const getUsersGroups = async ( forceRefresh = false ) => {
     usersGroupCache = data; // Store the response in the cache
     return data;
   } catch (error) {
-    console.error("Error fetching user's groups:", error);
-    return [];
+    throw new Error("Failed to fetch user's groups");
   }
 };
 
@@ -91,8 +86,7 @@ export const getGroupById = async (groupId) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
-      console.error("No logged-in user.");
-      return [];
+      throw new Error("User not authenticated");
     }
 
     const token = await user.getIdToken();
@@ -102,8 +96,7 @@ export const getGroupById = async (groupId) => {
 
     return await response.json();
   } catch (error) {
-    console.error("Error fetching group by ID:", error);
-    return [];
+    throw new Error("Failed to fetch group by ID");
   }};
 
 let allGroupsCache = [];
@@ -111,12 +104,10 @@ export const getAllGroups = async ( limit = 0 , forceRefresh = false ) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
-      console.error("No logged-in user.");
-      return [];
+      throw new Error("User not authenticated");
     }
 
     // Check if the data is already in the cache
-    console.log("Checking cache for all groups. Cache length:", allGroupsCache.length);
     if (allGroupsCache.length > 0 && !forceRefresh) {
       console.log(`Returning cached data for all groups`);
       return allGroupsCache;
@@ -132,8 +123,7 @@ export const getAllGroups = async ( limit = 0 , forceRefresh = false ) => {
     console.log("Fetched all groups from API. Number of groups:", data.groups.length);
     return data.groups;
   } catch (error) {
-    console.error("Error fetching all groups:", error);
-    return [];
+    throw new Error("Failed to fetch all groups");
   }
 };
 
@@ -156,8 +146,7 @@ export const getUsersCurrency = async (groupId, forceRefresh = false) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
-      console.error("No logged-in user.");
-      return [];
+      throw new Error("User not authenticated");
     }
 
     if (balanceCache[groupId] && !forceRefresh) {
@@ -172,8 +161,7 @@ export const getUsersCurrency = async (groupId, forceRefresh = false) => {
     balanceCache[groupId] = data.balance;
     return data.balance;
   } catch (error) {
-    console.error("Error fetching user's currency:", error);
-    return [];
+    throw new Error("Failed to fetch user's currency");
   }
 };
 
@@ -193,8 +181,7 @@ export const getGroupLeaderboard = async (groupId) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
-      console.error("No logged-in user.");
-      return [];
+      throw new Error("User not authenticated");
     }
 
     if (leaderboardCache[groupId]) {
@@ -210,7 +197,6 @@ export const getGroupLeaderboard = async (groupId) => {
     leaderboardCache[groupId] = data.leaderboard;
     return data.leaderboard;
   } catch (error) {
-    console.error("Error fetching group leaderboard:", error);
-    return [];
+    throw new Error("Failed to fetch group leaderboard");
   }
 };

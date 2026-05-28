@@ -15,20 +15,18 @@ import Purchases, {
 } from "react-native-purchases";
 import Colors from "@/assets/styles/colors";
 
-// ─── Replace with your RevenueCat API key from app.revenuecat.com ─────────────
-const REVENUECAT_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY!;
-
 // ─── Match these to the product IDs you create in App Store Connect ───────────
-const PRO_MONTHLY_ID = "betify_pro_monthly";
-const PRO_YEARLY_ID = "betify_pro_yearly";
-const REMOVE_ADS_ID = "betify_remove_ads";
+const PRO_MONTHLY_ID = "pro_monthly";
+const PRO_YEARLY_ID = "pro_yearly";
+const REMOVE_ADS_ID = "remove_ads";
 
 type BillingPeriod = "monthly" | "yearly";
 
 export default function Shop() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
-  const [purchasing, setPurchasing] = useState(false);
+  const [purchasingPro, setPurchasingPro] = useState(false);
+  const [purchasingRemoveAds, setPurchasingRemoveAds] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
@@ -39,7 +37,6 @@ export default function Shop() {
   useEffect(() => {
     const init = async () => {
       try {
-        Purchases.configure({ apiKey: REVENUECAT_API_KEY });
         const info = await Purchases.getCustomerInfo();
         console.log("Customer Info:", info);
         setCustomerInfo(info);
@@ -50,10 +47,11 @@ export default function Shop() {
         );
 
         const offerings = await Purchases.getOfferings();
+        console.log("Offerings:", offerings);
         console.log("Package identifiers:", offerings.current?.availablePackages.map(p => ({
-  packageId: p.identifier,
-  productId: p.product.identifier,
-})));
+          packageId: p.identifier,
+          productId: p.product.identifier,
+        })));
         if (offerings.current?.availablePackages) {
           setPackages(offerings.current.availablePackages);
         }
@@ -77,7 +75,11 @@ export default function Shop() {
       Alert.alert("Unavailable", "This product is not available right now.");
       return;
     }
-    setPurchasing(true);
+    if (productId === PRO_MONTHLY_ID || productId === PRO_YEARLY_ID) {
+      setPurchasingPro(true);
+    } else if (productId === REMOVE_ADS_ID) {
+      setPurchasingRemoveAds(true);
+    }
     try {
       const { customerInfo: updatedInfo } = await Purchases.purchasePackage(pkg);
       setCustomerInfo(updatedInfo);
@@ -92,13 +94,15 @@ export default function Shop() {
         Alert.alert("Purchase Failed", err.message);
       }
     } finally {
-      setPurchasing(false);
+      setPurchasingPro(false);
+      setPurchasingRemoveAds(false);
     }
   };
 
   // ── Restore purchases ────────────────────────────────────────────────────────
   const handleRestore = async () => {
-    setPurchasing(true);
+    setPurchasingPro(true);
+    setPurchasingRemoveAds(true);
     try {
       const info = await Purchases.restorePurchases();
       setCustomerInfo(info);
@@ -111,7 +115,8 @@ export default function Shop() {
     } catch (err: any) {
       Alert.alert("Error", err.message);
     } finally {
-      setPurchasing(false);
+      setPurchasingPro(false);
+      setPurchasingRemoveAds(false);
     }
   };
 
@@ -206,9 +211,9 @@ export default function Shop() {
                 billingPeriod === "monthly" ? PRO_MONTHLY_ID : PRO_YEARLY_ID
               )
             }
-            disabled={isPro || purchasing}
+            disabled={isPro || purchasingPro || purchasingRemoveAds}
           >
-            {purchasing ? (
+            {purchasingPro ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.buyButtonText}>
@@ -239,16 +244,18 @@ export default function Shop() {
           <TouchableOpacity
             style={[styles.cardPriceButton, adsRemoved && styles.buyButtonDisabled]}
             onPress={() => handlePurchase(REMOVE_ADS_ID)}
-            disabled={adsRemoved || purchasing}
+            disabled={adsRemoved || purchasingPro || purchasingRemoveAds}
           >
             <Text style={styles.cardPriceText}>
-              {adsRemoved ? "Owned" : removeAdsPrice()}
+              {adsRemoved ? "Owned" : purchasingRemoveAds ? (
+              <ActivityIndicator color="#fff" />
+            ) : removeAdsPrice()}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* ── Restore ── */}
-        <TouchableOpacity onPress={handleRestore} disabled={purchasing}>
+        <TouchableOpacity onPress={handleRestore} disabled={purchasingPro || purchasingRemoveAds}>
           <Text style={styles.restoreText}>Restore purchases</Text>
         </TouchableOpacity>
 
