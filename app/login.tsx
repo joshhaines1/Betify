@@ -31,7 +31,7 @@ import {
   getAdditionalUserInfo,
 } from "firebase/auth";
 
-import { FIREBASE_AUTH } from "@/.FirebaseConfig";
+import { FIREBASE_AUTH } from "@/FirebaseConfig";
 import { useAuth } from "../context/AuthContext";
 import Colors from "@/assets/styles/colors";
 

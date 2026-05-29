@@ -1,4 +1,4 @@
-import { FIREBASE_AUTH } from '@/.FirebaseConfig';
+import { FIREBASE_AUTH } from '@/FirebaseConfig';
 import { BASE_API_ENDPOINT } from '../constants/api';
 
 export const createGroup = async (groupName, visibility, startingCurrency, password) => {

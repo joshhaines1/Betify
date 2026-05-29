@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator, Pressable, Platform } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { arrayRemove, doc, updateDoc } from "firebase/firestore";
-import { FIREBASE_AUTH, FIRESTORE } from "@/.FirebaseConfig";
+import { FIREBASE_AUTH, FIRESTORE } from "@/FirebaseConfig";
 import { useNavigation } from '@react-navigation/native';
 import { UnifiedCard } from "@/components/UnifiedCard";
 import { CreatePropView } from "@/components/CreatePropView";
@@ -133,6 +133,7 @@ export default function Group() {
 
   // AD
   const loadInterstitialAd = () => {
+    try {
     const ad = InterstitialAd.createForAdRequest(INTERSTITIAL_AD_UNIT_ID, {
       requestNonPersonalizedAdsOnly: true,
     });
@@ -156,6 +157,9 @@ export default function Group() {
 
     ad.load();
     interstitialAdRef.current = ad;
+    } catch (error) {
+      console.error("Error loading interstitial ad:", error);
+    }
   };
 
 useEffect(() => {

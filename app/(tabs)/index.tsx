@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { GroupCard } from "@/components/GroupCard";
-import { FIREBASE_AUTH } from "@/.FirebaseConfig";
+import { FIREBASE_AUTH } from "@/FirebaseConfig";
 import { CreateGroupView } from "@/components/CreateGroupView";
 import Colors from "@/assets/styles/colors";
 import { JoinGroupWithCodeView } from "@/components/JoinGroupWithCodeView";

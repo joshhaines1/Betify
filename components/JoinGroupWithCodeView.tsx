@@ -1,4 +1,4 @@
-import { FIREBASE_AUTH } from '@/.FirebaseConfig';
+import { FIREBASE_AUTH } from '@/FirebaseConfig';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, Modal, TextInput, View, Text } from 'react-native';
 import * as Haptics from 'expo-haptics';

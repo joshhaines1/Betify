@@ -8,14 +8,25 @@
       "developmentClient": true,
       "distribution": "internal"
     },
-    "preview": {
-      "distribution": "internal"
+    "preview":  {
+      "distribution": "store",
+      "autoIncrement": true,
+      "ios": {
+        "image": "latest"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "distribution": "store"
     }
   },
   "submit": {
-    "production": {}
+    "preview": {
+      "ios": {
+        "appleId": "joshhaines1@icloud.com",
+        "ascAppId": "6746223829",
+        "appleTeamId": "H8B648RV5C"
+      }
+    }
   }
 }
