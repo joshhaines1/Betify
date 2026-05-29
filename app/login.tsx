@@ -28,6 +28,7 @@ import {
   updateProfile,
   User,
   fetchSignInMethodsForEmail,
+  getAdditionalUserInfo,
 } from "firebase/auth";
 
 import { FIREBASE_AUTH } from "@/.FirebaseConfig";
@@ -86,31 +87,26 @@ export default function Login() {
   }, [response]);
 
   const handleGoogleSignIn = async () => {
-    try {
-      if (response?.type !== "success") return;
+  try {
+    if (response?.type !== "success") return;
+    setLoading(true);
 
-      setLoading(true);
+    const { id_token } = response.params;
+    const credential = GoogleAuthProvider.credential(id_token);
+    const result = await signInWithCredential(FIREBASE_AUTH, credential);
 
-      const { id_token } = response.params;
-
-      const credential =
-        GoogleAuthProvider.credential(id_token);
-
-      const result = await signInWithCredential(
-        FIREBASE_AUTH,
-        credential
-      );
-
-      await completeOAuthSignIn(result.user);
-    } catch (err: any) {
-      Alert.alert(
-        "Google Sign-In Error",
-        err.message
-      );
-    } finally {
-      setLoading(false);
+    // New Google user — wipe their Google display name so they must pick a username
+    if (getAdditionalUserInfo(result)?.isNewUser) {
+      await updateProfile(result.user, { displayName: "" });
     }
-  };
+
+    await completeOAuthSignIn(result.user);
+  } catch (err: any) {
+    Alert.alert("Google Sign-In Error", err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ─────────────────────────────────────────────────────────────
   // Shared OAuth Flow
@@ -121,6 +117,7 @@ export default function Login() {
   ) => {
     // Existing user with username
     if (
+      console.log("User display name:", user.displayName),
       user.displayName &&
       user.displayName.trim().length > 0
     ) {
