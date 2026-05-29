@@ -10,17 +10,17 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Purchases, {
-  PurchasesPackage,
+  PurchasesStoreProduct,
   CustomerInfo,
 } from "react-native-purchases";
 import Colors from "@/assets/styles/colors";
 
 // ─── Match these to the product IDs you create in App Store Connect ───────────
 const PRO_MONTHLY_ID = "pro_monthly";
-const PRO_YEARLY_ID = "pro_yearly";
+const PRO_LIFETIME_ID = "pro_lifetime";
 const REMOVE_ADS_ID = "remove_ads";
 
-type BillingPeriod = "monthly" | "yearly";
+type BillingPeriod = "monthly" | "lifetime";
 
 export default function Shop() {
   const insets = useSafeAreaInsets();
@@ -28,76 +28,82 @@ export default function Shop() {
   const [purchasingPro, setPurchasingPro] = useState(false);
   const [purchasingRemoveAds, setPurchasingRemoveAds] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
-  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  const [products, setProducts] = useState<PurchasesStoreProduct[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [adsRemoved, setAdsRemoved] = useState(false);
   const [isPro, setIsPro] = useState(false);
 
   // ── Init RevenueCat & fetch offerings ────────────────────────────────────────
   useEffect(() => {
-    const init = async () => {
-      try {
-        const info = await Purchases.getCustomerInfo();
-        console.log("Customer Info:", info);
-        setCustomerInfo(info);
-        setIsPro(info.entitlements.active["pro"] !== undefined);
-        setAdsRemoved(
-          info.entitlements.active["remove_ads"] !== undefined ||
-            info.entitlements.active["pro"] !== undefined
-        );
-
-        const offerings = await Purchases.getOfferings();
-        console.log("Offerings:", offerings);
-        console.log("Package identifiers:", offerings.current?.availablePackages.map(p => ({
-          packageId: p.identifier,
-          productId: p.product.identifier,
-        })));
-        if (offerings.current?.availablePackages) {
-          setPackages(offerings.current.availablePackages);
-        }
-      } catch (err) {
-        console.error("RevenueCat init error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    init();
-  }, []);
-
-  // ── Find a package by product ID ─────────────────────────────────────────────
-  const findPackage = (productId: string) =>
-    packages.find((p) => p.product.identifier === productId);
-
-  // ── Purchase handler ─────────────────────────────────────────────────────────
-  const handlePurchase = async (productId: string) => {
-    const pkg = findPackage(productId);
-    if (!pkg) {
-      Alert.alert("Unavailable", "This product is not available right now.");
-      return;
-    }
-    if (productId === PRO_MONTHLY_ID || productId === PRO_YEARLY_ID) {
-      setPurchasingPro(true);
-    } else if (productId === REMOVE_ADS_ID) {
-      setPurchasingRemoveAds(true);
-    }
+  const init = async () => {
     try {
-      const { customerInfo: updatedInfo } = await Purchases.purchasePackage(pkg);
-      setCustomerInfo(updatedInfo);
-      setIsPro(updatedInfo.entitlements.active["pro"] !== undefined);
+      const info = await Purchases.getCustomerInfo();
+      setCustomerInfo(info);
+      setIsPro(info.entitlements.active["pro"] !== undefined);
       setAdsRemoved(
-        updatedInfo.entitlements.active["remove_ads"] !== undefined ||
-          updatedInfo.entitlements.active["pro"] !== undefined
+        info.entitlements.active["remove_ads"] !== undefined ||
+          info.entitlements.active["pro"] !== undefined
       );
-      Alert.alert("Success!", "Your purchase was completed.");
-    } catch (err: any) {
-      if (!err.userCancelled) {
-        Alert.alert("Purchase Failed", err.message);
-      }
+
+      // 👇 Fetch directly by product ID instead of offerings
+      const fetchedProducts = await Purchases.getProducts([
+        PRO_MONTHLY_ID,
+        PRO_LIFETIME_ID,
+        REMOVE_ADS_ID,
+      ]);
+      setProducts(fetchedProducts);
+    } catch (err) {
+      console.error("RevenueCat init error:", err);
     } finally {
-      setPurchasingPro(false);
-      setPurchasingRemoveAds(false);
+      setLoading(false);
     }
   };
+  init();
+}, []);
+
+  // ── Find a package by product ID ─────────────────────────────────────────────
+  const findProduct = (productId: string) =>
+  products.find((p) => p.identifier === productId);
+
+// Updated purchase handler — purchase product directly
+const handlePurchase = async (productId: string) => {
+  const product = findProduct(productId);
+  if (!product) {
+    Alert.alert("Unavailable", "This product is not available right now.");
+    return;
+  }
+  if (productId === PRO_MONTHLY_ID || productId === PRO_LIFETIME_ID) {
+    setPurchasingPro(true);
+  } else if (productId === REMOVE_ADS_ID) {
+    setPurchasingRemoveAds(true);
+  }
+  try {
+    const { customerInfo: updatedInfo } = await Purchases.purchaseStoreProduct(product);
+    setCustomerInfo(updatedInfo);
+    setIsPro(updatedInfo.entitlements.active["pro"] !== undefined);
+    setAdsRemoved(
+      updatedInfo.entitlements.active["remove_ads"] !== undefined ||
+        updatedInfo.entitlements.active["pro"] !== undefined
+    );
+    Alert.alert("Success!", "Your purchase was completed.");
+  } catch (err: any) {
+    if (!err.userCancelled) {
+      Alert.alert("Purchase Failed", err.message);
+    }
+  } finally {
+    setPurchasingPro(false);
+    setPurchasingRemoveAds(false);
+  }
+};
+
+// Updated price helpers
+const proPrice = () => {
+  const id = billingPeriod === "monthly" ? PRO_MONTHLY_ID : PRO_LIFETIME_ID;
+  return findProduct(id)?.priceString ?? (billingPeriod === "monthly" ? "$2.99" : "$9.99");
+};
+
+const removeAdsPrice = () =>
+  findProduct(REMOVE_ADS_ID)?.priceString ?? "$0.99";
 
   // ── Restore purchases ────────────────────────────────────────────────────────
   const handleRestore = async () => {
@@ -118,18 +124,6 @@ export default function Shop() {
       setPurchasingPro(false);
       setPurchasingRemoveAds(false);
     }
-  };
-
-  // ── Price helpers ─────────────────────────────────────────────────────────────
-  const proPrice = () => {
-    const id = billingPeriod === "monthly" ? PRO_MONTHLY_ID : PRO_YEARLY_ID;
-    const pkg = findPackage(id);
-    return pkg?.product.priceString ?? (billingPeriod === "monthly" ? "$2.99" : "$24.99");
-  };
-
-  const removeAdsPrice = () => {
-    const pkg = findPackage(REMOVE_ADS_ID);
-    return pkg?.product.priceString ?? "$0.99";
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -159,7 +153,7 @@ export default function Shop() {
 
           {/* Billing toggle */}
           <View style={styles.toggleRow}>
-            {(["monthly", "yearly"] as BillingPeriod[]).map((period) => (
+            {(["monthly", "lifetime"] as BillingPeriod[]).map((period) => (
               <TouchableOpacity
                 key={period}
                 style={[
@@ -174,7 +168,7 @@ export default function Shop() {
                     billingPeriod === period && styles.toggleBtnTextActive,
                   ]}
                 >
-                  {period === "monthly" ? "Monthly" : "Yearly · Save 30%"}
+                  {period === "monthly" ? "Monthly" : "Lifetime"}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -200,7 +194,7 @@ export default function Shop() {
           <View style={styles.priceRow}>
             <Text style={styles.price}>{proPrice()}</Text>
             <Text style={styles.pricePeriod}>
-              {billingPeriod === "monthly" ? "/ month" : "/ year"}
+              {billingPeriod === "monthly" ? "/ month" : "One Time Purchase"}
             </Text>
           </View>
 
@@ -208,7 +202,7 @@ export default function Shop() {
             style={[styles.buyButton, isPro && styles.buyButtonDisabled]}
             onPress={() =>
               handlePurchase(
-                billingPeriod === "monthly" ? PRO_MONTHLY_ID : PRO_YEARLY_ID
+                billingPeriod === "monthly" ? PRO_MONTHLY_ID : PRO_LIFETIME_ID
               )
             }
             disabled={isPro || purchasingPro || purchasingRemoveAds}

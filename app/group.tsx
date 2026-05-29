@@ -16,7 +16,7 @@ import Leaderboard from "@/components/Leaderboard";
 import { useAds } from "@/context/PurchasesContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 //Ad
-import { InterstitialAd, AdEventType, TestIds } from "react-native-google-mobile-ads";
+import { InterstitialAd, AdEventType, TestIds, BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
 
 //Ad
 const INTERSTITIAL_AD_UNIT_ID = __DEV__
@@ -24,6 +24,13 @@ const INTERSTITIAL_AD_UNIT_ID = __DEV__
   : Platform.OS === "ios"
     ? process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_IOS!
     : process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_ANDROID!;
+
+// ADS
+const BANNER_AD_UNIT_ID = __DEV__
+  ? TestIds.BANNER
+  : Platform.OS === "ios"
+    ? process.env.EXPO_PUBLIC_ADMOB_BANNER_IOS!
+    : process.env.EXPO_PUBLIC_ADMOB_BANNER_ANDROID!;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Event {
@@ -143,6 +150,7 @@ export default function Group() {
     ad.addAdEventListener(AdEventType.CLOSED, () => {
       // Preload next ad as soon as current one is dismissed
       adLoadedRef.current = false;
+      Alert.alert("Success", "Your bet has been placed!");
       loadInterstitialAd();
     });
 
@@ -206,6 +214,7 @@ useEffect(() => {
   // ── Place bets ─────────────────────────────────────────────────────────────
   const placeBets = async () => {
     setLoading(true);
+    let success = false;
     try {
       let counter = 0;
       const lockDates: Date[] = [];
@@ -253,21 +262,26 @@ useEffect(() => {
       resetSlip();
       setCurrentBalance((prev) => prev - wager);
       invalidateBalanceCache();
-      Alert.alert("Success", "Your bet has been placed!");
+      success = true;
     } catch (err) {
       resetSlip();
       Alert.alert("Error", err instanceof Error ? err.message : String(err));
     } finally {
-        setBetSlipModalVisible(false);
-        if (adsEnabled && adLoadedRef.current && interstitialAdRef.current) {
-          setTimeout(() => {
-            interstitialAdRef.current?.show();
-          }, 500);
-        }
-        setLoading(false);
-    }
+    setBetSlipModalVisible(false);
     setLoading(false);
-  };
+
+    if (adsEnabled && adLoadedRef.current && interstitialAdRef.current) {
+      setTimeout(() => {
+        interstitialAdRef.current?.show();
+      }, 500);
+    } else if (success) {
+      setTimeout(() => {
+        Alert.alert("Success", "Your bet has been placed!");
+      }, 300);
+    }
+  }
+  setLoading(false);
+};
 
   const resetSlip = () => {
     setBetSlip([]);
@@ -484,6 +498,16 @@ useEffect(() => {
         </TouchableOpacity>
       </View>
 
+       {/* ADS */}
+            {adsEnabled && (
+            <View style={{ marginBottom: 10, alignItems: 'center' }}>
+              <BannerAd
+                unitId={BANNER_AD_UNIT_ID}
+                size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+                requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+              />
+            </View> 
+          )}
       {/* ── Events + Props scroll ── */}
       <>
         <ScrollView

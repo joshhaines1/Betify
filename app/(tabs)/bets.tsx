@@ -7,6 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import { BetCard } from "@/components/BetCard";
 import {
@@ -14,7 +15,9 @@ import {
 } from "firebase/firestore";
 import Colors from "@/assets/styles/colors";
 import { useFocusEffect } from "expo-router";
+import { useAds } from "../../context/PurchasesContext";
 import * as wagers_service from "../../clients/wagers-client";
+import { BannerAd, BannerAdSize, TestIds } from "react-native-google-mobile-ads";
 
 interface Bet {
   id: string;
@@ -42,6 +45,13 @@ export default function Bets() {
   const [hasMoreActiveBets, setHasMoreActiveBets] = useState(true);
   const [hasMoreSettledBets, setHasMoreSettledBets] = useState(true);
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const { adsEnabled } = useAds();
+  // ADS
+  const BANNER_AD_UNIT_ID = __DEV__
+    ? TestIds.BANNER
+    : Platform.OS === "ios"
+      ? process.env.EXPO_PUBLIC_ADMOB_BANNER_IOS!
+      : process.env.EXPO_PUBLIC_ADMOB_BANNER_ANDROID!;
 
 
   const getStatusFilter = () => (view === "active" ? "active" : "settled");
@@ -226,11 +236,19 @@ const onRefresh = async () => {
       )}
       </View>
 
+ {/* ADS */}
+      {adsEnabled && (
+      <View style={{ marginBottom: 10, alignItems: 'center' }}>
+        <BannerAd
+          unitId={BANNER_AD_UNIT_ID}
+          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+          requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+        />
+      </View>
+    )}
       {/* FlatList for Bets */}
       {(loadingActive && activeBets.length === 0) || (loadingSettled && settledBets.length === 0) ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
+        <></>
       ) : (
         <>
           <FlatList

@@ -76,7 +76,6 @@ export default function GroupsScreen() {
   const onRefresh = async () => {
     console.log("Refresh..");
     setRefreshing(true);
-    await sleep(1000);
     await fetchGroups(true);
     setRefreshing(false);
   };
@@ -132,9 +131,6 @@ export default function GroupsScreen() {
         />
       </View>
     )}
-      {refreshing && (
-        <ActivityIndicator size="large" color="#ff496b" />
-      )}
       {loading && myGroups?.length === 0 && otherGroups?.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />

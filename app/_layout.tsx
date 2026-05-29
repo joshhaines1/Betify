@@ -14,17 +14,17 @@ const [isPro, setIsPro] = useState(false);
     const setup = async () => {
       try {
         if (Platform.OS === 'ios') {
-          await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY! });
+          await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY! });
         } else {
-          await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY! });
+          await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY! });
         }
 
         const customerInfo = await Purchases.getCustomerInfo();
-        setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined);
+        setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined || customerInfo.entitlements.active["pro"] !== undefined);
         setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
 
         Purchases.addCustomerInfoUpdateListener((customerInfo) => {
-          setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined);
+          setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined || customerInfo.entitlements.active["pro"] !== undefined);
           setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
         });
 

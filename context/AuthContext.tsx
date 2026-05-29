@@ -2,13 +2,13 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { FIREBASE_AUTH } from "@/.FirebaseConfig";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import { View, ActivityIndicator } from "react-native";
+import Purchases from "react-native-purchases/dist/purchases";
 
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   uid: string | null;
   logout: () => Promise<void>;
-  setUser: (user: User | null) => void;
   setIsLoggedIn: (value: boolean) => void;
 }
 
@@ -21,7 +21,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (currentUser: User | null) => {
+    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, async (currentUser: User | null) => {
+      if (currentUser) {
+      // Tell RevenueCat who just logged in
+      await Purchases.logIn(currentUser.uid);
+    }
       setUser(currentUser);
       setUid(currentUser?.uid || null);
       setIsLoggedIn(!!currentUser);
@@ -51,7 +55,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn, uid, logout, setUser, setIsLoggedIn }}>
+    <AuthContext.Provider value={{ user, isLoggedIn, uid, logout, setIsLoggedIn }}>
       {children}
     </AuthContext.Provider>
   );

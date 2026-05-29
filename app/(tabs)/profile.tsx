@@ -4,6 +4,8 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/assets/styles/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as groups_client from "../../clients/groups-client";
+import Purchases from "react-native-purchases/dist/purchases";
 
 export default function Profile() {
   const { user, logout } = useAuth();
@@ -11,8 +13,21 @@ export default function Profile() {
 
   const handleSignOut = async () => {
     await logout();
+    groups_client.clearGroupsCache();
+    await Purchases.logOut(); 
     router.replace("/login");
   };
+
+  const getEmailDisplay = () => {
+  if (user?.email) return user.email;
+  
+  const providerIds = user?.providerData?.map(p => p.providerId) ?? [];
+  
+  if (providerIds.includes("apple.com")) return "Signed in with Apple";
+  if (providerIds.includes("google.com")) return "Signed in with Google";
+  
+  return "—";
+};
 
   const initials = user?.displayName
     ? user.displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -40,7 +55,7 @@ export default function Profile() {
 
         <View style={[styles.card, styles.cardFirst]}>
           <Text style={styles.cardLabel}>Email</Text>
-          <Text style={styles.cardValue} numberOfLines={1}>{user?.email ?? "—"}</Text>
+          <Text style={styles.cardValue} numberOfLines={1}>{getEmailDisplay()}</Text>
         </View>
 
         {user?.displayName && (

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
@@ -49,7 +49,10 @@ export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, 
 
     return (
     
-            <View style={styles.modalContainer}>
+            <KeyboardAvoidingView 
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.modalContainer}
+            >
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Bet Slip</Text>
                 <View style={{flexDirection: 'row'}}>
@@ -96,7 +99,7 @@ export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, 
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>    
+            </KeyboardAvoidingView>    
   );
 }
 
@@ -171,11 +174,12 @@ const styles = StyleSheet.create({
       },
       input: {
         borderWidth: 1,
-        borderColor: "#ccc",
+        borderColor: "#474747",
         padding: 10,
         borderRadius: 5,
         marginBottom: 10,
         color: Colors.textColor,
+        backgroundColor: "#181415",
       },
       riskPayoutText: {
 

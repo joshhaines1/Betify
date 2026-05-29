@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
@@ -52,13 +52,16 @@ export function CreateGroupView({setModalVisible, fetchGroups}) {
     if (!validInputs()) return;
     setLoading(true);
     setModalVisible(false);
-    groups_service.createGroup(groupName, visibility, startingCurrency, password).catch((error) => {
+    try {
+      await groups_service.createGroup(groupName, visibility, startingCurrency, password);
+      fetchGroups(true); 
+    } catch (error) {
       console.error("Error creating group:", error);
-    }).finally(() => {
+      Alert.alert("Error", "Failed to create group.");
+    } finally {
       setLoading(false);
-    });
-    fetchGroups();
-  };
+    }
+};
     
       const resetFields = () => {
         setGroupName(""); 

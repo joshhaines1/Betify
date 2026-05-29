@@ -629,6 +629,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.accent,
     backgroundColor: Colors.accent + '22',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   settleButtonReady: {
     backgroundColor: Colors.surfaceHighlight,
@@ -643,6 +645,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.5,
     color: Colors.textSecondary,
+    textAlign: 'center',
+    marginRight: -1.5,
   },
   settleButtonTextLocked: {
     color: Colors.locked,

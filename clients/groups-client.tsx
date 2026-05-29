@@ -24,7 +24,10 @@ export const createGroup = async (groupName, visibility, startingCurrency, passw
         password: password || "",
       }),
     });
-
+    if (response.status !== 201) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to create group");
+    }
     return await response.json();
   } catch (error) {
     throw new Error("Failed to create group. Please try again later.");
