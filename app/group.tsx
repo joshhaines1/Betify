@@ -876,6 +876,10 @@ const styles = StyleSheet.create({
     left: 4,
     padding: 4,
     zIndex: 1,
+    width: 60,
+     height: 40,
+     justifyContent: "center",
+     alignItems: "flex-start",
   },
   headerBackArrow: {
     fontSize: 38,
