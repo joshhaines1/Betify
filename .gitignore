@@ -36,11 +36,13 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-ios
 android
 .firebaserc
 
-google-services.json
-GoogleService-Info.plist
 *.keystore
 .env
+
+# Only comment for deployment
+GoogleService-Info.plist
+FirebaseConfig.ts
+google-services.json
