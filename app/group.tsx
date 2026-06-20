@@ -12,7 +12,7 @@ import * as wagers_service from "../clients/wagers-client";
 import * as groups_client from "../clients/groups-client";
 import * as events_client from "../clients/events-client";
 import Leaderboard from "@/components/Leaderboard";
-import { useAds } from "@/context/PurchasesContext";
+import { useAds, usePro } from "@/context/PurchasesContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 //Ad
 import { InterstitialAd, AdEventType, TestIds, BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
@@ -77,27 +77,40 @@ const EVENT_TYPES = [
     key: "basic",
     label: "Basic Event",
     description: "Simple Win/Loss Event",
+    proOnly: false,
     onSelect: (setters) => {
       console.log("Setting eventType to basic");
       setters.setEventType("basic");
     },
   },
   {
+    key: "prop",
+    label: "Prop Bet",
+    description: "Over or Under bets on a specific stat or outcome",
+    proOnly: false,
+    onSelect: (setters) => {
+      console.log("Setting eventType to prop");
+      setters.setEventType("prop");
+    },
+  },
+  {
     key: "advanced",
     label: "Advanced Event",
     description: "Moneyline, Spread, and Over/Under",
+    proOnly: true,
     onSelect: (setters) => {
       console.log("Setting eventType to MSO");
       setters.setEventType("MSO");
     },
   },
   {
-    key: "prop",
-    label: "Prop Bet",
-    description: "Over or Under bets on a specific stat or outcome",
+    key: "single",
+    label: "Single Event",
+    description: "High Risk Single-Option Bets (Moneyline Only)",
+    proOnly: true,
     onSelect: (setters) => {
-      console.log("Setting eventType to prop");
-      setters.setEventType("prop");
+      console.log("Setting eventType to single");
+      setters.setEventType("single");
     },
   },
 ];
@@ -125,12 +138,14 @@ export default function Group() {
   const [leaving, setLeaving] = useState(false);
   const [groupInfo, setGroupInfo] = useState({ memberCount: 0, totalWagered: 0 });
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [bannerAdLoaded, setBannerAdLoaded] = useState(false);
 
   const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
 
   const interstitialAdRef = useRef<InterstitialAd | null>(null);
   const adLoadedRef = useRef(false);
   const { adsEnabled } = useAds();
+  const { isPro } = usePro();
 
   // AD
   const loadInterstitialAd = () => {
@@ -476,7 +491,6 @@ useEffect(() => {
     refreshEvents,
   };
 
-  console.log("modalState:", modalState, "eventType:", eventType);
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -519,14 +533,16 @@ useEffect(() => {
 
        {/* ADS */}
             {adsEnabled && (
-            <View style={{ marginBottom: 10, alignItems: 'center' }}>
-              <BannerAd
-                unitId={BANNER_AD_UNIT_ID}
-                size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-                requestOptions={{ requestNonPersonalizedAdsOnly: true }}
-              />
-            </View> 
-          )}
+  <View style={{ marginBottom: 10, alignItems: 'center', display: bannerAdLoaded ? 'flex' : 'none' }}>
+    <BannerAd
+      unitId={BANNER_AD_UNIT_ID}
+      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+      requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+      onAdLoaded={() => setBannerAdLoaded(true)}
+      onAdFailedToLoad={() => setBannerAdLoaded(false)}
+    />
+  </View>
+)}
       {/* ── Events + Props scroll ── */}
       <>
         <ScrollView
@@ -640,11 +656,12 @@ useEffect(() => {
         transparent
         animationType="fade"
         onRequestClose={() => setModalState("none")}
+        style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
       >
       
-        <Pressable style={styles.eventTypeOverlay} onPress={() => setModalState("none")}>
+      <View style={styles.modalBackground}>
         {modalState === "selector" && (
-            
+            <Pressable style={styles.eventTypeOverlay} onPress={() => setModalState("none")}>
           <Animated.View style={{ opacity: fadeAnim }}>
             <Pressable style={styles.eventTypeSheet} onPress={(e) => e.stopPropagation()}>
               <Text style={styles.eventTypeTitle}>Create Event</Text>
@@ -652,14 +669,15 @@ useEffect(() => {
               {EVENT_TYPES.map((type) => (
                 <TouchableOpacity
                   key={type.key}
-                  style={styles.eventTypeOption}
+                  style={type.proOnly && isPro === false ? [styles.eventTypeOption, styles.eventTypeOptionDisabled] : styles.eventTypeOption}
                   onPress={() => {
                     type.onSelect({ setEventType });
                     setModalState(type.key === "prop" ? "prop" : "event");
                   }}
+                  disabled={(isPro === false) && type.proOnly}
                 >
                   <View style={styles.eventTypeTextBlock}>
-                    <Text style={styles.eventTypeLabel}>{type.label}</Text>
+                    <Text style={styles.eventTypeLabel}>{type.label + (type.proOnly && isPro === false ? " - PRO MEMBERS ONLY" : "")}</Text>
                     <Text style={styles.eventTypeDescription}>{type.description}</Text>
                   </View>
                   <Text style={styles.eventTypeChevron}>›</Text>
@@ -670,7 +688,7 @@ useEffect(() => {
               </TouchableOpacity>
             </Pressable>
           </Animated.View>
-          
+          </Pressable>
         )}
 
         {modalState === "event" && (
@@ -696,7 +714,7 @@ useEffect(() => {
           />
           </Animated.View>
         )}
-        </Pressable>
+        </View>
       </Modal>
 
       <Modal animationType="fade" transparent visible={betSlipModalVisible}>
@@ -831,8 +849,12 @@ const styles = StyleSheet.create({
   },
   eventTypeOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "flex-end",
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   eventTypeSheet: {
     backgroundColor: "#121112",
@@ -859,6 +881,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
     color: Colors.textColor,
+  },
+  eventTypeOptionDisabled: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    color: Colors.textColor,
+    opacity: 0.4,
   },
   eventTypeIcon: {
     fontSize: 24,
@@ -956,6 +987,7 @@ const infoStyles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 3,
     color: "#FFFFFF",
+    marginTop: 16,
   },
   headerSub: {
     fontSize: 12,

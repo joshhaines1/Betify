@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   Modal,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -343,9 +344,8 @@ const handleAppleSignIn = async () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.inner}>
-          <Text style={styles.title}>
-            BETIFY
-          </Text>
+          <Image source={require('@/assets/images/BetifyHeaderLogo.png')} style={{ width: 350, height: 100, marginLeft: 15, marginBottom: 20 }}
+              resizeMode="contain" />
 
           <Text style={styles.subtitle}>
             Sign in to continue
@@ -537,15 +537,14 @@ const handleAppleSignIn = async () => {
         style={{ width: "100%" }}
       >
         <View style={styles.inner}>
-          <Text style={styles.title}>
-            BETIFY
-          </Text>
+          <Image source={require('@/assets/images/BetifyHeaderLogo.png')} style={{ width: 350, height: 100, marginLeft: 15, marginBottom: 20 }}
+              resizeMode="contain" />
 
           <Text style={styles.subtitle}>
             {mode ===
             "emailSignup"
               ? "Create an account"
-              : "Welcome back"}
+              : "Welcome back!"}
           </Text>
 
           {mode ===
@@ -667,6 +666,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     paddingHorizontal: 24,
+    marginBottom: 20,
   },
 
   title: {

@@ -47,6 +47,7 @@ export default function GroupsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const { adsEnabled } = useAds();
+  const [bannerAdLoaded, setBannerAdLoaded] = useState(false);
   
 
   useFocusEffect(
@@ -123,13 +124,15 @@ export default function GroupsScreen() {
       
         {/* ADS */}
       {adsEnabled && (
-      <View style={{ marginBottom: 10, alignItems: 'center' }}>
-        <BannerAd
-          unitId={BANNER_AD_UNIT_ID}
-          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-          requestOptions={{ requestNonPersonalizedAdsOnly: true }}
-        />
-      </View>
+       <View style={{ marginBottom: 10, alignItems: 'center', display: bannerAdLoaded ? 'flex' : 'none' }}>
+          <BannerAd
+            unitId={BANNER_AD_UNIT_ID}
+            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+            requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+            onAdLoaded={() => setBannerAdLoaded(true)}
+            onAdFailedToLoad={() => setBannerAdLoaded(false)}
+          />
+        </View>
     )}
       {loading && myGroups?.length === 0 && otherGroups?.length === 0 ? (
         <View style={styles.loadingContainer}>

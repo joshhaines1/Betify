@@ -1,266 +1,185 @@
 import Colors from '@/assets/styles/colors';
 import React, { useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Text, View } from 'react-native';
 import { joinGroup } from '@/clients/groups-client';
 
-
-export function JoinGroupView({setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId}) {
+export function JoinGroupView({ setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId }) {
   const [password, setPassword] = useState("");
-  
-    const addUserToGroup = async () => {
-        try {
-          if(visibility == "Private")
-          {
-            if(password == correctPassword)
-            {
-              setModalVisible(false);
-              await joinGroup(groupId);
 
-            } else {
-
-              Alert.alert("Incorrect Password")
-            }
-
-          } else {
-            setModalVisible(false);
-            await joinGroup(groupId);
-          }
-      
-          
-        } catch (error) {
-          console.error("Error joining group:", error);
+  const addUserToGroup = async () => {
+    try {
+      if (visibility == "Private") {
+        if (password == correctPassword) {
+          setModalVisible(false);
+          await joinGroup(groupId);
+        } else {
+          Alert.alert("Incorrect Password");
         }
-    
-        fetchGroups();
-      };
-    
-      const cancelGroupJoin = () => {
+      } else {
         setModalVisible(false);
-      };
+        await joinGroup(groupId);
+      }
+    } catch (error) {
+      console.error("Error joining group:", error);
+    }
+    fetchGroups();
+  };
 
-    return (
-    
-            <View style={styles.modalContainer}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Join a Group</Text>
-                <Text style={styles.label}>Name:</Text>
-                <View style={styles.infoContainer}><Text style={styles.infoText}>{name}</Text></View>
-                <Text style={styles.label}>Visibility:</Text>
-                <View style={styles.infoContainer}><Text style={styles.infoText}>{visibility}</Text></View>
-                {visibility === "Private" && (
-                  <>
-                  <Text style={styles.label}>Password:</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder=""
-                    value={password}
-                    onChangeText={setPassword}
-                  />
-                  </>
-                )}
-                <Text style={styles.label}>Current Members:</Text>
-                <View style={styles.infoContainer}><Text style={styles.infoText}>{members?.length}</Text></View>
-                <Text style={styles.label}>Starting Currency:</Text>
-                <View style={styles.infoContainer}><Text style={styles.infoText}>{startingCurrency}</Text></View>
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => addUserToGroup()}>
-                    <Text style={styles.buttonText}>JOIN</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupJoin()}>
-                    <Text style={styles.cancelButtonText}>CANCEL</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+  return (
+    <View style={styles.modalContainer}>
+      <View style={styles.modalContent}>
+
+        {/* Title */}
+        <Text style={styles.modalTitle}>Join Group</Text>
+        <Text style={styles.modalSubtitle}>Review details before joining</Text>
+
+        {/* Info rows */}
+        <View style={styles.infoBlock}>
+          {[
+            { label: "NAME", value: name },
+            { label: "VISIBILITY", value: visibility },
+            { label: "MEMBERS", value: String(members?.length ?? 0) },
+            { label: "STARTING COINS", value: String(startingCurrency) },
+          ].map((row, i) => (
+            <View key={row.label} style={[styles.infoRow, i < 3 && styles.infoRowBorder]}>
+              <Text style={styles.infoLabel}>{row.label}</Text>
+              <Text style={styles.infoValue}>{row.value}</Text>
             </View>
-          
+          ))}
+        </View>
+
+        {/* Password field */}
+        {visibility === "Private" && (
+          <View style={styles.passwordBlock}>
+            <Text style={styles.infoLabel}>PASSWORD</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter password"
+              placeholderTextColor="#555"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
+        )}
+
+        {/* Buttons */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+            <Text style={styles.cancelButtonText}>CANCEL</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.joinButton} onPress={addUserToGroup}>
+            <Text style={styles.joinButtonText}>JOIN</Text>
+          </TouchableOpacity>
+        </View>
+
+      </View>
+    </View>
   );
 }
 
-
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "white",
-        padding: 10,
-      },
-      infoContainer: {
-        borderColor: '#bdbdbd',
-        borderWidth: 0, 
-        borderRadius: 4, 
-        padding: 6,
-        marginTop: 5,
-        marginBottom: 5,
-
-      },
-      header: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#ff496b",
-        textAlign: "center",
-        marginBottom: 15,
-      },
-      buttonStyle: {
-        paddingVertical: 12,
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 120,
-        height: 50,
-      },
-      createButton: {
-        backgroundColor: "#ff496b",
-      },
-      cancelButton: {
-        backgroundColor: "#ccc",
-      },
-
-      infoText: {
-        color: Colors.textColor,
-        fontSize: 20,
-        marginBottom: 10,
-      },
-      buttonText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 16,
-      },
-      cancelButtonText: {
-        color: "#000",
-        fontWeight: "bold",
-        fontSize: 16,
-      },
-      modalContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.75)",
-      },
-      modalContent: {
-        backgroundColor: Colors.cardBackground,
-        padding: 20,
-        width: "90%",
-        borderRadius: 10,
-        borderWidth: 0.5,
-        borderColor: 'gray',
-      },
-      modalTitle: {
-        fontSize: 20,
-        fontWeight: "bold",
-        marginBottom: 5,
-        textAlign: "center",
-        color: Colors.textColor,
-      },
-      input: {
-        borderWidth: 1,
-        borderColor: "#ccc",
-        padding: 10,
-        borderRadius: 5,
-        marginBottom: 10,
-        marginTop: 10,
-        color: Colors.textColor,
-      },
-      label: {
-        fontSize: 16,
-        fontWeight: "bold",
-        marginBottom: 0,
-        color: Colors.textColor,
-      },
-      picker: {
-        height: 50,
-        marginBottom: 10,
-      },
-      buttonRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 10,
-      },
-      visibilityRow: {
-        flexDirection: "row",
-        justifyContent: "flex-start",
-        marginTop: 5,
-        marginBottom: 10,
-      },
-      selectedVisibilityButton: {
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 120,
-        height: 35,
-        marginRight: 10,
-        backgroundColor: "#ff496b",
-      },
-    
-      deselectedVisibilityButton: {
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 120,
-        height: 35,
-        marginRight: 10,
-        backgroundColor: "#ccc",
-      },
-    
-      visibilityButtonText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 16,
-      },
-    
-      plusButtonText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 50,
-        padding: 0,
-        lineHeight: 52.5,
-      },
-      plusButtonStyle: {
-        position: "absolute",
-        bottom: 30,
-        right: 30,
-        borderRadius: 25,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 55,
-        height: 55,
-        backgroundColor: "#ff496b",
-      },
-    
-      scrollView: {
-        maxHeight: 200,
-        marginBottom: 20,
-      },
-      visibilityButton: {
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 120,
-        height: 35,
-        marginRight: 10,
-        backgroundColor: "#ccc",
-      },
-      switchContainer: {
-        flexDirection: "row",
-        justifyContent: "center",
-        marginBottom: 10,
-        backgroundColor: 'white',
-      },
-      switchButton: {
-        padding: 10,
-        marginHorizontal: 5,
-        borderBottomWidth: 2,
-        borderColor: "transparent",
-      },
-      activeSwitchButton: {
-        borderColor: "#ff496b",
-      },
-      switchText: {
-        fontSize: 16,
-        color: 'black',
-        fontWeight: "bold",
-      },
-      scrollContainer: {
-        flex: 1,
-        
-      },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.85)",
+  },
+  modalContent: {
+    backgroundColor: Colors.cardBackground,
+    width: "90%",
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#2a2a2a",
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: Colors.textColor,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 15,
+    color: "#666",
+    marginBottom: 20,
+  },
+  infoBlock: {
+    borderRadius: 12,
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#2a2a2a",
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  infoRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#2a2a2a",
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    color: "#666",
+  },
+  infoValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.textColor,
+  },
+  passwordBlock: {
+    marginBottom: 20,
+    gap: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#2a2a2a",
+    backgroundColor: "#1a1a1a",
+    padding: 14,
+    borderRadius: 10,
+    color: Colors.textColor,
+    fontSize: 15,
+    marginTop: 8,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#2a2a2a",
+  },
+  cancelButtonText: {
+    color: "#666",
+    fontWeight: "700",
+    fontSize: 14,
+    letterSpacing: 1,
+  },
+  joinButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "#ff496b",
+  },
+  joinButtonText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 14,
+    letterSpacing: 1,
+  },
 });

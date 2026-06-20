@@ -6,7 +6,6 @@ import { View, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { useRef } from 'react';
 import { Animated, StyleSheet, Image } from 'react-native';
-import fetchGroups from './(tabs)/index'
 
 
 //SplashScreen.preventAutoHideAsync(); 
@@ -27,15 +26,7 @@ const Index = () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
       setAppReady(true);
 
-      // Start fade-out animation
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 1000,
-        useNativeDriver: true,
-      }).start(async () => {
-        //await SplashScreen.hideAsync(); // hide after animation
-        setIsMounted(true);
-      });
+      setIsMounted(true); // Mark as mounted after loading is complete
     };
 
     prepare();

@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, Image } from "react-native";
 import React, { useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuth } from "firebase/auth";
@@ -23,7 +23,8 @@ export default function TabLayout() {
     <SafeAreaView edges={['top']} style={styles.headerContainer}>
 
     <View style={styles.titleContainer}>
-      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.headerTitle}>BETIFY</Text>
+     <Image source={require('@/assets/images/BetifyHeaderLogo.png')} style={{ width: 220, height: 60, marginLeft: -5 }}
+    resizeMode="contain" />
     </View>
 
     <View style={styles.usernameContainer}>

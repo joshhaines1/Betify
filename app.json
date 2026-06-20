@@ -8,12 +8,18 @@
     "scheme": "betify",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "backgroundColor": "#000000",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "backgroundColor": "#000000"
+    },
     "ios": {
       "supportsTablet": true,
       "buildNumber": "8",
       "googleServicesFile": "./GoogleService-Info.plist",
       "bundleIdentifier": "com.anonymous.Betify",
       "usesAppleSignIn": true,
+      "backgroundColor": "#000000",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -24,6 +30,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "backgroundColor": "#000000",
       "package": "com.anonymous.Betify"
     },
     "web": {

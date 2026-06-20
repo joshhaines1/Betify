@@ -1,7 +1,7 @@
 import { AuthProvider } from '@/context/AuthContext';
 import Colors from '@/assets/styles/colors';
 import { Slot, Stack } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { AdsProvider } from '@/context/PurchasesContext';
 import Purchases from 'react-native-purchases';
 import { useEffect, useState } from 'react';
@@ -37,6 +37,7 @@ const [isPro, setIsPro] = useState(false);
   }, []);
 
   return (
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
     <AuthProvider>
       <AdsProvider adsRemoved={adsRemoved} isPro={isPro}>
 
@@ -62,6 +63,7 @@ const [isPro, setIsPro] = useState(false);
       
       </AdsProvider>
     </AuthProvider>
+    </View>
     
   );
   
