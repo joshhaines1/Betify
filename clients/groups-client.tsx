@@ -10,7 +10,6 @@ export const createGroup = async (groupName, visibility, startingCurrency, passw
     }
 
     const token = await user.getIdToken();
-
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
       headers: {

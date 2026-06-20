@@ -1,8 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator, Pressable, Platform } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator, Pressable, Platform, Animated } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { arrayRemove, doc, updateDoc } from "firebase/firestore";
-import { FIREBASE_AUTH, FIRESTORE } from "@/FirebaseConfig";
+import { FIREBASE_AUTH } from "@/FirebaseConfig";
 import { useNavigation } from '@react-navigation/native';
 import { UnifiedCard } from "@/components/UnifiedCard";
 import { CreatePropView } from "@/components/CreatePropView";
@@ -79,7 +78,7 @@ const EVENT_TYPES = [
     label: "Basic Event",
     description: "Simple Win/Loss Event",
     onSelect: (setters) => {
-      setters.setModalState("event");
+      console.log("Setting eventType to basic");
       setters.setEventType("basic");
     },
   },
@@ -88,7 +87,7 @@ const EVENT_TYPES = [
     label: "Advanced Event",
     description: "Moneyline, Spread, and Over/Under",
     onSelect: (setters) => {
-      setters.setModalState("event");
+      console.log("Setting eventType to MSO");
       setters.setEventType("MSO");
     },
   },
@@ -97,7 +96,8 @@ const EVENT_TYPES = [
     label: "Prop Bet",
     description: "Over or Under bets on a specific stat or outcome",
     onSelect: (setters) => {
-      setters.setModalState("prop");
+      console.log("Setting eventType to prop");
+      setters.setEventType("prop");
     },
   },
 ];
@@ -124,6 +124,7 @@ export default function Group() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [leaving, setLeaving] = useState(false);
   const [groupInfo, setGroupInfo] = useState({ memberCount: 0, totalWagered: 0 });
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
 
@@ -191,6 +192,18 @@ useEffect(() => {
     if (shouldRemove) setProps((prev) => prev.filter((p) => p.id !== propId));
     invalidateEventsCache();
   };
+ 
+  //Modal animations
+  useEffect(() => {
+  if (modalState !== "none") {
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }
+}, [modalState]);
 
   // ── Odds calculation ───────────────────────────────────────────────────────
   const calculateOdds = () => {
@@ -463,6 +476,8 @@ useEffect(() => {
     refreshEvents,
   };
 
+  console.log("modalState:", modalState, "eventType:", eventType);
+
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
@@ -620,56 +635,70 @@ useEffect(() => {
 )}
 
       {/* ── Modals ── */}
-        <Modal animationType="fade" transparent visible={modalState === "prop"}>
-          <CreatePropView fetchEvents={refreshEvents} setModalVisible={() => setModalState("none")} groupId={groupId} groupName={name} />
-        </Modal>
-    
-        <Modal animationType="fade" transparent visible={modalState === "event"}>
-          <CreateMSOView fetchEvents={refreshEvents} setModalVisible={() => setModalState("none")} groupId={groupId} groupName={name} eventType={eventType}/>
-        </Modal>
       <Modal
-    visible={modalState === "selector"}
-    transparent
-    animationType="fade"
-    onRequestClose={() => setModalState("none")}
-  >
-    <Pressable
-      style={styles.eventTypeOverlay}
-      onPress={() => setModalState("none")}
-    >
-      <Pressable style={styles.eventTypeSheet} onPress={(e) => e.stopPropagation()}>
-        <Text style={styles.eventTypeTitle}>Create Event</Text>
-        <Text style={styles.eventTypeSubtitle}>What type of event?</Text>
+        visible={modalState !== "none"}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalState("none")}
+      >
+      
+        <Pressable style={styles.eventTypeOverlay} onPress={() => setModalState("none")}>
+        {modalState === "selector" && (
+            
+          <Animated.View style={{ opacity: fadeAnim }}>
+            <Pressable style={styles.eventTypeSheet} onPress={(e) => e.stopPropagation()}>
+              <Text style={styles.eventTypeTitle}>Create Event</Text>
+              <Text style={styles.eventTypeSubtitle}>What type of event?</Text>
+              {EVENT_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type.key}
+                  style={styles.eventTypeOption}
+                  onPress={() => {
+                    type.onSelect({ setEventType });
+                    setModalState(type.key === "prop" ? "prop" : "event");
+                  }}
+                >
+                  <View style={styles.eventTypeTextBlock}>
+                    <Text style={styles.eventTypeLabel}>{type.label}</Text>
+                    <Text style={styles.eventTypeDescription}>{type.description}</Text>
+                  </View>
+                  <Text style={styles.eventTypeChevron}>›</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.eventTypeCancelButton} onPress={() => setModalState("none")}>
+                <Text style={styles.eventTypeCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Animated.View>
+          
+        )}
 
-        {EVENT_TYPES.map((type) => (
-          <TouchableOpacity
-            key={type.key}
-            style={styles.eventTypeOption}
-            onPress={() => {
-              // Pass all your modal setters here — add new ones as you build them
-              type.onSelect({
-                setModalState,
-                setEventType,
-              });
-            }}
-          >
-            <View style={styles.eventTypeTextBlock}>
-              <Text style={styles.eventTypeLabel}>{type.label}</Text>
-              <Text style={styles.eventTypeDescription}>{type.description}</Text>
-            </View>
-            <Text style={styles.eventTypeChevron}>›</Text>
-          </TouchableOpacity>
-        ))}
+        {modalState === "event" && (
+          <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+          <CreateMSOView
+            key={eventType}
+            fetchEvents={refreshEvents}
+            setModalVisible={() => setModalState("none")}
+            groupId={groupId}
+            groupName={name}
+            eventType={eventType}
+          />
+          </Animated.View>
+        )}
 
-        <TouchableOpacity
-          style={styles.eventTypeCancelButton}
-          onPress={() => setModalState("none")}
-        >
-          <Text style={styles.eventTypeCancelText}>Cancel</Text>
-        </TouchableOpacity>
-      </Pressable>
-    </Pressable>
-  </Modal>
+        {modalState === "prop" && (
+          <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+          <CreatePropView
+            fetchEvents={refreshEvents}
+            setModalVisible={() => setModalState("none")}
+            groupId={groupId}
+            groupName={name}
+          />
+          </Animated.View>
+        )}
+        </Pressable>
+      </Modal>
+
       <Modal animationType="fade" transparent visible={betSlipModalVisible}>
         <BetSlipView
           fetchGroups={refreshEvents}

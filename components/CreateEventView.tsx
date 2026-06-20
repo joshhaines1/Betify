@@ -8,7 +8,8 @@ import * as Utils from '../DataValidation'
 import * as events_client from "../clients/events-client"
 
 export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId, eventType}) {
-  
+  console.log("CreateMSOView rendered with eventType:", eventType);
+
     const [team1, setTeam1] = useState("");
     const [team2, setTeam2] = useState("");
     const [team1MoneylineOdds, setTeam1MoneylineOdds] = useState("");
@@ -462,7 +463,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.75)",
       },
       modalContent: {
         backgroundColor: Colors.cardBackground,
