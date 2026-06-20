@@ -34,6 +34,14 @@
         "ascAppId": "6746223829",
         "appleTeamId": "H8B648RV5C"
       }
+    },
+    "production": {
+    "ios": {
+      "appleId": "joshhaines1@icloud.com",
+      "ascAppId": "6746223829",
+      "appleTeamId": "H8B648RV5C"
     }
+  }
+    
   }
 }

@@ -30,7 +30,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>myapp</string>
-          <string>com.joshhaines.Betify</string>
+          <string>com.anonymous.Betify</string>
         </array>
       </dict>
       <dict>
