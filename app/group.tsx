@@ -507,7 +507,9 @@ useEffect(() => {
            <TouchableOpacity onPress={() => router.replace("/(tabs)")} style={styles.headerBackButton}>
             <Text style={styles.headerBackArrow}>‹</Text>
           </TouchableOpacity>
-          <Text style={styles.headerGroupName}>{name}</Text>
+          <Text style={styles.headerGroupName} numberOfLines={1} ellipsizeMode="tail">
+            {name}
+          </Text>
         </View>
       {/* ── Tab bar ── */}
       <View style={styles.switchContainer}>
@@ -531,18 +533,6 @@ useEffect(() => {
         </TouchableOpacity>
       </View>
 
-       {/* ADS */}
-            {adsEnabled && (
-  <View style={{ marginBottom: 10, alignItems: 'center', display: bannerAdLoaded ? 'flex' : 'none' }}>
-    <BannerAd
-      unitId={BANNER_AD_UNIT_ID}
-      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-      requestOptions={{ requestNonPersonalizedAdsOnly: true }}
-      onAdLoaded={() => setBannerAdLoaded(true)}
-      onAdFailedToLoad={() => setBannerAdLoaded(false)}
-    />
-  </View>
-)}
       {/* ── Events + Props scroll ── */}
       <>
         <ScrollView
@@ -554,7 +544,11 @@ useEffect(() => {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
             </View>
-          ) : (
+          ) : events.length === 0 ? (
+    <View style={{ alignItems: 'center', marginTop: 60 }}>
+      <Text style={{ fontSize: 16, color: '#666', fontWeight: '600' }}>No events currently active.</Text>
+    </View>
+  ) :  (
             events.map((event) => (
               <UnifiedCard
                 key={event.id}
@@ -590,7 +584,11 @@ useEffect(() => {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
             </View>
-          ) : (
+          ) : events.length === 0 ? (
+    <View style={{ alignItems: 'center', marginTop: 60 }}>
+      <Text style={{ fontSize: 16, color: '#666', fontWeight: '600' }}>No props currently active.</Text>
+    </View>
+  ) :  (
             props.map((prop) => (
               <UnifiedCard
                 key={prop.id}
@@ -731,27 +729,47 @@ useEffect(() => {
         />
       </Modal>
 
-      {/* ── FAB / Bet slip button ── */}
-      <View style={styles.betSlipAndCreateButton}>
-        {isAdmin && betSlip.length === 0 && (
-          <TouchableOpacity
-            style={styles.plusButtonStyle}
-            onPress={() => setModalState("selector")}
-          >
-            <Text style={styles.plusButtonText}>+</Text>
-          </TouchableOpacity>
-        )}
 
-        {betSlip.length > 0 && (
-          <View style={styles.betSlipButtonContainer}>
-            <TouchableOpacity disabled={loading} onPress={() => setBetSlipModalVisible(true)}>
-              <Text style={styles.betSlipButtonText}>
-                {loading ? "PLACING BETS..." : `OPEN BET SLIP (${liveSlipOdds})`}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+      <View style={styles.bottomContainer}>
+
+     {/* FAB / Bet slip button */}
+      {isAdmin && betSlip.length === 0 && (
+        <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "flex-end", width: "100%" }}>
+        <TouchableOpacity
+          style={styles.plusButtonStyle}
+          onPress={() => setModalState("selector")}
+        >
+          <Text style={styles.plusButtonText}>+</Text>
+        </TouchableOpacity>
+        </View>
+      )}
+
+      {betSlip.length > 0 && (
+        <View style={styles.betSlipButtonContainer}>
+          <TouchableOpacity disabled={loading} onPress={() => setBetSlipModalVisible(true)}>
+            <Text style={styles.betSlipButtonText}>
+              {loading ? "PLACING BETS..." : `OPEN BET SLIP (${liveSlipOdds})`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+    
+
+
+  {/* ADS */}
+  {adsEnabled && (
+    <View style={{ alignItems: 'center', height: bannerAdLoaded ? undefined : 0, overflow: 'hidden' }}>
+      <BannerAd
+        unitId={BANNER_AD_UNIT_ID}
+        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+        onAdLoaded={() => setBannerAdLoaded(true)}
+        onAdFailedToLoad={() => setBannerAdLoaded(false)}
+      />
+    </View>
+  )}
+</View>
 
     </SafeAreaView>
   );
@@ -775,13 +793,14 @@ const styles = StyleSheet.create({
     maxWidth: 75,
   },
   betSlipButtonContainer: {
-    width: "100%",
-    borderRadius: 25,
-    alignSelf: "center",
-    justifyContent: "center",
-    height: 55,
-    backgroundColor: "#ff496b",
-  },
+  width: "100%",
+  borderRadius: 25,
+  justifyContent: "center",
+  height: 55,
+  backgroundColor: "#ff496b",
+  marginHorizontal: 10,
+  marginBottom: 15,
+},
   betSlipAndCreateButton: {
     marginHorizontal: 10,
     marginBottom: 35,
@@ -802,17 +821,21 @@ const styles = StyleSheet.create({
     padding: 0,
     lineHeight: 52.5,
   },
-  plusButtonStyle: {
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 55,
-    height: 55,
-    backgroundColor: "#ff496b",
-    alignSelf: "flex-end",
-    bottom: 20,
-    position: "absolute",
-  },
+    bottomContainer: {
+  alignItems: "center",
+  paddingBottom: 10,
+},
+plusButtonStyle: {
+  borderRadius: 25,
+  alignItems: "center",
+  justifyContent: "center",
+  width: 55,
+  height: 55,
+  backgroundColor: "#ff496b",
+  marginTop: 10,
+  marginRight: 7,
+  marginBottom: 15,
+},
   switchContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -934,6 +957,7 @@ const styles = StyleSheet.create({
     color: Colors.textColor,
     letterSpacing: 0.5,
     textAlign: "center",
+    maxWidth: "84%",
   },
   headerBackButton: {
     position: "absolute",
@@ -950,6 +974,10 @@ const styles = StyleSheet.create({
     color: Colors.textColor,
     lineHeight: 38,
     fontWeight: "300",
+    backgroundColor: "#0000009a",
+    borderRadius: 20,
+    paddingHorizontal: 6,
+    paddingBottom: 2,
   },
   headerBalancePill: {
     position: "absolute",

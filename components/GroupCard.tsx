@@ -39,15 +39,17 @@ export function GroupCard({ name, members, adminName, admins, visibility, passwo
         resizeMode="contain"
       />
       <View style={styles.groupInfoContainer}>
-        <Text style={styles.groupName}>{name}</Text>
-        <Text style={styles.visibilityText}>{visibility} Group</Text>
+        <Text style={styles.groupName} numberOfLines={1} ellipsizeMode="tail">
+          {name}
+        </Text>
+        <Text style={styles.visibilityText} numberOfLines={1} ellipsizeMode="tail">{visibility} Group</Text>
         <Text style={styles.adminName} numberOfLines={1} ellipsizeMode="tail">
           Created by: {adminName}
         </Text>
       </View>
       <View style={styles.memberCountContainer}>
         <Text style={styles.memberCountText}>
-          {members.length}
+          {members.length < 1000 ? members.length : (members.length < 1000000 ? (members.length / 1000).toFixed(1) + 'K' : (members.length / 1000000).toFixed(1) + 'M')}
         </Text>
       </View>
     </TouchableOpacity>
@@ -120,11 +122,11 @@ const styles = StyleSheet.create({
   },
   groupInfoContainer: {
   flex: 1,  // takes remaining space after logo
-  marginTop: 1,
+  marginTop: 3,
   alignItems: 'flex-start',
 },
 groupName: {
-  fontSize: 23,
+  fontSize: 20,
   color: Colors.textColor,
   fontWeight: '500',
   // remove the fixed width: 225

@@ -42,7 +42,7 @@ const [isPro, setIsPro] = useState(false);
       <AdsProvider adsRemoved={adsRemoved} isPro={isPro}>
 
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ animation: "fade", headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ animation: "slide_from_left", headerShown: false }} />
         <Stack.Screen name="+not-found" options={{headerShown: false}} />
         <Stack.Screen name="index" options={{headerShown: false}} />
         <Stack.Screen name="login" options={{animation: "fade", headerShown: false}} />

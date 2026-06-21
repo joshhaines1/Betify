@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "backgroundColor": "#000000",
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/GroupIcon.png",
       "backgroundColor": "#000000"
     },
     "ios": {

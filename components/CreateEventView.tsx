@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
       },
       input: {
         borderWidth: 1,
-        borderColor: "#ccc",
+        borderColor: "#4a4a4a",
         padding: 10,
         borderRadius: 5,
         marginBottom: 5,
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
       },
       datePickerButton: {
         borderWidth: 1,
-        borderColor: '#ccc',
+        borderColor: '#4a4a4a',
         padding: 12,
         borderRadius: 5,
         backgroundColor: Colors.cardBackground,

@@ -19,9 +19,9 @@ export function CreateGroupView({ setModalVisible, fetchGroups }) {
 
   const validInputs = () => {
     if (visibility == "Private") {
-      return Utils.validInt(maxMembers) && Utils.validInt(startingCurrency) && groupName.trim() !== "" && password.trim() !== "";
+      return Utils.validInt(maxMembers) && Utils.validInt(startingCurrency) && groupName.trim() !== "" && password.trim() !== "" && groupName.length <= 30;
     }
-    return Utils.validInt(maxMembers) && Utils.validInt(startingCurrency) && groupName.trim() !== "";
+    return Utils.validInt(maxMembers) && Utils.validInt(startingCurrency) && groupName.trim() !== "" && groupName.length <= 30;
   };
 
   const createGroup = async () => {

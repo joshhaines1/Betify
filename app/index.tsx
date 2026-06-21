@@ -45,15 +45,13 @@ const Index = () => {
     }
   }, [isLoggedIn, isMounted]); // Triggered only after `isMounted` is true
 
-
+console.log('App ready:', appReady);
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: 'black' }}>
       <Stack />
-      {!appReady && (
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'black', opacity: fadeAnim, justifyContent: 'center', alignItems: 'center' }]}>
           <Image source={require('../assets/icons/BetifyAppLogoDark.png')} style={{ width: 200, height: 200 }} resizeMode="contain" />
         </Animated.View>
-      )}
     </View>
   );
 };

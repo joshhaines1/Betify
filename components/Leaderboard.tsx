@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    paddingTop: 24,
+    paddingTop: 15,
     paddingBottom: 8,
   },
   headerTop: {

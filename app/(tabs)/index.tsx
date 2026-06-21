@@ -122,18 +122,6 @@ export default function GroupsScreen() {
       </View>
 
       
-        {/* ADS */}
-      {adsEnabled && (
-       <View style={{ marginBottom: 10, alignItems: 'center', display: bannerAdLoaded ? 'flex' : 'none' }}>
-          <BannerAd
-            unitId={BANNER_AD_UNIT_ID}
-            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-            requestOptions={{ requestNonPersonalizedAdsOnly: true }}
-            onAdLoaded={() => setBannerAdLoaded(true)}
-            onAdFailedToLoad={() => setBannerAdLoaded(false)}
-          />
-        </View>
-    )}
       {loading && myGroups?.length === 0 && otherGroups?.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -202,9 +190,23 @@ export default function GroupsScreen() {
         </>
       )}
 
-      <TouchableOpacity style={styles.plusButtonStyle} onPress={() => setCreateModalVisible(true)}>
-        <Text style={styles.plusButtonText}>+</Text>
-      </TouchableOpacity>
+      <View style={styles.bottomContainer}>
+         <TouchableOpacity style={[styles.plusButtonStyle, {bottom: bannerAdLoaded ? 70 : 20,}]} onPress={() => setCreateModalVisible(true)}>
+          <Text style={styles.plusButtonText}>+</Text>
+        </TouchableOpacity>
+  {adsEnabled && (
+    <View style={{ alignItems: 'center', height: bannerAdLoaded ? undefined : 0, overflow: 'hidden' }}>
+      <BannerAd
+        unitId={BANNER_AD_UNIT_ID}
+        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+        onAdLoaded={() => setBannerAdLoaded(true)}
+        onAdFailedToLoad={() => setBannerAdLoaded(false)}
+      />
+    </View>
+  )}
+ 
+</View>
 
 
       <Modal animationType="fade" transparent={true} visible={createModalVisible}>
@@ -239,6 +241,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     marginBottom: 10,
     backgroundColor: '',
+    marginTop: -15,
   },
   switchButton: {
     padding: 10,
@@ -276,17 +279,23 @@ const styles = StyleSheet.create({
     color: Colors.textColor,
     fontWeight: "bold",
   },
-  plusButtonStyle: {
-    position: "absolute",
-    bottom: 30,
-    right: 30,
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 55,
-    height: 55,
-    backgroundColor: "#ff496b",
-  },
+  bottomContainer: {
+  alignItems: "flex-end",
+  paddingBottom: 10,
+  backgroundColor: "transparent",
+},
+plusButtonStyle: {
+  position: "absolute",
+  borderRadius: 25,
+  alignItems: "center",
+  justifyContent: "center",
+  width: 55,
+  height: 55,
+  backgroundColor: "#ff496b",
+  marginTop: 10,
+  marginRight: 10,
+  marginBottom: 10,
+},
   plusButtonText: {
     color: "#fff",
     fontWeight: "bold",

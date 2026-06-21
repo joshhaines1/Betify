@@ -320,7 +320,8 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: Colors.textColor,
+    color: '#666',
+    fontWeight: "600",
   },
   loadingOverlay: {
     marginVertical: 0,
