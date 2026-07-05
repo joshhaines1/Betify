@@ -14,6 +14,8 @@ import * as events_client from "../clients/events-client";
 import Leaderboard from "@/components/Leaderboard";
 import { useAds, usePro } from "@/context/PurchasesContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useGroupsRefresh } from "@/context/GroupsRefreshContext";
+
 //Ad
 import { InterstitialAd, AdEventType, TestIds, BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
 
@@ -139,6 +141,7 @@ export default function Group() {
   const [groupInfo, setGroupInfo] = useState({ memberCount: 0, totalWagered: 0 });
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [bannerAdLoaded, setBannerAdLoaded] = useState(false);
+  const { markGroupsStale } = useGroupsRefresh();
 
   const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
 
@@ -353,7 +356,7 @@ useEffect(() => {
       const rawEvents = await events_client.getEventsByGroupId({ groupId: groupId as string, forceRefresh });
       const eventsList: Event[] = [];
       const propsList: Prop[] = [];
-
+      console.log(`Fetched ${rawEvents.length} events for group.`);
       rawEvents.forEach((eventData) => {
         if (!eventData.acceptingWagers && !isAdmin) return;
 
@@ -423,7 +426,7 @@ useEffect(() => {
           });
         }
       });
-
+      console.log(`Processed ${eventsList.length} events and ${propsList.length} props for group.`);
       setEvents(eventsList);
       setProps(propsList);
       setBetSlip([]);
@@ -461,8 +464,7 @@ useEffect(() => {
                 onPress: async () => {
                   setLeaving(true);
                   await groups_client.leaveGroup(groupId);
-                  await groups_client.getAllGroups(0, true); // Invalidate cache on leave
-                  await groups_client.getUsersGroups(true);
+                  markGroupsStale();
                   router.dismissAll();
                 
                 },
@@ -528,7 +530,13 @@ useEffect(() => {
           <Text ellipsizeMode="clip" style={styles.currencyText}>
             {currentBalance <= 9999
               ? currentBalance
-              : (currentBalance / 1000).toFixed(1).replace(/\.0$/, "") + "K"}
+              : currentBalance >= 1000000000
+                ? (currentBalance / 1000000000).toFixed(1).replace(/\.0$/, "") + "B"
+              : currentBalance >= 1000000
+                ? (currentBalance / 1000000).toFixed(1).replace(/\.0$/, "") + "M"
+                : currentBalance >= 1000
+                  ? (currentBalance / 1000).toFixed(1).replace(/\.0$/, "") + "K"
+                  : currentBalance}
           </Text>
         </TouchableOpacity>
       </View>
@@ -584,7 +592,7 @@ useEffect(() => {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
             </View>
-          ) : events.length === 0 ? (
+          ) : props.length === 0 ? (
     <View style={{ alignItems: 'center', marginTop: 60 }}>
       <Text style={{ fontSize: 16, color: '#666', fontWeight: '600' }}>No props currently active.</Text>
     </View>
@@ -826,6 +834,9 @@ const styles = StyleSheet.create({
   paddingBottom: 10,
 },
 plusButtonStyle: {
+  position: "absolute",
+  right: 0,
+  bottom: 3,
   borderRadius: 25,
   alignItems: "center",
   justifyContent: "center",
@@ -833,8 +844,7 @@ plusButtonStyle: {
   height: 55,
   backgroundColor: "#ff496b",
   marginTop: 10,
-  marginRight: 7,
-  marginBottom: 15,
+  marginBottom: 10,
 },
   switchContainer: {
     flexDirection: "row",

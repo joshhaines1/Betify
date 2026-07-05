@@ -5,6 +5,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { AdsProvider } from '@/context/PurchasesContext';
 import Purchases from 'react-native-purchases';
 import { useEffect, useState } from 'react';
+import { GroupsRefreshProvider } from '@/context/GroupsRefreshContext';
 
 export default function RootLayout() {
 const [adsRemoved, setAdsRemoved] = useState(false);
@@ -40,7 +41,7 @@ const [isPro, setIsPro] = useState(false);
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
     <AuthProvider>
       <AdsProvider adsRemoved={adsRemoved} isPro={isPro}>
-
+        <GroupsRefreshProvider>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ animation: "slide_from_left", headerShown: false }} />
         <Stack.Screen name="+not-found" options={{headerShown: false}} />
@@ -60,7 +61,7 @@ const [isPro, setIsPro] = useState(false);
           
         }} 
       /></Stack>
-      
+        </GroupsRefreshProvider>
       </AdsProvider>
     </AuthProvider>
     </View>

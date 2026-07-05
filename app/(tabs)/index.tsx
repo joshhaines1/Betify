@@ -15,7 +15,8 @@ import { CreateGroupView } from "@/components/CreateGroupView";
 import Colors from "@/assets/styles/colors";
 import { JoinGroupWithCodeView } from "@/components/JoinGroupWithCodeView";
 import * as groups_service from "../../clients/groups-client";
-import { useFocusEffect } from "@react-navigation/core";
+import { useGroupsRefresh } from "@/context/GroupsRefreshContext";
+import { useFocusEffect } from "expo-router";
 
 // ADS
 const BANNER_AD_UNIT_ID = __DEV__
@@ -48,31 +49,80 @@ export default function GroupsScreen() {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const { adsEnabled } = useAds();
   const [bannerAdLoaded, setBannerAdLoaded] = useState(false);
-  
+  const [myGroupsLastVisible, setMyGroupsLastVisible] = useState(null);
+  const [otherGroupsLastVisible, setOtherGroupsLastVisible] = useState(null);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const { consumeStaleFlag } = useGroupsRefresh();
+
+  useEffect(() => {
+  }, []);
 
   useFocusEffect(
-  useCallback(() => {
-    fetchGroups(false);
-  }, [])
+    useCallback(() => {
+      if (consumeStaleFlag()) {
+        fetchGroups(true); // only refresh if something actually changed
+      } else {
+        fetchGroups(false); // fetch without forcing refresh to get the latest data
+      }
+    }, [])
 );
     
-  const fetchGroups = async (forceRefresh: boolean = false) => {
-    try {
+  const fetchGroups = async (forceRefresh: boolean = false, type: "my" | "other" | "all" = "all") => {
+  try {
     setLoading(true);
-    const myGroups = await groups_service.getUsersGroups(forceRefresh);
-    const otherGroups = await groups_service.getAllGroups(0, forceRefresh);
-    setMyGroups(myGroups);
-    setOtherGroups(otherGroups);
+
+    const shouldFetchMy = type === "my" || type === "all";
+    const shouldFetchOther = type === "other" || type === "all";
+
+    const [myGroups, otherGroups] = await Promise.all([
+      shouldFetchMy
+        ? groups_service.getUsersGroups(6, forceRefresh, myGroupsLastVisible)
+        : Promise.resolve(null),
+      shouldFetchOther
+        ? groups_service.getAllGroups(10, forceRefresh, otherGroupsLastVisible)
+        : Promise.resolve(null),
+    ]);
+
+    if (myGroups) {
+      if (forceRefresh || myGroups.cached) {
+        setMyGroups(myGroups.groups);
+      } else {
+        setMyGroups(prev => [...prev, ...myGroups.groups]);
+      }
+      setMyGroupsLastVisible(myGroups.lastVisible);
+    }
+
+    if (otherGroups) {
+      if (forceRefresh || otherGroups.cached) {
+        setOtherGroups(otherGroups.groups);
+      } else {
+        setOtherGroups(prev => [...prev, ...otherGroups.groups]);
+      }
+      setOtherGroupsLastVisible(otherGroups.lastVisible);
+    }
+
     console.log("No error");
-    
+
   } catch (error) {
-    setMyGroups([]);
-    setOtherGroups([]);
     Alert.alert("Error", "Failed to load groups. Please try again later.");
   } finally {
     setLoading(false);
   }
 };
+
+  const handleLoadMoreOtherGroups = () => {
+    console.log(isFetchingMore, loading, otherGroupsLastVisible);
+    if (isFetchingMore || loading || !otherGroupsLastVisible) return; // guard against duplicate/looping calls
+    setIsFetchingMore(true);
+    fetchGroups(false, "other").finally(() => setIsFetchingMore(false));
+  };
+
+  const handleLoadMoreMyGroups = () => {
+    console.log(isFetchingMore, loading, myGroupsLastVisible);
+    if (isFetchingMore || loading || !myGroupsLastVisible) return; // guard against duplicate/looping calls
+    setIsFetchingMore(true);
+    fetchGroups(false, "my").finally(() => setIsFetchingMore(false));
+  };
 
   const onRefresh = async () => {
     console.log("Refresh..");
@@ -127,7 +177,7 @@ export default function GroupsScreen() {
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : view === "joined" && myGroups.length === 0 ? (
-        <View style={{ alignItems: 'center', marginTop: 50 }}>
+        <View style={{ flex: 1, alignItems: 'center', marginTop: 50 }}>
           <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600'}}>
             You haven't joined any groups yet.
           </Text>
@@ -157,9 +207,11 @@ export default function GroupsScreen() {
             keyExtractor={(item) => item.id}
             renderItem={renderGroup}
             refreshing={refreshing}
+            style={[{ flex: 1 }, view !== "joined" && { display: "none" }]}
             onRefresh={onRefresh}
             showsVerticalScrollIndicator={false}
-            style={[{ flex: 1 }, view !== "joined" && { display: "none" }]}
+            onEndReached={handleLoadMoreMyGroups}
+            onEndReachedThreshold={0.0}
             ListEmptyComponent={
               <View style={{ alignItems: 'center', marginTop: 50 }}>
                 <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600' }}>
@@ -184,8 +236,27 @@ export default function GroupsScreen() {
             renderItem={renderGroup}
             refreshing={refreshing}
             onRefresh={onRefresh}
+            onEndReached={handleLoadMoreOtherGroups}
+            onEndReachedThreshold={0.0}
             showsVerticalScrollIndicator={false}
             style={[{ flex: 1 }, view !== "explore" && { display: "none" }]}
+            ListEmptyComponent={
+              <View style={{ alignItems: 'center', marginTop: 50 }}>
+                <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600' }}>
+                  You haven't joined any groups yet.
+                </Text>
+                <View style={{ flexDirection: "row" }}>
+                  <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
+                    <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>Create </Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>or </Text>
+                  <TouchableOpacity onPress={() => setInviteCodeModalVisible(true)}>
+                    <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>join </Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>a group now!</Text>
+                </View>
+              </View>
+            }
           />
         </>
       )}
@@ -195,7 +266,7 @@ export default function GroupsScreen() {
           <Text style={styles.plusButtonText}>+</Text>
         </TouchableOpacity>
   {adsEnabled && (
-    <View style={{ alignItems: 'center', height: bannerAdLoaded ? undefined : 0, overflow: 'hidden' }}>
+    <View style={{ alignItems: 'center', height: bannerAdLoaded ? undefined : 0, overflow: 'hidden', backgroundColor: 'green' }}>
       <BannerAd
         unitId={BANNER_AD_UNIT_ID}
         size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
@@ -280,12 +351,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   bottomContainer: {
-  alignItems: "flex-end",
+  alignItems: "center",
   paddingBottom: 10,
   backgroundColor: "transparent",
 },
 plusButtonStyle: {
   position: "absolute",
+  right: 0,
   borderRadius: 25,
   alignItems: "center",
   justifyContent: "center",
@@ -293,7 +365,6 @@ plusButtonStyle: {
   height: 55,
   backgroundColor: "#ff496b",
   marginTop: 10,
-  marginRight: 10,
   marginBottom: 10,
 },
   plusButtonText: {

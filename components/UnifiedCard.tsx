@@ -293,7 +293,7 @@ export function UnifiedCard(props: UnifiedCardProps) {
 
   // ── Settle label ──────────────────────────────────────────────────────────
   const settleLabel =
-    readyToSettle && closed ? 'SETTLE' : !closed ? 'LOCK' : 'LOCKED';
+    readyToSettle ? 'SETTLE' : !closed ? 'LOCK' : 'LOCKED';
 
   // ── Show push button ──────────────────────────────────────────────────────
   const showPush = isEvent

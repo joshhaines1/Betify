@@ -23,7 +23,7 @@ export function JoinGroupView({ setModalVisible, fetchGroups, name, visibility, 
     } catch (error) {
       console.error("Error joining group:", error);
     }
-    fetchGroups();
+    fetchGroups(true, "all");
   };
 
   return (

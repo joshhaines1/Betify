@@ -46,6 +46,8 @@ export default function Bets() {
   const [hasMoreSettledBets, setHasMoreSettledBets] = useState(true);
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const { adsEnabled } = useAds();
+
+  const [bannerAdLoaded, setBannerAdLoaded] = useState(false);
   // ADS
   const BANNER_AD_UNIT_ID = __DEV__
     ? TestIds.BANNER
@@ -236,16 +238,6 @@ const onRefresh = async () => {
       )}
       </View>
 
- {/* ADS */}
-      {adsEnabled && (
-      <View style={{ marginBottom: 10, alignItems: 'center' }}>
-        <BannerAd
-          unitId={BANNER_AD_UNIT_ID}
-          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-          requestOptions={{ requestNonPersonalizedAdsOnly: true }}
-        />
-      </View>
-    )}
       {/* FlatList for Bets */}
       {(loadingActive && activeBets.length === 0) || (loadingSettled && settledBets.length === 0) ? (
         <></>
@@ -278,9 +270,23 @@ const onRefresh = async () => {
         </>
       )}
 
-      
+      {adsEnabled && (
+          <View style={{ alignItems: 'center', height: bannerAdLoaded ? undefined : 0, overflow: 'hidden' }}>
+            <BannerAd
+              unitId={BANNER_AD_UNIT_ID}
+              size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+              requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+              onAdLoaded={() => setBannerAdLoaded(true)}
+              onAdFailedToLoad={() => setBannerAdLoaded(false)}
+            />
+          </View>
+        )}
     </View>
+
+    
   );
+
+  
 }
 
 const styles = StyleSheet.create({

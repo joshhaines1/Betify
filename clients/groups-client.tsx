@@ -57,28 +57,51 @@ export const leaveGroup = async (groupId) => {
   }
 };
 
-let usersGroupCache = []
-export const getUsersGroups = async ( forceRefresh = false ) => {
+let usersGroupCache: any[] = [];
+
+export const getUsersGroups = async (
+  limit: number = 5,
+  forceRefresh: boolean = false,
+  startAfter: string | null = null
+) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
       throw new Error("User not authenticated");
     }
 
-    // Check if the data is already in the cache
-    if (usersGroupCache.length > 0 && !forceRefresh) {
+    // Only use the cache for the initial page — paginated requests always hit the network
+    if (usersGroupCache.length > 0 && !forceRefresh && !startAfter) {
       console.log(`Returning cached data for user's groups`);
-      return usersGroupCache;
+      return { groups: usersGroupCache, lastVisible: null, cached: true };
     }
 
     const token = await user.getIdToken();
-    const response = await fetch(`${BASE_API_ENDPOINT}/users/${user.uid}/groups`, {
+    let url = `${BASE_API_ENDPOINT}/users/${user.uid}/groups?limit=${limit}`;
+    if (startAfter && !forceRefresh) {
+      url += `&startAfter=${startAfter}`;
+    }
+
+    const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.error || "Failed to fetch user's groups");
+    }
+
     const data = await response.json();
-    usersGroupCache = data; // Store the response in the cache
-    return data;
+
+    if (!startAfter) {
+      usersGroupCache = data.groups; // Only overwrite cache on a fresh first page
+    }
+
+    return {
+      groups: data.groups,
+      lastVisible: data.lastVisible ?? null,
+      cached: false,
+    };
   } catch (error) {
     throw new Error("Failed to fetch user's groups");
   }
@@ -101,29 +124,54 @@ export const getGroupById = async (groupId) => {
     throw new Error("Failed to fetch group by ID");
   }};
 
-let allGroupsCache = [];
-export const getAllGroups = async ( limit = 0 , forceRefresh = false ) => {
+let allGroupsCache: any[] = [];
+
+export const getAllGroups = async (
+  limit: number = 5,
+  forceRefresh: boolean = false,
+  startAfter: string | null = null
+) => {
   try {
     const user = FIREBASE_AUTH.currentUser;
     if (!user) {
       throw new Error("User not authenticated");
     }
 
-    // Check if the data is already in the cache
-    if (allGroupsCache.length > 0 && !forceRefresh) {
+    // Only use the cache for the initial page — paginated requests always hit the network
+    if (allGroupsCache.length > 0 && !forceRefresh && !startAfter) {
       console.log(`Returning cached data for all groups`);
-      return allGroupsCache;
+      return { groups: allGroupsCache, lastVisible: null, cached: true };
     }
 
     const token = await user.getIdToken();
-    const response = await fetch(`${BASE_API_ENDPOINT}/groups?limit=${limit}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    let url = `${BASE_API_ENDPOINT}/groups?limit=${limit}`;
+    if (startAfter && !forceRefresh) {
+      url += `&startAfter=${startAfter}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.error || "Failed to fetch groups");
+    }
+
     const data = await response.json();
-    allGroupsCache = data.groups; // Store the response in the cache
-    console.log("Fetched all groups from API. Number of groups:", data.groups.length);
-    return data.groups;
+
+    if (!startAfter) {
+      allGroupsCache = data.groups; // Only overwrite cache on a fresh first page
+    }
+
+    return {
+      groups: data.groups,
+      lastVisible: data.lastVisible ?? null,
+      cached: false,
+    };
+
   } catch (error) {
     throw new Error("Failed to fetch all groups");
   }
@@ -175,7 +223,6 @@ export const clearBalanceCache = (groupId) => {
 export const clearGroupsCache = () => {
   console.log("Clearing groups cache");
   usersGroupCache = [];
-  allGroupsCache = [];
 }
 
 let leaderboardCache = {};

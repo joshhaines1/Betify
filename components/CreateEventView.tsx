@@ -8,7 +8,6 @@ import * as Utils from '../DataValidation'
 import * as events_client from "../clients/events-client"
 
 export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId, eventType}) {
-  console.log("CreateMSOView rendered with eventType:", eventType);
 
     const [team1, setTeam1] = useState("");
     const [team2, setTeam2] = useState("");

@@ -68,7 +68,7 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
       await groups_service.joinGroup(groupId);
       alert("Successfully joined group!");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      fetchGroups();
+      fetchGroups(true, "all");
       setModalVisible(false);
 
     } catch (error) {
