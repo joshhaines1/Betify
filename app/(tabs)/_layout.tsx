@@ -39,19 +39,17 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: '#ff496b',
           headerStyle: {
-          backgroundColor: '#ffffff', 
-          elevation: 0, 
-          
+            backgroundColor: '#ffffff', 
+            elevation: 0, 
           },
           headerShadowVisible: false,
           headerShown: false,
           headerTintColor: '#fff',
           tabBarStyle: {
-          backgroundColor: Colors.background,
-          borderWidth: 0,
-          borderTopWidth: 0,
-          
-              }, 
+            backgroundColor: Colors.background,
+            paddingTop: 5,
+            borderTopWidth: 0,
+          }, 
         }}
         screenListeners={{
           tabPress: () => {
@@ -96,16 +94,7 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
-        name="help"
-        options={{
-          title: 'Help',
-          lazy: true,
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'help-circle' : 'help-circle-outline'} color={color} size={24}/>
-          ),
-        }}
-      />
+      
       <Tabs.Screen
         name="shop"
         options={{
@@ -113,6 +102,16 @@ export default function TabLayout() {
           lazy: true,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'cart' : 'cart-outline'} color={color} size={24}/>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'More',
+          lazy: true,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'menu' : 'menu-outline'} color={color} size={24}/>
           ),
         }}
       />

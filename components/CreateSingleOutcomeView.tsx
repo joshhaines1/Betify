@@ -7,18 +7,19 @@ import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
 import * as events_client from '../clients/events-client';
 
-export function CreatePropView({setModalVisible, fetchEvents, groupName, groupId}) {
+export function CreateSingleOutcomeView({setModalVisible, fetchEvents, groupName, groupId}) {
   
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [line, setLine] = useState("");
-    const [overOdds, setOverOdds] = useState("");
-    const [underOdds, setUnderOdds] = useState("");
-    const [type, setType] = useState("prop");
+    const [odds, setOdds] = useState("");
+    const [type, setType] = useState("single outcome");
     const [lockDate, setLockDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [comparisonType, setComparisonType] = useState("");
+
 
     useEffect(() => {
         resetFields();
@@ -26,15 +27,36 @@ export function CreatePropView({setModalVisible, fetchEvents, groupName, groupId
       }, []);
 
       async function validInputs() {
-        if(!Utils.validOdds(overOdds) 
-        || !Utils.validOdds(underOdds) 
+        if(!Utils.validOdds(odds) 
         || name.trim() == "" || description.trim() == ""){
           return false;
         } else if(isNaN(Number(line))){
           const confirmed = await new Promise<boolean>((resolve) => {
           Alert.alert(
             "Non-Numeric Over / Under",
-            `The over/under value, ${line}, isn't a typical number. If you're setting a time, percentage, or other custom value, this is expected. Continue anyway?`,
+            `The over/under value, ${line}, isn't a typical number. If you're creating a time, percentage, Yes/No, or other custom event, this is expected. Continue anyway?`,
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+                onPress: () => resolve(false),
+              },
+              {
+                text: "Continue",
+                onPress: () => resolve(true),
+              },
+            ],
+            { cancelable: false }
+          );
+        });
+
+        return confirmed; // Return the user's choice
+          
+        } else if(line.trim() == ""){
+          const confirmed = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            "No Line Specified",
+            `There is no line specified. Is this the intended behavior? ex: For a Yes/No event, you may want to leave the line blank. Continue?`,
             [
               {
                 text: "Cancel",
@@ -89,8 +111,8 @@ export function CreatePropView({setModalVisible, fetchEvents, groupName, groupId
           options: {
             name: name,
             description: description,
-            underOdds: (Number(underOdds) > 0 && !underOdds.includes("+")) ? "+" + underOdds : underOdds,
-            overOdds: (Number(overOdds) > 0 && !overOdds.includes("+")) ? "+" + overOdds : overOdds,
+            odds: (Number(odds) > 0 && !odds.includes("+")) ? "+" + odds : odds,
+            comparisonType: comparisonType,
             overUnder: line,
           },
         };
@@ -110,8 +132,8 @@ export function CreatePropView({setModalVisible, fetchEvents, groupName, groupId
         setName(""); 
         setDescription("");
         setLine("");
-        setOverOdds("");
-        setUnderOdds("");
+        setOdds("");
+        setComparisonType("");
         setLockDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
       };
     
@@ -132,7 +154,7 @@ export function CreatePropView({setModalVisible, fetchEvents, groupName, groupId
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                   >
-                <Text style={styles.modalTitle}>Create a Prop</Text>
+                <Text style={styles.modalTitle}>Create a Single Outcome Event</Text>
                 <Text style={styles.label}>Name:</Text>
                 <TextInput
                   style={styles.input}
@@ -149,7 +171,7 @@ export function CreatePropView({setModalVisible, fetchEvents, groupName, groupId
                   onChangeText={setDescription}
                   placeholderTextColor={'gray'}
                 />
-                <Text style={styles.label}>Over / Under Line:</Text>
+                <Text style={styles.label}>Line: (Optional)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="6.5, 3:30pm, 43%, etc."
@@ -161,12 +183,12 @@ export function CreatePropView({setModalVisible, fetchEvents, groupName, groupId
 
                     <View style={styles.oddsContainer}>
 
-                        <Text style={styles.label}>Over Odds:</Text>
+                        <Text style={styles.label}>Comparison Type</Text>
                         <TextInput
-                        style={styles.input}
-                        placeholder="-135"
-                        value={overOdds}
-                        onChangeText={setOverOdds}
+                        style={[  styles.input, {width: 190} ]}
+                        placeholder="Over, Under, Exactly, etc."
+                        value={comparisonType}
+                        onChangeText={setComparisonType}
                         placeholderTextColor={'gray'}
                         />
 
@@ -174,12 +196,12 @@ export function CreatePropView({setModalVisible, fetchEvents, groupName, groupId
 
                     <View style={styles.oddsContainer}>
 
-                        <Text style={styles.label}>Under Odds:</Text>
+                        <Text style={styles.label}>Odds:</Text>
                         <TextInput
-                        style={styles.input}
+                        style={[  styles.input, {width: 80} ]}
                         placeholder="+130"
-                        value={underOdds}
-                        onChangeText={setUnderOdds}
+                        value={odds}
+                        onChangeText={setOdds}
                         placeholderTextColor={'gray'}
                         />
                         

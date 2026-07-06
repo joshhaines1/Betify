@@ -293,8 +293,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    padding: 10,
-    paddingTop: 0,
   },
   switchContainer: {
     flexDirection: "row",

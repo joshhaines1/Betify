@@ -44,7 +44,7 @@ export function JoinGroupView({ setModalVisible, fetchGroups, name, visibility, 
           ].map((row, i) => (
             <View key={row.label} style={[styles.infoRow, i < 3 && styles.infoRowBorder]}>
               <Text style={styles.infoLabel}>{row.label}</Text>
-              <Text style={styles.infoValue}>{row.value}</Text>
+              <Text numberOfLines={1} style={styles.infoValue}>{row.value}</Text>
             </View>
           ))}
         </View>
@@ -135,6 +135,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: Colors.textColor,
+    maxWidth: "80%",
   },
   passwordBlock: {
     marginBottom: 20,

@@ -19,10 +19,9 @@ const Colors = {
 } as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-export type CardType = 'basic' | 'event' | 'prop';
 const groupIcon = require('@/assets/images/groupIcon.png');
 export interface UnifiedCardProps {
-  type: CardType;
+  type: string;
 
   // Shared
   eventId: string;
@@ -55,6 +54,10 @@ export interface UnifiedCardProps {
   name?: string;
   description?: string;
   // overUnder, overOdds, underOdds reused from event fields above
+
+  // single outcome only
+  comparisonType?: string;
+  odds?: string;
 }
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -72,7 +75,7 @@ export function UnifiedCard(props: UnifiedCardProps) {
     team1, team2, moneylineOdds1, moneylineOdds2,
     spread, spreadOdds1, spreadOdds2,
     overUnder, overOdds, underOdds,
-    name, description,
+    name, description, comparisonType, odds
   } = props;
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -87,6 +90,7 @@ export function UnifiedCard(props: UnifiedCardProps) {
   const isEvent = type === 'event';
   const isProp = type === 'prop';
   const isBasic = type === 'basic';
+  const isSingleOutcome = type === 'single outcome';
 
   // For event cards, all three must be selected to settle
   const allEventSelected =
@@ -108,27 +112,80 @@ export function UnifiedCard(props: UnifiedCardProps) {
     setOverUnderSelection('');
   };
 
-  const settleBets = async () => {
-    const results = isEvent
-      ? (allEventSelected ? [moneylineSelection, overUnderSelection, spreadSelection] : [])
-      : (bet !== '' ? [bet] : []);
+  // ── Single outcome settle/lock ──────────────────────────────────────────────
+const settleSingleOutcomeEvent = async (outcome: 'hit' | 'miss') => {
+  const results = outcome === 'hit' ? ['hit'] : [];
+  events_service
+    .updateEvent({ eventId, status: 'settled', results, acceptingWagers: false })
+    .then(() => {
+      setClosed(true);
+      onEventSettled(eventId, true);
+      resetSelections();
+      clearBetSlip();
+      refreshEvents?.();
+    })
+    .catch((e) => console.error('Error settling event:', e));
+};
 
-    events_service
-      .updateEvent({
-        eventId,
-        status: results.length > 0 ? 'settled' : 'closed',
-        results,
-        acceptingWagers: false,
-      })
-      .then(() => {
-        setClosed(true);
-        onEventSettled(eventId, results.length > 0);
-        resetSelections();
-        clearBetSlip();
-        refreshEvents?.();
-      })
-      .catch((e) => console.error('Error settling event:', e));
-  };
+const lockSingleOutcomeEvent = async () => {
+  events_service
+    .updateEvent({ eventId, status: 'closed', results: [], acceptingWagers: false })
+    .then(() => {
+      setClosed(true);
+      onEventSettled(eventId, false);
+      resetSelections();
+      clearBetSlip();
+      refreshEvents?.();
+    })
+    .catch((e) => console.error('Error locking event:', e));
+};
+
+const handleSingleOptionSettlePress = () => {
+  Alert.alert(
+    'Settle Event',
+    'Did this outcome hit or miss?',
+    [
+      { text: 'HIT', onPress: () => settleSingleOutcomeEvent('hit') },
+      { text: 'MISS', onPress: () => settleSingleOutcomeEvent('miss'), style: 'destructive' },
+      { text: 'Cancel', style: 'cancel' },
+    ],
+    { cancelable: true }
+  );
+};
+
+const handleSingleOptionLockPress = () => {
+  if (closed) return;
+  Alert.alert(
+    'Manually Lock Event?',
+    'Are you sure you want to manually lock this event and stop accepting wagers?',
+    [{ text: 'Yes', onPress: lockSingleOutcomeEvent }, { text: 'No', style: 'cancel' }],
+    { cancelable: false }
+  );
+};
+
+  const settleBets = async () => {
+  let results: string[] = [];
+  let status: 'settled' | 'closed' = 'closed';
+
+  if (isEvent) {
+    results = allEventSelected ? [moneylineSelection, overUnderSelection, spreadSelection] : [];
+    status = results.length > 0 ? 'settled' : 'closed';
+  } else {
+    results = bet !== '' ? [bet] : [];
+    status = results.length > 0 ? 'settled' : 'closed';
+  }
+
+  events_service
+    .updateEvent({ eventId, status, results, acceptingWagers: false })
+    .then(() => {
+      setClosed(true);
+      onEventSettled(eventId, status === 'settled');
+      resetSelections();
+      clearBetSlip();
+      refreshEvents?.();
+    })
+    .catch((e) => console.error('Error settling event:', e));
+};
 
   const settleBetWithPush = async () => {
     events_service
@@ -145,7 +202,8 @@ export function UnifiedCard(props: UnifiedCardProps) {
 
   const handleSettleButtonPress = () => {
     if (closed && !readyToSettle) return;
-    Alert.alert(
+    
+      Alert.alert(
       readyToSettle ? 'Settle Event?' : 'Manually Lock Event?',
       readyToSettle
         ? 'Are you sure you want to settle this event with the selected outcome?'
@@ -153,6 +211,7 @@ export function UnifiedCard(props: UnifiedCardProps) {
       [{ text: 'Yes', onPress: settleBets }, { text: 'No', style: 'cancel' }],
       { cancelable: false }
     );
+    
   };
 
   const handlePushButtonPress = () => {
@@ -160,12 +219,14 @@ export function UnifiedCard(props: UnifiedCardProps) {
     // For basic/prop, push is shown when closed + no selection
     if (isEvent && (!closed || !allEventSelected)) return;
     if (!isEvent && closed && bet !== '') return;
+    if (type !== 'single outcome') {
     Alert.alert(
       'Settle Event?',
       'Are you sure you want to settle this event with a tie, refunding each wager placed on this event?',
       [{ text: 'Yes', onPress: settleBetWithPush }, { text: 'No', style: 'cancel' }],
       { cancelable: false }
     );
+  }
   };
 
   // ── Bet slip helpers ───────────────────────────────────────────────────────
@@ -316,11 +377,12 @@ export function UnifiedCard(props: UnifiedCardProps) {
       <Text style={styles.groupName} numberOfLines={1}>{groupName}</Text>
       {isAdmin && (
         <View style={styles.adminActions}>
-          {showPush && (
+          {showPush && type !== 'single outcome' && (
             <TouchableOpacity style={styles.pushButton} onPress={handlePushButtonPress}>
               <Text style={styles.pushButtonText}>PUSH</Text>
             </TouchableOpacity>
           )}
+          {type !== 'single outcome' && (
           <TouchableOpacity
             style={[
               styles.settleButton,
@@ -336,6 +398,42 @@ export function UnifiedCard(props: UnifiedCardProps) {
               {settleLabel}
             </Text>
           </TouchableOpacity>
+          )}
+          {type === 'single outcome' && (
+            <>
+          <TouchableOpacity
+            style={[
+              styles.settleButton,
+            ]}
+            onPress={handleSingleOptionSettlePress}
+          >
+            <Text style={[
+              styles.settleButtonText,
+            ]}>
+              SETTLE
+            </Text>
+          </TouchableOpacity>
+          {!closed && (
+          <TouchableOpacity
+            style={[
+              styles.settleButton,
+              closed && !readyToSettle && styles.settleButtonLocked,
+              readyToSettle && closed && styles.settleButtonReady,
+            ]}
+            onPress={handleSingleOptionLockPress}
+          >
+            <Text style={[
+              styles.settleButtonText,
+              closed && !readyToSettle && styles.settleButtonTextLocked,
+            ]}>
+              LOCK
+            </Text>
+          </TouchableOpacity>
+          )}
+          </>
+          
+          )}
+
         </View>
       )}
     </View>
@@ -456,6 +554,7 @@ export function UnifiedCard(props: UnifiedCardProps) {
     );
   }
 
+  if (isProp) {
   // ── PROP layout ───────────────────────────────────────────────────────────
   return (
     <View style={styles.card}>
@@ -483,6 +582,31 @@ export function UnifiedCard(props: UnifiedCardProps) {
           activeOpacity={0.75}
         >
           <Text style={[styles.oddsText, bet === 'under' && styles.oddsTextSelected]}>{underOdds}</Text>
+        </TouchableOpacity>
+      </View>
+      {renderBottomBar()}
+    </View>
+  );
+}
+// ── Single Outcome layout ───────────────────────────────────────────────────────────
+  return (
+    <View style={styles.card}>
+      {renderTopBar(
+        <View style={styles.columnHeaders}>
+          <Text style={[styles.columnHeader, { width: 150 }]}>{comparisonType} {overUnder}</Text>
+        </View>
+      )}
+      <View style={styles.propMainRow}>
+        <View style={styles.propNameBlock}>
+          <Text style={styles.propTitle} numberOfLines={1}>{name}</Text>
+          <Text style={styles.propDescription} numberOfLines={2}>{description}</Text>
+        </View>
+        <TouchableOpacity
+          style={[[styles.propOddsButton, { width: 150 }], bet === 'hit' && styles.oddsButtonSelected]}
+          onPress={() => handleSimplePress('hit', odds!, name!, `${comparisonType} ${overUnder} - ${description}`, groupName)}
+          activeOpacity={0.75}
+        >
+          <Text style={[styles.oddsText, bet === 'hit' && styles.oddsTextSelected]}>{odds}</Text>
         </TouchableOpacity>
       </View>
       {renderBottomBar()}
@@ -628,7 +752,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: Colors.accent,
-    backgroundColor: Colors.accent + '22',
+    backgroundColor: Colors.accent + '20',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -243,7 +243,7 @@ export default function GroupsScreen() {
             ListEmptyComponent={
               <View style={{ alignItems: 'center', marginTop: 50 }}>
                 <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600' }}>
-                  You haven't joined any groups yet.
+                  There are no groups available.
                 </Text>
                 <View style={{ flexDirection: "row" }}>
                   <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
@@ -265,17 +265,17 @@ export default function GroupsScreen() {
          <TouchableOpacity style={[styles.plusButtonStyle, {bottom: bannerAdLoaded ? 70 : 20,}]} onPress={() => setCreateModalVisible(true)}>
           <Text style={styles.plusButtonText}>+</Text>
         </TouchableOpacity>
-  {adsEnabled && (
-    <View style={{ alignItems: 'center', height: bannerAdLoaded ? undefined : 0, overflow: 'hidden', backgroundColor: 'green' }}>
-      <BannerAd
-        unitId={BANNER_AD_UNIT_ID}
-        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-        requestOptions={{ requestNonPersonalizedAdsOnly: true }}
-        onAdLoaded={() => setBannerAdLoaded(true)}
-        onAdFailedToLoad={() => setBannerAdLoaded(false)}
-      />
-    </View>
-  )}
+        {adsEnabled && (
+          <View style={{ alignItems: 'center', height: bannerAdLoaded ? undefined : 0, overflow: 'hidden', }}>
+            <BannerAd
+              unitId={BANNER_AD_UNIT_ID}
+              size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+              requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+              onAdLoaded={() => setBannerAdLoaded(true)}
+              onAdFailedToLoad={() => setBannerAdLoaded(false)}
+            />
+          </View>
+        )}
  
 </View>
 
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    padding: 10,
+    paddingTop: 10,
   },
   switchContainer: {
     flexDirection: "row",
@@ -352,7 +352,6 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
   alignItems: "center",
-  paddingBottom: 10,
   backgroundColor: "transparent",
 },
 plusButtonStyle: {

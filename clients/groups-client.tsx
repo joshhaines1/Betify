@@ -95,6 +95,8 @@ export const getUsersGroups = async (
 
     if (!startAfter) {
       usersGroupCache = data.groups; // Only overwrite cache on a fresh first page
+    } else {
+      usersGroupCache = [...usersGroupCache, ...data.groups]; // Append new groups to the cache
     }
 
     return {
@@ -164,6 +166,8 @@ export const getAllGroups = async (
 
     if (!startAfter) {
       allGroupsCache = data.groups; // Only overwrite cache on a fresh first page
+    } else {
+      allGroupsCache = [...allGroupsCache, ...data.groups]; // Append new groups to the cache
     }
 
     return {
@@ -215,6 +219,26 @@ export const getUsersCurrency = async (groupId, forceRefresh = false) => {
   }
 };
 
+export const addRewardedCurrency = async (groupId, forceRefresh = false) => {
+  try {
+    const user = FIREBASE_AUTH.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/rewarded-ad`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    balanceCache[groupId] = data.balance; // Update the cache with the new balance
+    return data.balance;
+  } catch (error) {
+    throw new Error("Failed to fetch user's currency");
+  }
+};
+
 export const clearBalanceCache = (groupId) => {
   console.log("Clearing balance cache for group " + groupId);
   balanceCache[groupId] = null;
@@ -247,5 +271,23 @@ export const getGroupLeaderboard = async (groupId) => {
     return data.leaderboard;
   } catch (error) {
     throw new Error("Failed to fetch group leaderboard");
+  }
+};
+
+export const deleteGroup = async (groupId) => {
+  try {
+    const user = FIREBASE_AUTH.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/delete`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await response.json();
+  } catch (error) {
+    throw new Error("Failed to delete group");
   }
 };

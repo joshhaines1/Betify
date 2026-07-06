@@ -22,7 +22,8 @@ const [isPro, setIsPro] = useState(false);
 
         const customerInfo = await Purchases.getCustomerInfo();
         setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined || customerInfo.entitlements.active["pro"] !== undefined);
-        setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
+        //setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
+        setIsPro(true); // Set isPro to true for testing purposes
 
         Purchases.addCustomerInfoUpdateListener((customerInfo) => {
           setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined || customerInfo.entitlements.active["pro"] !== undefined);
@@ -60,7 +61,78 @@ const [isPro, setIsPro] = useState(false);
           
           
         }} 
-      /></Stack>
+      />
+      <Stack.Screen 
+        name="settings/help" 
+        options={{ 
+          animation: "flip", 
+          headerShown: false, 
+          headerBackButtonDisplayMode: "minimal",
+          headerTitleStyle: styles.headerText,
+          headerTintColor: Colors.textColor, // Back arrow color
+          headerShadowVisible: false, 
+          headerStyle: styles.headerStyle,
+          
+          
+        }} 
+      />
+      <Stack.Screen 
+        name="settings/basicEventHelp" 
+        options={{ 
+          animation: "flip", 
+          headerShown: false, 
+          headerBackButtonDisplayMode: "minimal",
+          headerTitleStyle: styles.headerText,
+          headerTintColor: Colors.textColor, // Back arrow color
+          headerShadowVisible: false, 
+          headerStyle: styles.headerStyle,
+          
+          
+        }} 
+      />
+      <Stack.Screen 
+        name="settings/playerPropHelp" 
+        options={{ 
+          animation: "flip", 
+          headerShown: false, 
+          headerBackButtonDisplayMode: "minimal",
+          headerTitleStyle: styles.headerText,
+          headerTintColor: Colors.textColor, // Back arrow color
+          headerShadowVisible: false, 
+          headerStyle: styles.headerStyle,
+          
+          
+        }} 
+      />
+      <Stack.Screen 
+        name="settings/advancedEventHelp" 
+        options={{ 
+          animation: "flip", 
+          headerShown: false, 
+          headerBackButtonDisplayMode: "minimal",
+          headerTitleStyle: styles.headerText,
+          headerTintColor: Colors.textColor, // Back arrow color
+          headerShadowVisible: false, 
+          headerStyle: styles.headerStyle,
+          
+          
+        }} 
+      />
+      <Stack.Screen 
+        name="settings/singleOutcomeEventHelp" 
+        options={{ 
+          animation: "flip", 
+          headerShown: false, 
+          headerBackButtonDisplayMode: "minimal",
+          headerTitleStyle: styles.headerText,
+          headerTintColor: Colors.textColor, // Back arrow color
+          headerShadowVisible: false, 
+          headerStyle: styles.headerStyle,
+          
+          
+        }} 
+      />
+      </Stack>
         </GroupsRefreshProvider>
       </AdsProvider>
     </AuthProvider>

@@ -17,7 +17,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useGroupsRefresh } from "@/context/GroupsRefreshContext";
 
 //Ad
-import { InterstitialAd, AdEventType, TestIds, BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+import { RewardedAd, InterstitialAd, AdEventType, RewardedAdEventType, TestIds, BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
+import { CreateSingleOutcomeView } from "@/components/CreateSingleOutcomeView";
 
 //Ad
 const INTERSTITIAL_AD_UNIT_ID = __DEV__
@@ -32,6 +33,12 @@ const BANNER_AD_UNIT_ID = __DEV__
   : Platform.OS === "ios"
     ? process.env.EXPO_PUBLIC_ADMOB_BANNER_IOS!
     : process.env.EXPO_PUBLIC_ADMOB_BANNER_ANDROID!;
+
+const REWARDED_AD_UNIT_ID = __DEV__
+  ? TestIds.REWARDED
+  : Platform.OS === "ios"
+    ? process.env.EXPO_PUBLIC_ADMOB_REWARDED_IOS!
+    : process.env.EXPO_PUBLIC_ADMOB_REWARDED_ANDROID!;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Event {
@@ -72,6 +79,9 @@ interface Prop {
   status: string;
   lockDate: Date;
   acceptingWagers: boolean;
+  odds: string;
+  comparisonType: string;
+  type: string;
 }
 
 const EVENT_TYPES = [
@@ -81,7 +91,6 @@ const EVENT_TYPES = [
     description: "Simple Win/Loss Event",
     proOnly: false,
     onSelect: (setters) => {
-      console.log("Setting eventType to basic");
       setters.setEventType("basic");
     },
   },
@@ -91,7 +100,6 @@ const EVENT_TYPES = [
     description: "Over or Under bets on a specific stat or outcome",
     proOnly: false,
     onSelect: (setters) => {
-      console.log("Setting eventType to prop");
       setters.setEventType("prop");
     },
   },
@@ -101,18 +109,16 @@ const EVENT_TYPES = [
     description: "Moneyline, Spread, and Over/Under",
     proOnly: true,
     onSelect: (setters) => {
-      console.log("Setting eventType to MSO");
       setters.setEventType("MSO");
     },
   },
   {
-    key: "single",
-    label: "Single Event",
+    key: "single outcome",
+    label: "Single Outcome Event",
     description: "High Risk Single-Option Bets (Moneyline Only)",
     proOnly: true,
     onSelect: (setters) => {
-      console.log("Setting eventType to single");
-      setters.setEventType("single");
+      setters.setEventType("single outcome");
     },
   },
 ];
@@ -126,7 +132,7 @@ export default function Group() {
   const navigation = useNavigation();
   const [eventType, setEventType] = useState("none");
   // Replace your two modal booleans + eventTypeSelectorVisible with one state:
-  const [modalState, setModalState] = useState<"none" | "selector" | "event" | "prop">("none");
+  const [modalState, setModalState] = useState<"none" | "selector" | "event" | "prop" | "single outcome">("none");
   const [betSlipOdds, setBetSlipOdds] = useState(new Map<string, string>());
   const [betSlip, setBetSlip] = useState<Map<string, string>[]>([]);
   const [liveSlipOdds, setLiveSlipOdds] = useState("");
@@ -138,10 +144,14 @@ export default function Group() {
   const [betSlipModalVisible, setBetSlipModalVisible] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
   const [leaving, setLeaving] = useState(false);
-  const [groupInfo, setGroupInfo] = useState({ memberCount: 0, totalWagered: 0 });
+  const [groupInfo, setGroupInfo] = useState({} as any);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [bannerAdLoaded, setBannerAdLoaded] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const { markGroupsStale } = useGroupsRefresh();
+  const rewardedAdRef = useRef<RewardedAd | null>(null);
+  const rewardedAdLoadedRef = useRef(false);
+  const [claimingReward, setClaimingReward] = useState(false);
 
   const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
 
@@ -180,6 +190,41 @@ export default function Group() {
       console.error("Error loading interstitial ad:", error);
     }
   };
+  const loadRewardedAd = () => {
+  try {
+    const ad = RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
+      requestNonPersonalizedAdsOnly: true,
+    });
+
+    ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      rewardedAdLoadedRef.current = true;
+    });
+
+    ad.addAdEventListener(AdEventType.ERROR, (error) => {
+      console.log("Rewarded ad failed to load:", error);
+      rewardedAdLoadedRef.current = false;
+    });
+
+    ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+      grantRewardedBalance();
+    });
+
+    ad.addAdEventListener(AdEventType.CLOSED, () => {
+      rewardedAdLoadedRef.current = false;
+      setClaimingReward(false);
+      loadRewardedAd(); // preload the next one
+    });
+
+    ad.load();
+    rewardedAdRef.current = ad;
+  } catch (error) {
+    console.error("Error loading rewarded ad:", error);
+  }
+};
+
+useEffect(() => {
+  loadRewardedAd();
+}, []);
 
 useEffect(() => {
     if (adsEnabled) {
@@ -296,6 +341,13 @@ useEffect(() => {
 
       resetSlip();
       setCurrentBalance((prev) => prev - wager);
+      setGroupInfo((prev: any) => ({
+        ...prev,
+        stats: {
+          ...prev.stats,
+          totalWagered: prev.stats.totalWagered + Math.round(wager),
+        },
+      }));
       invalidateBalanceCache();
       success = true;
     } catch (err) {
@@ -305,7 +357,7 @@ useEffect(() => {
     setBetSlipModalVisible(false);
     setLoading(false);
 
-    if (adsEnabled && adLoadedRef.current && interstitialAdRef.current) {
+    if (adsEnabled && adLoadedRef.current && interstitialAdRef.current && success == true) {
       setTimeout(() => {
         interstitialAdRef.current?.show();
       }, 500);
@@ -345,7 +397,13 @@ useEffect(() => {
   };
 
   const fetchGroupInfo = async () => {
-    
+    try {
+      const data = await groups_client.getGroupById(groupId as string);
+      setGroupInfo(data);
+    } catch (error) {
+      setGroupInfo(null);
+      Alert.alert("Error", "Failed to load group info. Please try again later.");
+    }
   };
 
   const refreshEvents = () => fetchEvents(true);
@@ -423,7 +481,30 @@ useEffect(() => {
             result: eventData.results[0],
             status: eventData.status,
             acceptingWagers: eventData.acceptingWagers,
+            odds: 'N/A',
+            comparisonType: 'N/A',
+            type: eventData.type,
           });
+        }  else if (eventData.type === "single outcome") {
+          console.log("Herererere")
+            propsList.push({
+              id: eventData.id,
+              groupId: eventData.groupId,
+              name: eventData.options.name,
+              description: eventData.options.description,
+              overOdds: eventData.options.overOdds,
+              underOdds: eventData.options.underOdds,
+              overUnder: eventData.options.overUnder,
+              createdAt: eventData.createdAt,
+              groupName: eventData.groupName,
+              lockDate: eventData.lockDate,
+              result: eventData.results[0],
+              status: eventData.status,
+              acceptingWagers: eventData.acceptingWagers,
+              odds: eventData.options.odds,
+              comparisonType: eventData.options.comparisonType,
+              type: eventData.type,
+            });
         }
       });
       console.log(`Processed ${eventsList.length} events and ${propsList.length} props for group.`);
@@ -441,6 +522,42 @@ useEffect(() => {
       setLoadingEvents(false);
     }
   };
+
+  const grantRewardedBalance = async () => {
+  try {
+    const newBalance = await groups_client.addRewardedCurrency(groupId as string);
+    setCurrentBalance(newBalance);
+  } catch (error) {
+    Alert.alert("Error", "Failed to add your reward. Please try again later.");
+  }
+};
+
+const handleBalancePress = () => {
+  if (currentBalance > groupInfo.startingCurrency * 0.075) {
+    Alert.alert("Balance Info", `Your current balance is ${currentBalance}. Once you get close to nothing left, you can watch a short ad to get ${groupInfo.startingCurrency * 0.075} coins added to your balance.`);
+    return;
+  };
+  if (!rewardedAdLoadedRef.current || !rewardedAdRef.current) {
+    Alert.alert("Not Ready", "No reward is available right now. Please try again in a moment.");
+    return;
+  }
+
+  Alert.alert(
+    "Out of Currency",
+    `Watch a short ad to get ${groupInfo.startingCurrency * 0.075} coins added to your balance?`,
+    [
+      {
+        text: "Watch Ad",
+        onPress: () => {
+          setClaimingReward(true);
+          rewardedAdRef.current?.show();
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ],
+    { cancelable: true }
+  );
+};
 
   useEffect(() => {
     fetchEvents();
@@ -480,6 +597,36 @@ useEffect(() => {
       
     } catch (error) {
       Alert.alert("Error", "Failed to leave group. Please try again later.");
+    }
+  };
+
+  const handleDeleteGroupPress = async () => {
+    try {
+      Alert.alert(
+            "Delete Group?",
+            "Are you sure you want to delete this group? THIS CANNOT BE UNDONE",
+            [
+              {
+                text: "Yes",
+                onPress: async () => {
+                  setLeaving(true);
+                  await groups_client.deleteGroup(groupId);
+                  markGroupsStale();
+                  router.dismissAll();
+                
+                },
+              },
+              {
+                text: "No",
+                onPress: () => console.log("User answered: No"),
+                style: "cancel",
+              },
+            ],
+            { cancelable: false }
+          );
+      
+    } catch (error) {
+      Alert.alert("Error", "Failed to delete group. Please try again later.");
     }
   };
 
@@ -526,7 +673,7 @@ useEffect(() => {
             </Text>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={[styles.switchButton, styles.balance]}>
+        <TouchableOpacity style={[styles.switchButton, styles.balance]} onPress={() => handleBalancePress()}>
           <Text ellipsizeMode="clip" style={styles.currencyText}>
             {currentBalance <= 9999
               ? currentBalance
@@ -600,7 +747,7 @@ useEffect(() => {
             props.map((prop) => (
               <UnifiedCard
                 key={prop.id}
-                type="prop"
+                type={prop.type}
                 eventId={prop.id}
                 groupName={prop.groupName}
                 lockDate={prop.lockDate as any}
@@ -612,6 +759,8 @@ useEffect(() => {
                 overUnder={prop.overUnder}
                 overOdds={prop.overOdds}
                 underOdds={prop.underOdds}
+                odds={prop.odds}
+                comparisonType={prop.comparisonType}
                 {...sharedCardProps}
               />
             ))
@@ -636,22 +785,31 @@ useEffect(() => {
     </View>
 
     {[
-      { label: "INVITE CODE", value: groupId.toString().slice(-6).toUpperCase() },
-      { label: "MEMBERS",     value: String(groupInfo.memberCount) },
-      { label: "TOTAL WAGERED", value: groupInfo.totalWagered.toLocaleString() },
-    ].map((row, i) => (
-      <View
-        key={row.label}
-        style={[infoStyles.row, i === 0 && infoStyles.rowFirst]}
-      >
-        <Text style={infoStyles.label}>{row.label}</Text>
-        <Text style={infoStyles.value}>{row.value}</Text>
-      </View>
-    ))}
+  { label: "INVITE CODE", value: groupId.toString().slice(-6).toUpperCase() },
+  { label: "MEMBERS", value: String([groupInfo.stats.members] ), onPress: () => setShowMembersModal(true) },
+  { label: "TOTAL WAGERED", value: groupInfo.stats.totalWagered.toLocaleString() },
+].map((row, i) => {
+  const RowWrapper = row.onPress ? TouchableOpacity : View;
+  return (
+    <RowWrapper
+      key={row.label}
+      style={[infoStyles.row, i === 0 && infoStyles.rowFirst]}
+      {...(row.onPress ? { onPress: row.onPress, activeOpacity: 0.7 } : {})}
+    >
+      <Text style={infoStyles.label}>{row.label}</Text>
+      <Text style={infoStyles.value}>{row.value}</Text>
+    </RowWrapper>
+  );
+})}
 
     <TouchableOpacity style={infoStyles.leaveButton} onPress={handleLeaveButtonPress}>
       <Text style={infoStyles.leaveText}>LEAVE GROUP</Text>
     </TouchableOpacity>
+    {isAdmin && (
+      <TouchableOpacity style={infoStyles.deleteButton} onPress={handleDeleteGroupPress}>
+        <Text style={infoStyles.deleteText}>DELETE GROUP</Text>
+      </TouchableOpacity>
+    )}
 
   </ScrollView>
 )}
@@ -664,6 +822,7 @@ useEffect(() => {
         onRequestClose={() => setModalState("none")}
         style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
       >
+        
       
       <View style={styles.modalBackground}>
         {modalState === "selector" && (
@@ -678,7 +837,13 @@ useEffect(() => {
                   style={type.proOnly && isPro === false ? [styles.eventTypeOption, styles.eventTypeOptionDisabled] : styles.eventTypeOption}
                   onPress={() => {
                     type.onSelect({ setEventType });
-                    setModalState(type.key === "prop" ? "prop" : "event");
+                    setModalState(
+                      type.key === "prop"
+                        ? "prop"
+                        : type.key === "single outcome"
+                        ? "single outcome"
+                        : "event"
+                    );
                   }}
                   disabled={(isPro === false) && type.proOnly}
                 >
@@ -720,8 +885,42 @@ useEffect(() => {
           />
           </Animated.View>
         )}
+
+        {modalState === "single outcome" && (
+          <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+          <CreateSingleOutcomeView
+            fetchEvents={refreshEvents}
+            setModalVisible={() => setModalState("none")}
+            groupId={groupId}
+            groupName={name}
+          />
+          </Animated.View>
+        )}
         </View>
       </Modal>
+
+      <Modal
+  visible={showMembersModal}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setShowMembersModal(false)}
+>
+  <View style={infoStyles.membersOverlay}>
+    <View style={infoStyles.membersSheet}>
+      <Text style={infoStyles.membersTitle}>MEMBERS</Text>
+      <ScrollView style={{ maxHeight: 300 }}>
+        {(groupInfo.stats?.memberNames ?? []).map((memberName: string, index: number) => (
+          <View key={`${memberName}-${index}`} style={infoStyles.memberRow}>
+            <Text numberOfLines={1} ellipsizeMode="tail" style={infoStyles.memberName}>{memberName}</Text>
+          </View>
+        ))}
+      </ScrollView>
+      <TouchableOpacity style={infoStyles.membersCloseButton} onPress={() => setShowMembersModal(false)}>
+        <Text style={infoStyles.membersCloseText}>CLOSE</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
 
       <Modal animationType="fade" transparent visible={betSlipModalVisible}>
         <BetSlipView
@@ -741,7 +940,7 @@ useEffect(() => {
       <View style={styles.bottomContainer}>
 
      {/* FAB / Bet slip button */}
-      {isAdmin && betSlip.length === 0 && (
+      {isAdmin && betSlip.length === 0 && view != "leaderboard" && view != "info" && (
         <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "flex-end", width: "100%" }}>
         <TouchableOpacity
           style={styles.plusButtonStyle}
@@ -1027,6 +1226,45 @@ const infoStyles = StyleSheet.create({
     color: "#FFFFFF",
     marginTop: 16,
   },
+  membersOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.7)",
+  justifyContent: "center",
+},
+membersSheet: {
+  backgroundColor: "#121112",
+  borderRadius: 16,
+  padding: 24,
+  paddingBottom: 0,
+},
+membersTitle: {
+  fontSize: 20,
+  fontWeight: "700",
+  marginBottom: 6,
+  color: "#FFFFFF",
+  letterSpacing: 1,
+  textAlign: 'center',
+},
+memberRow: {
+  paddingTop: 12,
+  paddingBottom: 12,
+},
+memberName: {
+  fontSize: 20,
+  color: "#FFFFFF",
+  fontWeight: "600",
+  textAlign: "center",
+},
+membersCloseButton: {
+  alignItems: "center",
+  paddingVertical: 12,
+  marginBottom: 5,
+  marginTop: 6,
+},
+membersCloseText: {
+  fontSize: 16,
+  color: "#888",
+},
   headerSub: {
     fontSize: 12,
     color: "#7A8499",
@@ -1085,6 +1323,21 @@ const infoStyles = StyleSheet.create({
     borderColor: "#ff496b55",
     paddingVertical: 16,
     alignItems: "center",
+  },
+  deleteButton: {
+    marginTop: 10,
+    backgroundColor: 'rgba(255, 75, 108, 0.27)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ff496b55",
+    paddingVertical: 6,
+    alignItems: "center",
+  },
+  deleteText: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 2,
+    color: "white",
   },
   leaveText: {
     fontSize: 13,
