@@ -106,28 +106,58 @@ async function lockExpiredEvents(events) {
   }
 }
 
-export async function getEventsByGroupId({ groupId, forceRefresh = false }) {
+export async function getEventsByGroupId({ groupId, limit = 5, startAfterId = null, forceRefresh = false }) {
+  console.log("forceRefresh for Events:", forceRefresh)
   const token = await FIREBASE_AUTH.currentUser?.getIdToken();
   if (!token) throw new Error("User not authenticated");
 
-  if (cache[groupId] && !forceRefresh) {
-    console.log("Using CACHED data");
-    await lockExpiredEvents(cache[groupId]);
-    return cache[groupId];
+  const cacheKey = `${groupId}_${limit}_${startAfterId}`;
+  if (cache[cacheKey] && !forceRefresh) {
+    console.log("Using CACHED data for events");
+    await lockExpiredEvents(cache[cacheKey].events);
+    return cache[cacheKey];
   }
 
-  console.log("Using FRESH data");
-  const res = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/events`, {
+  console.log("Using FRESH data for events");
+
+  const res = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/events?limit=${limit}&startAfter=${startAfterId}`, {
     method: "GET",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || data.message || "Failed to get events");
 
-  await lockExpiredEvents(data);
-  cache[groupId] = data;
+  await lockExpiredEvents(data.events);
+  cache[cacheKey] = data;
   return data;
 }
+
+export async function getPropsByGroupId({ groupId, limit = 5, startAfterId = null, forceRefresh = false }) {
+  console.log("forceRefresh for Props:", forceRefresh)
+  const token = await FIREBASE_AUTH.currentUser?.getIdToken();
+  if (!token) throw new Error("User not authenticated");
+
+  const cacheKey = `${groupId}_${limit}_${startAfterId}`;
+  if (cache[cacheKey] && !forceRefresh) {
+    console.log("Using CACHED data for props");
+    await lockExpiredEvents(cache[cacheKey].events);
+    return cache[cacheKey];
+  }
+
+  console.log("Using FRESH data for props");
+  const res = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/props?limit=${limit}&startAfter=${startAfterId}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  console.log("data", data)
+  if (!res.ok) throw new Error(data.error || data.message || "Failed to get props");
+
+  await lockExpiredEvents(data.events);
+  cache[cacheKey] = data;
+  return data;
+}
+
 
 export async function clearEventsCache(groupId: string) {
   delete cache[groupId];

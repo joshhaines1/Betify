@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator, Pressable, Platform, Animated } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator, Pressable, Platform, Animated, FlatList } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { FIREBASE_AUTH } from "@/FirebaseConfig";
 import { useNavigation } from '@react-navigation/native';
@@ -19,6 +19,7 @@ import { useGroupsRefresh } from "@/context/GroupsRefreshContext";
 //Ad
 import { RewardedAd, InterstitialAd, AdEventType, RewardedAdEventType, TestIds, BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
 import { CreateSingleOutcomeView } from "@/components/CreateSingleOutcomeView";
+import { startAfter } from "firebase/firestore";
 
 //Ad
 const INTERSTITIAL_AD_UNIT_ID = __DEV__
@@ -152,6 +153,11 @@ export default function Group() {
   const rewardedAdRef = useRef<RewardedAd | null>(null);
   const rewardedAdLoadedRef = useRef(false);
   const [claimingReward, setClaimingReward] = useState(false);
+  const [propsLastVisible, setPropsLastVisible] = useState(null);
+  const [eventsLastVisible, setEventsLastVisible] = useState(null);
+
+  const [isFetchingMoreEvents, setIsFetchingMoreEvents] = useState(false);
+   const [isFetchingMoreProps, setIsFetchingMoreProps] = useState(false);
 
   const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
 
@@ -406,16 +412,138 @@ useEffect(() => {
     }
   };
 
-  const refreshEvents = () => fetchEvents(true);
+  const refreshEvents = () => {
+    fetchEvents(true, null);
+  }
 
-  const fetchEvents = async (forceRefresh = false) => {
+  const refreshProps = () => {
+    fetchProps(true, null);
+  }
+
+  const loadMoreEvents = () => {
+    fetchEvents(false, eventsLastVisible);
+  }
+
+  const handleLoadMoreEvents = () => {
+    console.log(isFetchingMoreEvents, loading, eventsLastVisible);
+    if (isFetchingMoreEvents || loading || !eventsLastVisible) return; // guard against duplicate/looping calls
+    setIsFetchingMoreEvents(true);
+    loadMoreEvents();
+  };
+
+   const loadMoreProps = () => {
+    console.log("Here");
+    fetchProps(false, propsLastVisible);
+  }
+
+   const handleLoadMoreProps = () => {
+    console.log(isFetchingMoreProps, loading, propsLastVisible);
+    if (isFetchingMoreProps || loading || !propsLastVisible) return; // guard against duplicate/looping calls
+    setIsFetchingMoreProps(true);
+    loadMoreEvents();
+  };
+
+  const fetchEventsAndProps = (forceRefresh = false, propsStartAfterId = null, eventsStartAfterId = null) => {
+    fetchEvents(forceRefresh, eventsStartAfterId)
+    fetchProps(forceRefresh, propsStartAfterId)
+  }
+
+  const fetchProps = async (forceRefresh = false, startAfterId = null) => {
     setLoadingEvents(true);
+
     try {
-      const rawEvents = await events_client.getEventsByGroupId({ groupId: groupId as string, forceRefresh });
-      const eventsList: Event[] = [];
+      const rawProps = await events_client.getPropsByGroupId({
+        groupId: groupId as string,
+        startAfterId,
+        forceRefresh,
+      });
+
       const propsList: Prop[] = [];
-      console.log(`Fetched ${rawEvents.length} events for group.`);
-      rawEvents.forEach((eventData) => {
+
+      setPropsLastVisible(rawProps.lastVisible);
+
+    // Process props
+    rawProps.events.forEach((eventData) => {
+      if (!eventData.acceptingWagers && !isAdmin) return;
+
+      if (eventData.type === "prop") {
+        propsList.push({
+          id: eventData.id,
+          groupId: eventData.groupId,
+          name: eventData.options.name,
+          description: eventData.options.description,
+          overOdds: eventData.options.overOdds,
+          underOdds: eventData.options.underOdds,
+          overUnder: eventData.options.overUnder,
+          createdAt: eventData.createdAt,
+          groupName: eventData.groupName,
+          lockDate: eventData.lockDate,
+          result: eventData.results[0],
+          status: eventData.status,
+          acceptingWagers: eventData.acceptingWagers,
+          odds: "N/A",
+          comparisonType: "N/A",
+          type: eventData.type,
+        });
+      } else if (eventData.type === "single outcome") {
+        propsList.push({
+          id: eventData.id,
+          groupId: eventData.groupId,
+          name: eventData.options.name,
+          description: eventData.options.description,
+          overOdds: eventData.options.overOdds,
+          underOdds: eventData.options.underOdds,
+          overUnder: eventData.options.overUnder,
+          createdAt: eventData.createdAt,
+          groupName: eventData.groupName,
+          lockDate: eventData.lockDate,
+          result: eventData.results[0],
+          status: eventData.status,
+          acceptingWagers: eventData.acceptingWagers,
+          odds: eventData.options.odds,
+          comparisonType: eventData.options.comparisonType,
+          type: eventData.type,
+        });
+      }
+    });
+    
+    if(forceRefresh){
+      setProps(propsList);
+    } else {
+      setProps(prev => [...prev, ...propsList]);
+    }
+    
+    setBetSlip([]);
+    setBetSlipOdds(new Map());
+  } catch (error) {
+    setProps([]);
+    setBetSlip([]);
+    setBetSlipOdds(new Map());
+
+    Alert.alert("Error", "Failed to load props. Please try again later.");
+  } finally {
+    setLoadingEvents(false);
+    setIsFetchingMoreProps(false);
+  }
+};
+
+const fetchEvents = async (forceRefresh = false, startAfterId = null) => {
+    setLoadingEvents(true);
+
+    try {
+
+      const rawEvents = await events_client.getEventsByGroupId({
+        groupId: groupId as string,
+        startAfterId,
+        forceRefresh,
+      });
+
+      const eventsList: Event[] = [];
+
+      setEventsLastVisible(rawEvents.lastVisible);
+
+      // Process events
+      rawEvents.events.forEach((eventData) => {
         if (!eventData.acceptingWagers && !isAdmin) return;
 
         if (eventData.type === "MSO") {
@@ -466,62 +594,27 @@ useEffect(() => {
             results: eventData.results,
             acceptingWagers: eventData.acceptingWagers,
           });
-        } else if (eventData.type === "prop") {
-          propsList.push({
-            id: eventData.id,
-            groupId: eventData.groupId,
-            name: eventData.options.name,
-            description: eventData.options.description,
-            overOdds: eventData.options.overOdds,
-            underOdds: eventData.options.underOdds,
-            overUnder: eventData.options.overUnder,
-            createdAt: eventData.createdAt,
-            groupName: eventData.groupName,
-            lockDate: eventData.lockDate,
-            result: eventData.results[0],
-            status: eventData.status,
-            acceptingWagers: eventData.acceptingWagers,
-            odds: 'N/A',
-            comparisonType: 'N/A',
-            type: eventData.type,
-          });
-        }  else if (eventData.type === "single outcome") {
-          console.log("Herererere")
-            propsList.push({
-              id: eventData.id,
-              groupId: eventData.groupId,
-              name: eventData.options.name,
-              description: eventData.options.description,
-              overOdds: eventData.options.overOdds,
-              underOdds: eventData.options.underOdds,
-              overUnder: eventData.options.overUnder,
-              createdAt: eventData.createdAt,
-              groupName: eventData.groupName,
-              lockDate: eventData.lockDate,
-              result: eventData.results[0],
-              status: eventData.status,
-              acceptingWagers: eventData.acceptingWagers,
-              odds: eventData.options.odds,
-              comparisonType: eventData.options.comparisonType,
-              type: eventData.type,
-            });
         }
       });
-      console.log(`Processed ${eventsList.length} events and ${propsList.length} props for group.`);
+
+    if(forceRefresh){
       setEvents(eventsList);
-      setProps(propsList);
-      setBetSlip([]);
-      setBetSlipOdds(new Map());
-    } catch (error) {
-      setEvents([]);
-      setProps([]);
-      setBetSlip([]);
-      setBetSlipOdds(new Map());
-      Alert.alert("Error", "Failed to load events. Please try again later.");
-    } finally {
-      setLoadingEvents(false);
+    } else {
+      setEvents(prev => [...prev, ...eventsList]);
     }
-  };
+    setBetSlip([]);
+    setBetSlipOdds(new Map());
+  } catch (error) {
+    setEvents([]);
+    setBetSlip([]);
+    setBetSlipOdds(new Map());
+
+    Alert.alert("Error", "Failed to load events. Please try again later.");
+  } finally {
+    setLoadingEvents(false);
+    setIsFetchingMoreEvents(false);
+  }
+};
 
   const grantRewardedBalance = async () => {
   try {
@@ -560,7 +653,7 @@ const handleBalancePress = () => {
 };
 
   useEffect(() => {
-    fetchEvents();
+    fetchEventsAndProps();
     fetchBalance();
     fetchLeaderboard();
     fetchGroupInfo();
@@ -640,6 +733,51 @@ const handleBalancePress = () => {
     refreshEvents,
   };
 
+  const renderProp = ({ item }: { item: Prop}) => (
+      <UnifiedCard
+        key={item.id}
+        type={item.type}
+        eventId={item.id}
+        groupName={item.groupName}
+        lockDate={item.lockDate as any}
+        createdAt={item.createdAt}
+        acceptingWagers={item.acceptingWagers}
+        onEventSettled={onPropChanged}
+        name={item.name}
+        description={item.description}
+        overUnder={item.overUnder}
+        overOdds={item.overOdds}
+        underOdds={item.underOdds}
+        odds={item.odds}
+        comparisonType={item.comparisonType}
+        {...sharedCardProps}
+      />
+    );
+
+  const renderEvent = ({ item }: { item: Event}) => (
+    <UnifiedCard
+      key={item.id}
+      type={item.type === "MSO" ? "event" : "basic"}
+      eventId={item.id}
+      groupName={item.groupName}
+      lockDate={item.lockDate as any}
+      createdAt={item.createdAt}
+      acceptingWagers={item.acceptingWagers}
+      onEventSettled={onEventChanged}
+      team1={item.options.team1}
+      team2={item.options.team2}
+      moneylineOdds1={item.options.moneylineOdds1}
+      moneylineOdds2={item.options.moneylineOdds2}
+      spread={item.options.spread}
+      spreadOdds1={item.options.spreadOdds1}
+      spreadOdds2={item.options.spreadOdds2}
+      overUnder={item.options.overUnder}
+      overOdds={item.options.overOdds}
+      underOdds={item.options.underOdds}
+      {...sharedCardProps}
+    />
+  )
+
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -690,82 +828,54 @@ const handleBalancePress = () => {
 
       {/* ── Events + Props scroll ── */}
       <>
-        <ScrollView
+          {loadingEvents && (!isFetchingMoreEvents && !isFetchingMoreProps) ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) :  (
+            <FlatList
+            data={events}
+            keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           style={[styles.scrollContainer, view !== "events" && { display: "none" }]}
           contentContainerStyle={styles.scrollContent}
-        >
-          {loadingEvents ? (
+          onEndReached={handleLoadMoreEvents}
+          onEndReachedThreshold={0.0}
+          renderItem={renderEvent}
+          ListEmptyComponent={
+              <View style={{ alignItems: 'center', marginTop: 50 }}>
+                <Text style={{ fontSize: 18, color: "gray", fontWeight: '600' }}>
+                  No active events available.
+                </Text>
+              </View>
+            }
+        />
+          )}
+        
+          {loadingEvents && (!isFetchingMoreEvents && !isFetchingMoreProps) ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
             </View>
-          ) : events.length === 0 ? (
-    <View style={{ alignItems: 'center', marginTop: 60 }}>
-      <Text style={{ fontSize: 16, color: '#666', fontWeight: '600' }}>No events currently active.</Text>
-    </View>
+    
   ) :  (
-            events.map((event) => (
-              <UnifiedCard
-                key={event.id}
-                type={event.type === "MSO" ? "event" : "basic"}
-                eventId={event.id}
-                groupName={event.groupName}
-                lockDate={event.lockDate as any}
-                createdAt={event.createdAt}
-                acceptingWagers={event.acceptingWagers}
-                onEventSettled={onEventChanged}
-                team1={event.options.team1}
-                team2={event.options.team2}
-                moneylineOdds1={event.options.moneylineOdds1}
-                moneylineOdds2={event.options.moneylineOdds2}
-                spread={event.options.spread}
-                spreadOdds1={event.options.spreadOdds1}
-                spreadOdds2={event.options.spreadOdds2}
-                overUnder={event.options.overUnder}
-                overOdds={event.options.overOdds}
-                underOdds={event.options.underOdds}
-                {...sharedCardProps}
-              />
-            ))
-          )}
-        </ScrollView>
-
-        <ScrollView
+            <FlatList
+            data={props}
+            keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           style={[styles.scrollContainer, view !== "props" && { display: "none" }]}
           contentContainerStyle={styles.scrollContent}
-        >
-          {loadingEvents ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-            </View>
-          ) : props.length === 0 ? (
-    <View style={{ alignItems: 'center', marginTop: 60 }}>
-      <Text style={{ fontSize: 16, color: '#666', fontWeight: '600' }}>No props currently active.</Text>
-    </View>
-  ) :  (
-            props.map((prop) => (
-              <UnifiedCard
-                key={prop.id}
-                type={prop.type}
-                eventId={prop.id}
-                groupName={prop.groupName}
-                lockDate={prop.lockDate as any}
-                createdAt={prop.createdAt}
-                acceptingWagers={prop.acceptingWagers}
-                onEventSettled={onPropChanged}
-                name={prop.name}
-                description={prop.description}
-                overUnder={prop.overUnder}
-                overOdds={prop.overOdds}
-                underOdds={prop.underOdds}
-                odds={prop.odds}
-                comparisonType={prop.comparisonType}
-                {...sharedCardProps}
-              />
-            ))
+          onEndReached={handleLoadMoreProps}
+          onEndReachedThreshold={0.0}
+          renderItem={renderProp}
+          ListEmptyComponent={
+              <View style={{ alignItems: 'center', marginTop: 50 }}>
+                <Text style={{ fontSize: 18, color: "gray", fontWeight: '600' }}>
+                  No active props available.
+                </Text>
+              </View>
+            }
+        />
           )}
-        </ScrollView>
         </>
       
 
@@ -878,7 +988,7 @@ const handleBalancePress = () => {
         {modalState === "prop" && (
           <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
           <CreatePropView
-            fetchEvents={refreshEvents}
+            fetchEvents={refreshProps}
             setModalVisible={() => setModalState("none")}
             groupId={groupId}
             groupName={name}
@@ -889,7 +999,7 @@ const handleBalancePress = () => {
         {modalState === "single outcome" && (
           <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
           <CreateSingleOutcomeView
-            fetchEvents={refreshEvents}
+            fetchEvents={refreshProps}
             setModalVisible={() => setModalState("none")}
             groupId={groupId}
             groupName={name}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { StyleSheet, TouchableOpacity, Modal, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { Text, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
@@ -20,7 +20,6 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
     const [overOdds, setOverOdds] = useState("");
     const [underOdds, setUnderOdds] = useState("");
     const [type, setType] = useState(eventType);
-    const [spreadType, setSpreadType] = useState("Spread");
     const [lockDate, setLockDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
@@ -29,6 +28,30 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
     useEffect(() => {
         resetFields();
       }, []);
+
+      // Parses a moneyline odds string (e.g. "-135", "130", "+130") into a number.
+      // Returns null if the input isn't a valid number yet (e.g. still empty or mid-typing).
+      const parseOdds = (odds: string): number | null => {
+        if (!odds || odds.trim() === "") return null;
+        const num = Number(odds.replace("+", ""));
+        return isNaN(num) ? null : num;
+      };
+
+      // Determines which team is favored based on moneyline odds.
+      // The team with the lower (more negative) odds value is the favorite.
+      // Returns null if odds aren't entered yet or are equal (a true pick'em).
+      const getFavoriteTeam = (): "team1" | "team2" | null => {
+        const odds1 = parseOdds(team1MoneylineOdds);
+        const odds2 = parseOdds(team2MoneylineOdds);
+        console.log("Odds1: ", odds1, " Odds2: ", odds2);
+        if (odds1 === null || odds2 === null || odds1 === odds2) return null;
+        console.log("Favorite Team: ", odds1 < odds2 ? "team1" : "team2");
+        return odds1 < odds2 ? "team1" : "team2";
+      };
+
+      // Defaults to team1 favored ("Spread") until odds make team2 the clear favorite.
+      const favoriteTeam = getFavoriteTeam();
+      const isReverseSpread = favoriteTeam === "team2";
 
       
       const validMSOInputs = () => {
@@ -83,7 +106,8 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
               overUnder: overUnder,
               moneylineOdds1: (Number(team1MoneylineOdds) > 0 && !team1MoneylineOdds.includes("+")) ? "+" + team1MoneylineOdds : team1MoneylineOdds,
               moneylineOdds2: (Number(team2MoneylineOdds) > 0 && !team2MoneylineOdds.includes("+")) ? "+" + team2MoneylineOdds : team2MoneylineOdds,
-              spread: spreadType == "Spread" ? spread : "-" + spread,
+              // Team1 is the favorite (-spread) unless team2's moneyline odds make them the favorite (+spread for team1)
+              spread: !isReverseSpread ? spread : "-" + spread,
               spreadOdds1: (Number(team1SpreadOdds) > 0 && !team1SpreadOdds.includes("+")) ? "+" + team1SpreadOdds : team1SpreadOdds,
               spreadOdds2: (Number(team2SpreadOdds) > 0 && !team2SpreadOdds.includes("+"))? "+" + team2SpreadOdds : team2SpreadOdds,
             },
@@ -115,7 +139,6 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
             },
         }
           events_client.createEvent(eventToCreate).then((response) => {
-          console.log("2.  " + response.eventId);
           fetchEvents();
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setModalVisible(false);
@@ -148,14 +171,6 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
 
   function handleVisiblityButton(type: string): void {
     setType(type);
-  }
-
-  function handleSpreadButtonPress(): void {
-    if(spreadType == "Spread") {
-      setSpreadType("Reverse Spread");
-    }else {
-      setSpreadType("Spread");
-    }
   }
 
   const handleDateClick = (choice) => {
@@ -246,17 +261,16 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
                   <View style={{alignItems: 'flex-start'}}>
                     <View style={{flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center'}}>
                       
-                    <Text style={[styles.header]}>{spreadType}</Text>
-                      <TouchableOpacity style={styles.spreadButton} onPress={handleSpreadButtonPress}>
-
-                        <Image source={require('@/assets/images/switchIcon.png')}
-                          resizeMode='contain'
-                          style={styles.logo}
-                        ></Image>
-
-                      </TouchableOpacity>
+                    <Text style={[styles.header]}>{isReverseSpread ? "Reverse Spread" : "Spread"}</Text>
                       
                     </View>
+                    <Text style={styles.helperText}>
+                      {favoriteTeam === null
+                        ? "Enter both teams' moneyline odds to determine the favorite"
+                        : favoriteTeam === "team1"
+                          ? `${team1 || "Team 1"} is favored (-${spread || "spread"})`
+                          : `${team2 || "Team 2"} is favored (Team 1 gets +${spread || "spread"})`}
+                    </Text>
                   
                   <View style={styles.moneylineRow}>
                       <View style={styles.oddsContainer}>
@@ -405,19 +419,6 @@ const styles = StyleSheet.create({
         backgroundColor: "white",
         padding: 8,
       },
-      logo:{
-
-        width: 18,
-        height: 18,
-        position: 'relative',
-        alignSelf: 'center',
-        justifyContent: 'flex-start',
-        margin: 0,
-        marginLeft: 0,
-        tintColor: Colors.primary,
-        resizeMode: 'contain',
-
-      },
       oddsContainer: {
 
         paddingHorizontal: 5,
@@ -535,18 +536,6 @@ const styles = StyleSheet.create({
         height: 35,
         marginRight: 10,
         backgroundColor: "#ccc",
-      },
-
-      spreadButton: {
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 25,
-        height: 25,
-        marginLeft: 0,
-        backgroundColor: "",
-        borderColor: 'gray',
-        borderWidth: 0,
       },
     
       visibilityButtonText: {

@@ -306,6 +306,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
     paddingTop: 10,
+    paddingHorizontal: 10,
   },
   switchContainer: {
     flexDirection: "row",

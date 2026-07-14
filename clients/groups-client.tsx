@@ -78,6 +78,7 @@ export const getUsersGroups = async (
 
     const token = await user.getIdToken();
     let url = `${BASE_API_ENDPOINT}/users/${user.uid}/groups?limit=${limit}`;
+    console.log(url);
     if (startAfter && !forceRefresh) {
       url += `&startAfter=${startAfter}`;
     }
@@ -105,6 +106,7 @@ export const getUsersGroups = async (
       cached: false,
     };
   } catch (error) {
+    console.log("Error:", error);
     throw new Error("Failed to fetch user's groups");
   }
 };

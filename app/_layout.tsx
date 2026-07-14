@@ -13,13 +13,16 @@ const [isPro, setIsPro] = useState(false);
 
   useEffect(() => {
     const setup = async () => {
+      
       try {
+        
         if (Platform.OS === 'ios') {
           await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY! });
         } else {
           await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY! });
         }
 
+        
         const customerInfo = await Purchases.getCustomerInfo();
         setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined || customerInfo.entitlements.active["pro"] !== undefined);
         //setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
@@ -29,6 +32,7 @@ const [isPro, setIsPro] = useState(false);
           setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined || customerInfo.entitlements.active["pro"] !== undefined);
           setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
         });
+        
 
       } catch (error) {
         console.error("Error setting up purchases:", error);
@@ -44,10 +48,10 @@ const [isPro, setIsPro] = useState(false);
       <AdsProvider adsRemoved={adsRemoved} isPro={isPro}>
         <GroupsRefreshProvider>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ animation: "slide_from_left", headerShown: false }} />
-        <Stack.Screen name="+not-found" options={{headerShown: false}} />
-        <Stack.Screen name="index" options={{headerShown: false}} />
-        <Stack.Screen name="login" options={{animation: "fade", headerShown: false}} />
+        <Stack.Screen name="(tabs)" options={{ animation: "slide_from_left", headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="+not-found" options={{headerShown: false, gestureEnabled: false}} />
+        <Stack.Screen name="index" options={{headerShown: false, gestureEnabled: false}} />
+        <Stack.Screen name="login" options={{animation: "fade", headerShown: false, gestureEnabled: false}} />
         <Stack.Screen 
         name="group" 
         options={{ 
@@ -58,8 +62,7 @@ const [isPro, setIsPro] = useState(false);
           headerTintColor: Colors.textColor, // Back arrow color
           headerShadowVisible: false, 
           headerStyle: styles.headerStyle,
-          
-          
+          gestureEnabled: false, // Disable swipe back gesture
         }} 
       />
       <Stack.Screen 
@@ -72,7 +75,7 @@ const [isPro, setIsPro] = useState(false);
           headerTintColor: Colors.textColor, // Back arrow color
           headerShadowVisible: false, 
           headerStyle: styles.headerStyle,
-          
+          gestureEnabled: false, // Disable swipe back gesture
           
         }} 
       />
@@ -86,7 +89,7 @@ const [isPro, setIsPro] = useState(false);
           headerTintColor: Colors.textColor, // Back arrow color
           headerShadowVisible: false, 
           headerStyle: styles.headerStyle,
-          
+          gestureEnabled: false, // Disable swipe back gesture
           
         }} 
       />
@@ -100,7 +103,7 @@ const [isPro, setIsPro] = useState(false);
           headerTintColor: Colors.textColor, // Back arrow color
           headerShadowVisible: false, 
           headerStyle: styles.headerStyle,
-          
+          gestureEnabled: false, // Disable swipe back gesture
           
         }} 
       />
@@ -114,7 +117,7 @@ const [isPro, setIsPro] = useState(false);
           headerTintColor: Colors.textColor, // Back arrow color
           headerShadowVisible: false, 
           headerStyle: styles.headerStyle,
-          
+          gestureEnabled: false, // Disable swipe back gesture
           
         }} 
       />
@@ -128,7 +131,7 @@ const [isPro, setIsPro] = useState(false);
           headerTintColor: Colors.textColor, // Back arrow color
           headerShadowVisible: false, 
           headerStyle: styles.headerStyle,
-          
+          gestureEnabled: false, // Disable swipe back gesture
           
         }} 
       />
