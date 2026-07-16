@@ -1168,7 +1168,7 @@ plusButtonStyle: {
     borderColor: "transparent",
   },
   activeSwitchButton: {
-    borderColor: "#ff496b",
+    borderColor: "white",
   },
   switchText: {
     fontSize: 16,
@@ -1252,7 +1252,7 @@ plusButtonStyle: {
   },
   eventTypeChevron: {
     fontSize: 22,
-    color: "#ff496b",
+    color: "white",
   },
   eventTypeCancelButton: {
     marginTop: 16,
@@ -1406,7 +1406,7 @@ membersCloseText: {
     borderColor: "#252B38",
   },
   rowFirst: {
-    borderColor: "#ff496b55",
+    borderColor: "#ffffff95",
     shadowColor: "#ff496b",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
@@ -1436,10 +1436,10 @@ membersCloseText: {
   },
   deleteButton: {
     marginTop: 10,
-    backgroundColor: 'rgba(255, 75, 108, 0.27)',
+    backgroundColor: 'rgba(154, 154, 154, 0.27)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ff496b55",
+    borderColor: "#85858555",
     paddingVertical: 6,
     alignItems: "center",
   },

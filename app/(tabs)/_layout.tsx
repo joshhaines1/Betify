@@ -37,7 +37,7 @@ export default function TabLayout() {
 
     <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#ff496b',
+          tabBarActiveTintColor: '#ffffff',
           headerStyle: {
             backgroundColor: '#ffffff', 
             elevation: 0, 

@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   activeSwitchButton: {
-    borderColor: Colors.primary || "#ff496b",
+    borderColor: "white",
   },
   switchText: {
     fontSize: 16,

@@ -303,10 +303,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#1d1a1c",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ff496b55",
+    borderColor: "#ffffff55",
     padding: 20,
     marginBottom: 10,
-    shadowColor: "#ff496b",
+    shadowColor: "#ffffff",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -314,9 +314,9 @@ const styles = StyleSheet.create({
   },
   proBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#ff496b22",
+    backgroundColor: "#ffffff22",
     borderWidth: 1,
-    borderColor: "#ff496b55",
+    borderColor: "#ffffff55",
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 2,
-    color: "#ff496b",
+    color: "white",
   },
   proTitle: {
     fontSize: 22,
@@ -354,8 +354,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   toggleBtnActive: {
-    borderColor: "#ff496b55",
-    backgroundColor: "#ff496b22",
+    borderColor: "#ffffff55",
+    backgroundColor: "#ffffff22",
   },
   toggleBtnText: {
     fontSize: 13,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     color: "#7A8499",
   },
   toggleBtnTextActive: {
-    color: "#ff496b",
+    color: "white",
   },
   featureRow: {
     flexDirection: "row",
@@ -375,16 +375,16 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#ff496b22",
+    backgroundColor: "#ffffff22",
     borderWidth: 1,
-    borderColor: "#ff496b55",
+    borderColor: "#ffffff55",
     alignItems: "center",
     justifyContent: "center",
   },
   checkText: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#ff496b",
+    color: "white",
   },
   featureText: {
     fontSize: 14,

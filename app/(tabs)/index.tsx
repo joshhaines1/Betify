@@ -166,7 +166,7 @@ export default function GroupsScreen() {
           <TouchableOpacity 
           style={[styles.joinButton]} 
           onPress={() => setInviteCodeModalVisible(true)}>
-            <Text style={styles.switchText}>JOIN</Text>
+            <Text style={[styles.switchText, { color: "black" }]}>JOIN</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -174,7 +174,7 @@ export default function GroupsScreen() {
       
       {loading && myGroups?.length === 0 && otherGroups?.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={"white"} />
         </View>
       ) : view === "joined" && myGroups.length === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', marginTop: 50 }}>
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   },
   joinButton: {
 
-    backgroundColor: Colors.primary, 
+    backgroundColor: "white", 
     width: '75%',
     alignItems: 'center',
     justifyContent: 'center',
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
 
   },
   activeSwitchButton: {
-    borderColor: "#ff496b",
+    borderColor: "white",
   },
   switchText: {
     fontSize: 16,

@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   },
   memberCountText: {
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: "white",
     fontSize: 25,
     textAlign: 'center',
   },

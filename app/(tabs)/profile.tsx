@@ -104,14 +104,14 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     backgroundColor: "#1d1a1c",
     borderWidth: 2,
-    borderColor: "#ff496b55",
+    borderColor: "white",
     alignItems: "center",
     justifyContent: "center",
   },
   avatarText: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#ff496b",
+    color: "white",
   },
   displayName: {
     marginTop: 12,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     borderColor: "#252B38",
   },
   cardFirst: {
-    borderColor: "#ff496b55",
+    borderColor: "#ffffff55",
     shadowColor: "#ff496b",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
