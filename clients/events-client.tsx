@@ -95,7 +95,8 @@ export async function getEventById({ eventId }) {
   return data;
 }
 
-const cache = {};
+const eventsCache = {};
+const propsCache = {}
 async function lockExpiredEvents(events) {
   for (const event of events) {
     if (event.lockDate._seconds * 1000 < Date.now() && event.status === "open") {
@@ -107,15 +108,14 @@ async function lockExpiredEvents(events) {
 }
 
 export async function getEventsByGroupId({ groupId, limit = 5, startAfterId = null, forceRefresh = false }) {
-  console.log("forceRefresh for Events:", forceRefresh)
   const token = await FIREBASE_AUTH.currentUser?.getIdToken();
   if (!token) throw new Error("User not authenticated");
 
   const cacheKey = `${groupId}_${limit}_${startAfterId}`;
-  if (cache[cacheKey] && !forceRefresh) {
-    console.log("Using CACHED data for events");
-    await lockExpiredEvents(cache[cacheKey].events);
-    return cache[cacheKey];
+  if (eventsCache[cacheKey] && !forceRefresh) {
+    await lockExpiredEvents(eventsCache[cacheKey].events);
+    console.log("Returning cached data for events:", eventsCache);
+    return eventsCache[cacheKey];
   }
 
   console.log("Using FRESH data for events");
@@ -128,7 +128,8 @@ export async function getEventsByGroupId({ groupId, limit = 5, startAfterId = nu
   if (!res.ok) throw new Error(data.error || data.message || "Failed to get events");
 
   await lockExpiredEvents(data.events);
-  cache[cacheKey] = data;
+  eventsCache[cacheKey] = data;
+  console.log("Cache updated for events:", eventsCache);
   return data;
 }
 
@@ -138,10 +139,10 @@ export async function getPropsByGroupId({ groupId, limit = 5, startAfterId = nul
   if (!token) throw new Error("User not authenticated");
 
   const cacheKey = `${groupId}_${limit}_${startAfterId}`;
-  if (cache[cacheKey] && !forceRefresh) {
+  if (propsCache[cacheKey] && !forceRefresh) {
     console.log("Using CACHED data for props");
-    await lockExpiredEvents(cache[cacheKey].events);
-    return cache[cacheKey];
+    await lockExpiredEvents(propsCache[cacheKey].events);
+    return propsCache[cacheKey];
   }
 
   console.log("Using FRESH data for props");
@@ -154,11 +155,12 @@ export async function getPropsByGroupId({ groupId, limit = 5, startAfterId = nul
   if (!res.ok) throw new Error(data.error || data.message || "Failed to get props");
 
   await lockExpiredEvents(data.events);
-  cache[cacheKey] = data;
+  propsCache[cacheKey] = data;
   return data;
 }
 
 
 export async function clearEventsCache(groupId: string) {
-  delete cache[groupId];
+  delete eventsCache[groupId];
+  delete propsCache[groupId];
 }

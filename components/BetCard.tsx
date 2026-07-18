@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import Colors from '@/assets/styles/colors';
 import { BetPropCard } from './BetPropCard';
 
-const groupIcon = require('@/assets/images/groupIcon.png');
+const betIcon = require('@/assets/images/BetIcon.png');
 export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}) {
 
   return (
@@ -54,7 +54,7 @@ export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}
             <View style={styles.logoContainer}>
                 {/* Add money image here */}
                 <Image
-                        source={groupIcon}
+                        source={betIcon}
                         style={styles.logo}
                         resizeMode="contain"
                     />                
@@ -243,7 +243,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'center',
     justifyContent: 'flex-start',
-    tintColor: Colors.textColor,
   },
   bet: {
     height: 80,

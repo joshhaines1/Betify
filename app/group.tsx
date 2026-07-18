@@ -828,7 +828,7 @@ const handleBalancePress = () => {
 
       {/* ── Events + Props scroll ── */}
       <>
-          {loadingEvents && (!isFetchingMoreEvents && !isFetchingMoreProps) ? (
+          {loadingEvents && (!isFetchingMoreEvents && !isFetchingMoreProps) && view === "events" ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
             </View>
@@ -852,7 +852,7 @@ const handleBalancePress = () => {
         />
           )}
         
-          {loadingEvents && (!isFetchingMoreEvents && !isFetchingMoreProps) ? (
+          {loadingEvents && (!isFetchingMoreEvents && !isFetchingMoreProps) && view === "props" ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
             </View>
