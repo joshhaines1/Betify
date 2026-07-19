@@ -43,9 +43,7 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
       const getFavoriteTeam = (): "team1" | "team2" | null => {
         const odds1 = parseOdds(team1MoneylineOdds);
         const odds2 = parseOdds(team2MoneylineOdds);
-        console.log("Odds1: ", odds1, " Odds2: ", odds2);
         if (odds1 === null || odds2 === null || odds1 === odds2) return null;
-        console.log("Favorite Team: ", odds1 < odds2 ? "team1" : "team2");
         return odds1 < odds2 ? "team1" : "team2";
       };
 

@@ -27,8 +27,8 @@ const hasTransitioned = useRef(false);
         
         const customerInfo = await Purchases.getCustomerInfo();
         setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined || customerInfo.entitlements.active["pro"] !== undefined);
-        //setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
-        setIsPro(true); // Set isPro to true for testing purposes
+        setIsPro(customerInfo.entitlements.active["pro"] !== undefined);
+        //setIsPro(true); // Set isPro to true for testing purposes
 
         Purchases.addCustomerInfoUpdateListener((customerInfo) => {
           setAdsRemoved(customerInfo.entitlements.active["remove_ads"] !== undefined || customerInfo.entitlements.active["pro"] !== undefined);

@@ -7,7 +7,7 @@ import Colors from '@/assets/styles/colors';
 import * as Utils from '../DataValidation'
 import * as events_client from '../clients/events-client';
 
-export function CreateSingleOutcomeView({setModalVisible, fetchEvents, groupName, groupId}) {
+export function CreateSingleOutcomeView({setModalVisible, fetchEvents, fetchProps, groupName, groupId}) {
   
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -56,7 +56,7 @@ export function CreateSingleOutcomeView({setModalVisible, fetchEvents, groupName
           const confirmed = await new Promise<boolean>((resolve) => {
           Alert.alert(
             "No Line Specified",
-            `There is no line specified. Is this the intended behavior? ex: For a Yes/No event, you may want to leave the line blank. Continue?`,
+            `There is no over/under line specified. Is this the intended behavior? (Note: this event will appear in the "Events" tab if no line is specified). Continue?`,
             [
               {
                 text: "Cancel",
@@ -106,7 +106,7 @@ export function CreateSingleOutcomeView({setModalVisible, fetchEvents, groupName
         setLoading(true);
         let eventToCreate = {
           groupId: groupId,
-          type: type,
+          type: line == "" ? "single outcome event" : "single outcome prop",
           lockDate: lockDate,
           options: {
             name: name,
@@ -118,7 +118,11 @@ export function CreateSingleOutcomeView({setModalVisible, fetchEvents, groupName
         };
           events_client.createEvent(eventToCreate).then((response) => {
           console.log(response);
-          fetchEvents();
+          if (eventToCreate.type == "single outcome event"){
+            fetchEvents();
+          } else {
+            fetchProps();
+          }
           setModalVisible(false);
           setLoading(false);
         }).catch((error) => {

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator, Pressable, Platform, Animated, FlatList } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { FIREBASE_AUTH } from "@/FirebaseConfig";
@@ -64,6 +64,16 @@ interface Event {
   status: string;
   results: string[];
   acceptingWagers: boolean;
+
+  // For Single Outcome
+  name: string;
+  description: string;
+  overOdds: string;
+  underOdds: string;
+  overUnder: string;
+  result: string;
+  odds: string;
+  comparisonType: string;
 }
 
 interface Prop {
@@ -252,16 +262,6 @@ useEffect(() => {
   const invalidateBalanceCache = () => {
     groups_client.clearBalanceCache(groupId as string);
   };
-
-  const onEventChanged = (eventId: string, shouldRemove: boolean) => {
-    if (shouldRemove) setEvents((prev) => prev.filter((e) => e.id !== eventId));
-    invalidateEventsCache();
-  };
-
-  const onPropChanged = (propId: string, shouldRemove: boolean) => {
-    if (shouldRemove) setProps((prev) => prev.filter((p) => p.id !== propId));
-    invalidateEventsCache();
-  };
  
   //Modal animations
   useEffect(() => {
@@ -415,10 +415,12 @@ useEffect(() => {
 
   const refreshEvents = () => {
     fetchEvents(true, null);
+    fetchGroupInfo();
   }
 
   const refreshProps = () => {
     fetchProps(true, null);
+    fetchGroupInfo();
   }
 
   const loadMoreEvents = () => {
@@ -426,7 +428,6 @@ useEffect(() => {
   }
 
   const handleLoadMoreEvents = () => {
-    console.log(isFetchingMoreEvents, loading, eventsLastVisible);
     if (isFetchingMoreEvents || loading || !eventsLastVisible) return; // guard against duplicate/looping calls
     setIsFetchingMoreEvents(true);
     loadMoreEvents();
@@ -485,7 +486,7 @@ useEffect(() => {
           comparisonType: "N/A",
           type: eventData.type,
         });
-      } else if (eventData.type === "single outcome") {
+      } else if (eventData.type === "single outcome prop") {
         propsList.push({
           id: eventData.id,
           groupId: eventData.groupId,
@@ -557,7 +558,6 @@ const handleToggleAdmin = async (memberUid: string, isCurrentlyAdmin: boolean) =
 };
 
 const fetchEvents = async (forceRefresh = false, startAfterId = null) => {
-  console.log("787877")
     setLoadingEvents(true);
 
     try {
@@ -599,6 +599,14 @@ const fetchEvents = async (forceRefresh = false, startAfterId = null) => {
             status: eventData.status,
             results: eventData.results,
             acceptingWagers: eventData.acceptingWagers,
+            name: "N/A",
+            description: "N/A",
+            overOdds: "N/A",
+            underOdds: "N/A",
+            overUnder: "N/A",
+            result: "N/A",
+            odds: "N/A",
+            comparisonType: "N/A",
           });
         } else if (eventData.type === "basic") {
           eventsList.push({
@@ -623,7 +631,47 @@ const fetchEvents = async (forceRefresh = false, startAfterId = null) => {
             status: eventData.status,
             results: eventData.results,
             acceptingWagers: eventData.acceptingWagers,
+            name: "N/A",
+            description: "N/A",
+            overOdds: "N/A",
+            underOdds: "N/A",
+            overUnder: "N/A",
+            result: "N/A",
+            odds: "N/A",
+            comparisonType: "N/A",
           });
+        } else if (eventData.type === "single outcome event") {
+          eventsList.push({
+            id: eventData.id,
+            groupId: eventData.groupId,
+            name: eventData.options.name,
+            description: eventData.options.description,
+            overOdds: eventData.options.overOdds,
+            underOdds: eventData.options.underOdds,
+            overUnder: eventData.options.overUnder,
+            createdAt: eventData.createdAt,
+            groupName: eventData.groupName,
+            lockDate: eventData.lockDate,
+            result: eventData.results[0],
+            status: eventData.status,
+            acceptingWagers: eventData.acceptingWagers,
+            odds: eventData.options.odds,
+            comparisonType: eventData.options.comparisonType,
+            type: eventData.type,
+            options: {
+              team1: "N/A",
+              team2: "N/A",
+              moneylineOdds1: "N/A",
+              moneylineOdds2: "N/A",
+              spread: "N/A",
+              spreadOdds1: "N/A",
+              spreadOdds2: "N/A",
+              overUnder: "N/A",
+              overOdds: "N/A",
+              underOdds: "N/A",
+            },
+            results: eventData.results,
+        });
         }
       });
 
@@ -683,7 +731,7 @@ const handleBalancePress = () => {
 };
 
   useEffect(() => {
-    fetchEventsAndProps(true, null, null);
+    fetchEventsAndProps(false, null, null);
     fetchBalance();
     fetchLeaderboard();
     fetchGroupInfo();
@@ -723,6 +771,14 @@ const handleBalancePress = () => {
     }
   };
 
+  const handleCreateEventButtonClick = () => {
+    if(groupInfo.stats?.activeEvents < 5 || isPro){
+      setModalState("selector")
+    } else {
+      Alert.alert("PRO FEATURE", "You can only have 5 active events at a time. Upgrade to pro to be able to create UNLIMITED events.");
+    }
+    
+  }
   const handleDeleteGroupPress = async () => {
     try {
       Alert.alert(
@@ -754,16 +810,49 @@ const handleBalancePress = () => {
   };
 
   // ── Shared props passed to every UnifiedCard ───────────────────────────────
-  const sharedCardProps = {
-    groupId: groupId as string,
-    betSlip,
-    setBetSlip,
-    setBetSlipOdds,
-    isAdmin,
-    refreshEvents,
-  };
+  const onEventChanged = useCallback((eventId: string, shouldRemove: boolean) => {
+  if (shouldRemove) setEvents((prev) => prev.filter((e) => e.id !== eventId));
+  invalidateEventsCache();
+}, []);
 
-  const renderProp = ({ item }: { item: Prop}) => (
+const onPropChanged = useCallback((propId: string, shouldRemove: boolean) => {
+  if (shouldRemove) setProps((prev) => prev.filter((p) => p.id !== propId));
+  invalidateEventsCache();
+}, []);
+
+const sharedCardProps = useMemo(() => ({
+  groupId: groupId as string,
+  betSlip,
+  setBetSlip,
+  setBetSlipOdds,
+  isAdmin,
+  refreshEvents,
+}), [groupId, betSlip, isAdmin, refreshEvents]);
+
+const renderProp = useCallback(({ item }: { item: Prop }) => (
+  <UnifiedCard
+    key={item.id}
+    type={item.type}
+    eventId={item.id}
+    groupName={item.groupName}
+    lockDate={item.lockDate as any}
+    createdAt={item.createdAt}
+    acceptingWagers={item.acceptingWagers}
+    onEventSettled={onPropChanged}
+    name={item.name}
+    description={item.description}
+    overUnder={item.overUnder}
+    overOdds={item.overOdds}
+    underOdds={item.underOdds}
+    odds={item.odds}
+    comparisonType={item.comparisonType}
+    {...sharedCardProps}
+  />
+), [sharedCardProps, onPropChanged]);
+
+const renderEvent = useCallback(({ item }: { item: Event }) => {
+  if (item.type === "single outcome event") {
+    return (
       <UnifiedCard
         key={item.id}
         type={item.type}
@@ -783,8 +872,9 @@ const handleBalancePress = () => {
         {...sharedCardProps}
       />
     );
+  }
 
-  const renderEvent = ({ item }: { item: Event}) => (
+  return (
     <UnifiedCard
       key={item.id}
       type={item.type === "MSO" ? "event" : "basic"}
@@ -806,15 +896,17 @@ const handleBalancePress = () => {
       underOdds={item.options.underOdds}
       {...sharedCardProps}
     />
-  )
+  );
+}, [sharedCardProps, onEventChanged]);
 
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
   return (
+    
     <SafeAreaView style={styles.container}>
-      <Modal animationType="fade" transparent visible={leaving}>
+      <Modal animationType="fade" transparent visible={(loadingEvents && !isFetchingMoreEvents && !isFetchingMoreProps) || leaving}>
         <View style={styles.leavingOverlay}>
           <ActivityIndicator size="large" color="#ffffff" />
         </View>
@@ -857,56 +949,47 @@ const handleBalancePress = () => {
       </View>
 
       {/* ── Events + Props scroll ── */}
-      <>
-          {loadingEvents && (!isFetchingMoreEvents && !isFetchingMoreProps) && view === "events" ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-            </View>
-          ) :  (
-            <FlatList
-            data={events}
-            keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          style={[styles.scrollContainer, view !== "events" && { display: "none" }]}
-          contentContainerStyle={styles.scrollContent}
-          onEndReached={handleLoadMoreEvents}
-          onEndReachedThreshold={0.0}
-          renderItem={renderEvent}
-          ListEmptyComponent={
-              <View style={{ alignItems: 'center', marginTop: 50 }}>
-                <Text style={{ fontSize: 18, color: "gray", fontWeight: '600' }}>
-                  No active events available.
-                </Text>
-              </View>
-            }
-        />
-          )}
-        
-          {loadingEvents && (!isFetchingMoreEvents && !isFetchingMoreProps) && view === "props" ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-            </View>
-    
-  ) :  (
-            <FlatList
-            data={props}
-            keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          style={[styles.scrollContainer, view !== "props" && { display: "none" }]}
-          contentContainerStyle={styles.scrollContent}
-          onEndReached={handleLoadMoreProps}
-          onEndReachedThreshold={0.0}
-          renderItem={renderProp}
-          ListEmptyComponent={
-              <View style={{ alignItems: 'center', marginTop: 50 }}>
-                <Text style={{ fontSize: 18, color: "gray", fontWeight: '600' }}>
-                  No active props available.
-                </Text>
-              </View>
-            }
-        />
-          )}
-        </>
+<>
+  <FlatList
+    data={events}
+    keyExtractor={(item) => item.id}
+    showsVerticalScrollIndicator={false}
+    style={[styles.scrollContainer, view !== "events" && { display: "none" }]}
+    contentContainerStyle={styles.scrollContent}
+    onEndReached={handleLoadMoreEvents}
+    onEndReachedThreshold={0.0}
+    renderItem={renderEvent}
+    ListEmptyComponent={
+      loadingEvents ? null : (
+      <View style={{ alignItems: 'center', marginTop: 50 }}>
+        <Text style={{ fontSize: 18, color: "gray", fontWeight: '600' }}>
+          No active events available.
+        </Text>
+      </View>
+      )
+    }
+  />
+
+  <FlatList
+    data={props}
+    keyExtractor={(item) => item.id}
+    showsVerticalScrollIndicator={false}
+    style={[styles.scrollContainer, view !== "props" && { display: "none" }]}
+    contentContainerStyle={styles.scrollContent}
+    onEndReached={handleLoadMoreProps}
+    onEndReachedThreshold={0.0}
+    renderItem={renderProp}
+    ListEmptyComponent={
+     loadingEvents ? null : (
+      <View style={{ alignItems: 'center', marginTop: 50 }}>
+        <Text style={{ fontSize: 18, color: "gray", fontWeight: '600' }}>
+          No active props available.
+        </Text>
+      </View>
+     )
+    }
+  />
+</>
       
 
       {/* ── Leaderboard ── */}
@@ -1034,7 +1117,8 @@ const handleBalancePress = () => {
         {modalState === "single outcome" && (
           <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
           <CreateSingleOutcomeView
-            fetchEvents={refreshProps}
+            fetchEvents={refreshEvents}
+            fetchProps={refreshProps}
             setModalVisible={() => setModalState("none")}
             groupId={groupId}
             groupName={name}
@@ -1146,7 +1230,7 @@ const handleBalancePress = () => {
         <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "flex-end", width: "100%" }}>
         <TouchableOpacity
           style={styles.plusButtonStyle}
-          onPress={() => setModalState("selector")}
+          onPress={() => handleCreateEventButtonClick()}
         >
           <Text style={styles.plusButtonText}>+</Text>
         </TouchableOpacity>
@@ -1201,6 +1285,12 @@ const styles = StyleSheet.create({
   balance: {
     maxWidth: 75,
   },
+  loadingOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+},
   betSlipButtonContainer: {
   width: "100%",
   borderRadius: 25,

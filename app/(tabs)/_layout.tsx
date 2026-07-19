@@ -17,7 +17,6 @@ export default function TabLayout() {
   useEffect(() => {
     //Runs on the first render
     //And any time any dependency value changes
-    console.log(user?.displayName)
     setUsername(user && user?.displayName != "" ? user?.displayName ?? "" : username);
   }, [user?.displayName]);
 

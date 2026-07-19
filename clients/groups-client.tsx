@@ -70,18 +70,23 @@ export const getUsersGroups = async (
       throw new Error("User not authenticated");
     }
 
-    // Only use the cache for the initial page — paginated requests always hit the network
     if (usersGroupCache.length > 0 && !forceRefresh && !startAfter) {
-      console.log(`Returning cached data for user's groups`);
+      console.log(`Fetching CACHED data for user's groups...`);
       return { groups: usersGroupCache, lastVisible: null, cached: true };
     }
 
+
     const token = await user.getIdToken();
     let url = `${BASE_API_ENDPOINT}/users/${user.uid}/groups?limit=${limit}`;
-    console.log(url);
+    const isFreshPage = !startAfter || forceRefresh; // <-- key fix
+
     if (startAfter && !forceRefresh) {
       url += `&startAfter=${startAfter}`;
+      console.log(`Fetching next page of data for user's groups...`);
+    } else {
+      console.log(`Fetching FRESH data for user's groups...`);
     }
+    
 
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
@@ -94,10 +99,10 @@ export const getUsersGroups = async (
 
     const data = await response.json();
 
-    if (!startAfter) {
-      usersGroupCache = data.groups; // Only overwrite cache on a fresh first page
+    if (isFreshPage) {
+      usersGroupCache = data.groups; // Overwrite: this was page 1, forced or not
     } else {
-      usersGroupCache = [...usersGroupCache, ...data.groups]; // Append new groups to the cache
+      usersGroupCache = [...usersGroupCache, ...data.groups]; // True continuation
     }
 
     return {
@@ -141,9 +146,11 @@ export const getAllGroups = async (
       throw new Error("User not authenticated");
     }
 
+    const isFreshPage = !startAfter || forceRefresh;
+
     // Only use the cache for the initial page — paginated requests always hit the network
-    if (allGroupsCache.length > 0 && !forceRefresh && !startAfter) {
-      console.log(`Returning cached data for all groups`);
+    if (!forceRefresh && !startAfter) {
+      console.log(`Fetching CACHED data for all groups...`);
       return { groups: allGroupsCache, lastVisible: null, cached: true };
     }
 
@@ -151,6 +158,9 @@ export const getAllGroups = async (
     let url = `${BASE_API_ENDPOINT}/groups?limit=${limit}`;
     if (startAfter && !forceRefresh) {
       url += `&startAfter=${startAfter}`;
+      console.log(`Fetching next page of data for all groups...`);
+    } else {
+      console.log(`Fetching FRESH data for all groups...`);
     }
 
     const response = await fetch(url, {
@@ -166,7 +176,7 @@ export const getAllGroups = async (
 
     const data = await response.json();
 
-    if (!startAfter) {
+    if (isFreshPage) {
       allGroupsCache = data.groups; // Only overwrite cache on a fresh first page
     } else {
       allGroupsCache = [...allGroupsCache, ...data.groups]; // Append new groups to the cache
@@ -206,7 +216,6 @@ export const getUsersCurrency = async (groupId, forceRefresh = false) => {
     }
 
     if (balanceCache[groupId] && !forceRefresh) {
-      console.log(`Returning cached balance for group ${groupId}`);
       return balanceCache[groupId];
     }
     const token = await user.getIdToken();

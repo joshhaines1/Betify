@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Alert, ActivityIndicator, Modal } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as events_service from '../clients/events-client';
@@ -86,11 +86,11 @@ export function UnifiedCard(props: UnifiedCardProps) {
   const [spreadSelection, setSpreadSelection] = useState('');
   const [overUnderSelection, setOverUnderSelection] = useState('');
   const [closed, setClosed] = useState(!acceptingWagers);
-
+  const [settling, setSettling] = useState(false); // gates settle/lock/push actions
   const isEvent = type === 'event';
   const isProp = type === 'prop';
   const isBasic = type === 'basic';
-  const isSingleOutcome = type === 'single outcome';
+  const isSingleOutcome = type.includes("single outcome");
 
   // For event cards, all three must be selected to settle
   const allEventSelected =
@@ -115,29 +115,33 @@ export function UnifiedCard(props: UnifiedCardProps) {
   // ── Single outcome settle/lock ──────────────────────────────────────────────
 const settleSingleOutcomeEvent = async (outcome: 'hit' | 'miss') => {
   const results = outcome === 'hit' ? ['hit'] : [];
+  setSettling(true);
   events_service
     .updateEvent({ eventId, status: 'settled', results, acceptingWagers: false })
-    .then(() => {
+    .then(() => { 
       setClosed(true);
-      onEventSettled(eventId, true);
-      resetSelections();
-      clearBetSlip();
-      refreshEvents?.();
+        onEventSettled(eventId, true);
+        resetSelections();
+        clearBetSlip();
+        refreshEvents?.();
     })
-    .catch((e) => console.error('Error settling event:', e));
+    .catch((e) => console.error('Error settling event:', e))
+    .finally(() => setSettling(false));
 };
 
 const lockSingleOutcomeEvent = async () => {
+  setSettling(true);
   events_service
     .updateEvent({ eventId, status: 'closed', results: [], acceptingWagers: false })
-    .then(() => {
+    .then(() => { 
       setClosed(true);
-      onEventSettled(eventId, false);
-      resetSelections();
-      clearBetSlip();
-      refreshEvents?.();
-    })
-    .catch((e) => console.error('Error locking event:', e));
+        onEventSettled(eventId, false);
+        resetSelections();
+        clearBetSlip();
+        refreshEvents?.();
+     })
+    .catch((e) => console.error('Error locking event:', e))
+    .finally(() => setSettling(false));
 };
 
 const handleSingleOptionSettlePress = () => {
@@ -175,30 +179,34 @@ const handleSingleOptionLockPress = () => {
     status = results.length > 0 ? 'settled' : 'closed';
   }
 
+  setSettling(true);
   events_service
     .updateEvent({ eventId, status, results, acceptingWagers: false })
-    .then(() => {
+    .then(() => { 
       setClosed(true);
-      onEventSettled(eventId, status === 'settled');
-      resetSelections();
-      clearBetSlip();
-      refreshEvents?.();
-    })
-    .catch((e) => console.error('Error settling event:', e));
+        onEventSettled(eventId, status === 'settled');
+        resetSelections();
+        clearBetSlip();
+        refreshEvents?.();
+     })
+    .catch((e) => console.error('Error settling event:', e))
+    .finally(() => setSettling(false));
 };
 
   const settleBetWithPush = async () => {
-    events_service
-      .updateEvent({ eventId, status: 'settled', results: ['push'], acceptingWagers: false })
-      .then(() => {
-        setClosed(true);
+  setSettling(true);
+  events_service
+    .updateEvent({ eventId, status: 'settled', results: ['push'], acceptingWagers: false })
+    .then(() => {
+      setClosed(true);
         onEventSettled(eventId, true);
         resetSelections();
         clearBetSlip();
         refreshEvents?.();
-      })
-      .catch((e) => console.error('Error settling event:', e));
-  };
+    })
+    .catch((e) => console.error('Error settling event:', e))
+    .finally(() => setSettling(false));
+};
 
   const handleSettleButtonPress = () => {
     if (closed && !readyToSettle) return;
@@ -372,17 +380,25 @@ const handleSingleOptionLockPress = () => {
     </View>
   );
 
+  const settlingOverlay = (
+  <Modal animationType="fade" transparent visible={settling}>
+    <View style={styles.settlingOverlay}>
+      <ActivityIndicator size="large" color="#ffffff" />
+    </View>
+  </Modal>
+);
+
   const renderBottomBar = () => (
     <View style={styles.bottomBar}>
       <Text style={styles.groupName} numberOfLines={1}>{groupName}</Text>
       {isAdmin && (
         <View style={styles.adminActions}>
-          {showPush && type !== 'single outcome' && (
-            <TouchableOpacity style={styles.pushButton} onPress={handlePushButtonPress}>
+          {showPush && !type.includes("single outcome") && (
+            <TouchableOpacity disabled={settling} style={styles.pushButton} onPress={handlePushButtonPress}>
               <Text style={styles.pushButtonText}>PUSH</Text>
             </TouchableOpacity>
           )}
-          {type !== 'single outcome' && (
+          {!type.includes("single outcome") && (
           <TouchableOpacity
             style={[
               styles.settleButton,
@@ -390,6 +406,7 @@ const handleSingleOptionLockPress = () => {
               readyToSettle && closed && styles.settleButtonReady,
             ]}
             onPress={handleSettleButtonPress}
+            disabled={settling}
           >
             <Text style={[
               styles.settleButtonText,
@@ -399,13 +416,14 @@ const handleSingleOptionLockPress = () => {
             </Text>
           </TouchableOpacity>
           )}
-          {type === 'single outcome' && (
+          {type.includes("single outcome")&& (
             <>
           <TouchableOpacity
             style={[
               styles.settleButton,
             ]}
             onPress={handleSingleOptionSettlePress}
+            disabled={settling}
           >
             <Text style={[
               styles.settleButtonText,
@@ -420,6 +438,7 @@ const handleSingleOptionLockPress = () => {
               closed && !readyToSettle && styles.settleButtonLocked,
               readyToSettle && closed && styles.settleButtonReady,
             ]}
+            disabled={settling}
             onPress={handleSingleOptionLockPress}
           >
             <Text style={[
@@ -443,6 +462,7 @@ const handleSingleOptionLockPress = () => {
   if (isBasic) {
     return (
       <View style={styles.card}>
+        {settlingOverlay}
         {renderTopBar()}
         <View style={styles.teamsRow}>
           {/* Team 1 */}
@@ -534,6 +554,7 @@ const handleSingleOptionLockPress = () => {
 
     return (
       <View style={styles.card}>
+        {settlingOverlay}
         {renderTopBar(
           <View style={styles.columnHeaders}>
             <Text style={styles.columnHeader}>ML</Text>
@@ -558,6 +579,7 @@ const handleSingleOptionLockPress = () => {
   // ── PROP layout ───────────────────────────────────────────────────────────
   return (
     <View style={styles.card}>
+      {settlingOverlay}
       {renderTopBar(
         <View style={styles.columnHeaders}>
           <Text style={styles.columnHeader}>OVER {overUnder}</Text>
@@ -591,6 +613,7 @@ const handleSingleOptionLockPress = () => {
 // ── Single Outcome layout ───────────────────────────────────────────────────────────
   return (
     <View style={styles.card}>
+      {settlingOverlay}
       {renderTopBar(
         <View style={styles.columnHeaders}>
           <Text style={[styles.columnHeader, { width: 150 }]}>{comparisonType} {overUnder}</Text>
@@ -725,6 +748,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     opacity: 0.7,
   },
+  settlingOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  justifyContent: "center",
+  alignItems: "center",
+},
 
   // ── Admin actions ──────────────────────────────────────────────────────────
   adminActions: {

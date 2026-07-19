@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Purchases, {
@@ -19,6 +20,8 @@ import Colors from "@/assets/styles/colors";
 const PRO_MONTHLY_ID = "pro_monthly";
 const PRO_LIFETIME_ID = "pro_lifetime";
 const REMOVE_ADS_ID = "remove_ads";
+
+const adIcon = require('@/assets/images/NoAdsIcon.png');
 
 type BillingPeriod = "monthly" | "lifetime";
 
@@ -99,11 +102,11 @@ const handlePurchase = async (productId: string) => {
 // Updated price helpers
 const proPrice = () => {
   const id = billingPeriod === "monthly" ? PRO_MONTHLY_ID : PRO_LIFETIME_ID;
-  return findProduct(id)?.priceString ?? (billingPeriod === "monthly" ? "$2.99" : "$9.99");
+  return findProduct(id)?.priceString ?? (billingPeriod === "monthly" ? "$4.99" : "$14.99");
 };
 
 const removeAdsPrice = () =>
-  findProduct(REMOVE_ADS_ID)?.priceString ?? "$0.99";
+  findProduct(REMOVE_ADS_ID)?.priceString ?? "$1.99";
 
   // ── Restore purchases ────────────────────────────────────────────────────────
   const handleRestore = async () => {
@@ -176,11 +179,10 @@ const removeAdsPrice = () =>
 
           {/* Features */}
           {[
-            "Unlimited groups",
-            "Ad-free experience",
-            "Detailed bet history & stats",
-            "Pro badge on leaderboard",
-            "Priority support",
+            "Create UNLIMITED Events and Props",
+            "Ads Removed FOREVER",
+            "Create Advanced Events",
+            "Create Single Outcome Events and Props",
           ].map((feature) => (
             <View key={feature} style={styles.featureRow}>
               <View style={styles.checkCircle}>
@@ -226,7 +228,11 @@ const removeAdsPrice = () =>
         <View style={[styles.card, adsRemoved && styles.cardDisabled]}>
           <View style={styles.cardLeft}>
             <View style={styles.iconWrap}>
-              <Text style={styles.iconText}>✕</Text>
+              <Image
+                        source={adIcon}
+                        style={styles.logo}
+                        resizeMode="contain"
+                    /> 
             </View>
             <View>
               <Text style={styles.cardLabel}>Remove Ads</Text>
@@ -390,6 +396,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: "#fff",
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+    alignSelf: 'center',
+    justifyContent: 'flex-start',
   },
   priceRow: {
     flexDirection: "row",

@@ -139,8 +139,6 @@ export function BasicEventCard({team1, team2, moneylineOdds1, moneylineOdds2, re
           return [];
         }
         const existingBetIndex = prev.findIndex((betMap) => betMap.has(eventId));
-        console.log(existingBetIndex);
-        console.log(betSlip);
         let newBetSlip = [...prev];
     
         if (existingBetIndex != -1) {

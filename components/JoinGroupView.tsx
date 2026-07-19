@@ -1,33 +1,44 @@
 import Colors from '@/assets/styles/colors';
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator } from 'react-native';
 import { Text, View } from 'react-native';
 import { joinGroup } from '@/clients/groups-client';
 
 export function JoinGroupView({ setModalVisible, fetchGroups, name, visibility, correctPassword, members, startingCurrency, groupId }) {
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const addUserToGroup = async () => {
     try {
       if (visibility == "Private") {
         if (password == correctPassword) {
-          setModalVisible(false);
+          setLoading(true);
           await joinGroup(groupId);
         } else {
           Alert.alert("Incorrect Password");
         }
       } else {
-        setModalVisible(false);
+        setLoading(true);
         await joinGroup(groupId);
       }
     } catch (error) {
       console.error("Error joining group:", error);
+    } finally {
+      setModalVisible(false);
+      setLoading(false);
+
     }
     fetchGroups(true, "all");
   };
 
   return (
     <View style={styles.modalContainer}>
+      <Modal animationType="fade" transparent visible={loading}>
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      </Modal>
+
       <View style={styles.modalContent}>
 
         {/* Title */}
@@ -66,10 +77,10 @@ export function JoinGroupView({ setModalVisible, fetchGroups, name, visibility, 
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)} disabled={loading}>
             <Text style={styles.cancelButtonText}>CANCEL</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.joinButton} onPress={addUserToGroup}>
+          <TouchableOpacity style={styles.joinButton} onPress={addUserToGroup} disabled={loading}>
             <Text style={styles.joinButtonText}>JOIN</Text>
           </TouchableOpacity>
         </View>
@@ -85,6 +96,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.85)",
+  },
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
     backgroundColor: Colors.cardBackground,

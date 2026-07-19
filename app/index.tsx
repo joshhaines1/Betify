@@ -45,7 +45,6 @@ const Index = () => {
     }
   }, [isLoggedIn, isMounted]); // Triggered only after `isMounted` is true
 
-console.log('App ready:', appReady);
   return (
     <View style={{ flex: 1, backgroundColor: 'black' }}>
       <Stack />

@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import Colors from '@/assets/styles/colors';
 import { BetPropCard } from './BetPropCard';
 
-const betIcon = require('@/assets/images/BetIcon.png');
+const betIcon = require('@/assets/images/StackOfCoins.png');
 export function BetCard({date, status, risk, payout, pickId, userId, bets, odds}) {
 
   return (

@@ -31,6 +31,7 @@ interface Group {
   name: string;
   members: string[];
   creator: string;
+  creatorName: string;
   visibility: string;
   startingCurrency: number;
   password: string;
@@ -101,8 +102,6 @@ export default function GroupsScreen() {
       setOtherGroupsLastVisible(otherGroups.lastVisible);
     }
 
-    console.log("No error");
-
   } catch (error) {
     Alert.alert("Error", "Failed to load groups. Please try again later.");
   } finally {
@@ -111,14 +110,12 @@ export default function GroupsScreen() {
 };
 
   const handleLoadMoreOtherGroups = () => {
-    console.log(isFetchingMore, loading, otherGroupsLastVisible);
     if (isFetchingMore || loading || !otherGroupsLastVisible) return; // guard against duplicate/looping calls
     setIsFetchingMore(true);
     fetchGroups(false, "other").finally(() => setIsFetchingMore(false));
   };
 
   const handleLoadMoreMyGroups = () => {
-    console.log(isFetchingMore, loading, myGroupsLastVisible);
     if (isFetchingMore || loading || !myGroupsLastVisible) return; // guard against duplicate/looping calls
     setIsFetchingMore(true);
     fetchGroups(false, "my").finally(() => setIsFetchingMore(false));
@@ -136,7 +133,7 @@ export default function GroupsScreen() {
       key={item.id}
       name={item.name}
       members={item.members}
-      adminName={item.creator}
+      adminName={item.creatorName}
       admins={item.admins}
       visibility={item.visibility}
       password={item.password}
