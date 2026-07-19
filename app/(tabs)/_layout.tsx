@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Text, View, StyleSheet, TouchableOpacity, Image } from "react-native";
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuth } from "firebase/auth";
 import { useAuth } from '../../context/AuthContext';
@@ -11,12 +11,19 @@ import Colors from '@/assets/styles/colors';
 
 export default function TabLayout() {
   const { user } = useAuth();
+    const [username, setUsername] = useState("");
   
 
   useEffect(() => {
     //Runs on the first render
     //And any time any dependency value changes
+    console.log(user?.displayName)
+    setUsername(user && user?.displayName != "" ? user?.displayName ?? "" : username);
   }, [user?.displayName]);
+
+  useEffect(() => {
+    setUsername(user?.displayName ?? "")
+  }, []);
 
   return (
     <>
@@ -28,7 +35,7 @@ export default function TabLayout() {
     </View>
 
     <View style={styles.usernameContainer}>
-      <Text numberOfLines={1} ellipsizeMode='tail' style={styles.userName}>{user?.displayName}</Text>
+      <Text numberOfLines={1} ellipsizeMode='tail' style={styles.userName}>{username}</Text>
     </View>
 
     </SafeAreaView>

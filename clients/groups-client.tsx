@@ -293,3 +293,59 @@ export const deleteGroup = async (groupId) => {
     throw new Error("Failed to delete group");
   }
 };
+
+export const addGroupAdmin = async (groupId, userId) => {
+  try {
+    const user = FIREBASE_AUTH.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/admin`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.message || "Failed to add group admin");
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error("Failed to add group admin. Please try again later.");
+  }
+};
+
+export const removeGroupAdmin = async (groupId, userId) => {
+  try {
+    const user = FIREBASE_AUTH.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${BASE_API_ENDPOINT}/groups/${groupId}/admin`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.message || "Failed to remove group admin");
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error("Failed to remove group admin. Please try again later.");
+  }
+};

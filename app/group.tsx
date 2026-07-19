@@ -160,6 +160,7 @@ export default function Group() {
    const [isFetchingMoreProps, setIsFetchingMoreProps] = useState(false);
 
   const isAdmin = admins.includes(FIREBASE_AUTH.currentUser?.uid ?? "Default UID") === true;
+  const isCreator = groupInfo.creator === FIREBASE_AUTH.currentUser?.uid;
 
   const interstitialAdRef = useRef<InterstitialAd | null>(null);
   const adLoadedRef = useRef(false);
@@ -432,7 +433,6 @@ useEffect(() => {
   };
 
    const loadMoreProps = () => {
-    console.log("Here");
     fetchProps(false, propsLastVisible);
   }
 
@@ -440,7 +440,7 @@ useEffect(() => {
     console.log(isFetchingMoreProps, loading, propsLastVisible);
     if (isFetchingMoreProps || loading || !propsLastVisible) return; // guard against duplicate/looping calls
     setIsFetchingMoreProps(true);
-    loadMoreEvents();
+    loadMoreProps();
   };
 
   const fetchEventsAndProps = (forceRefresh = false, propsStartAfterId = null, eventsStartAfterId = null) => {
@@ -527,7 +527,37 @@ useEffect(() => {
   }
 };
 
+const [adminActionLoading, setAdminActionLoading] = useState<string | null>(null); // holds uid being updated
+
+const currentUid = FIREBASE_AUTH.currentUser?.uid;
+const isCurrentUserAdmin = groupInfo.admins?.includes(currentUid);
+
+const handleToggleAdmin = async (memberUid: string, isCurrentlyAdmin: boolean) => {
+  if (!memberUid) return;
+
+  setAdminActionLoading(memberUid);
+  try {
+    if (isCurrentlyAdmin) {
+      await groups_client.removeGroupAdmin(groupInfo.id, memberUid);
+    } else {
+      await groups_client.addGroupAdmin(groupInfo.id, memberUid);
+    }
+    // Update local admins array in place — avoids refetching the whole group
+    setGroupInfo((prev: any) => ({
+      ...prev,
+      admins: isCurrentlyAdmin
+        ? prev.admins.filter((uid: string) => uid !== memberUid)
+        : [...prev.admins, memberUid],
+    }));
+  } catch (error: any) {
+    Alert.alert("Error", error.message || "Failed to update admin status.");
+  } finally {
+    setAdminActionLoading(null);
+  }
+};
+
 const fetchEvents = async (forceRefresh = false, startAfterId = null) => {
+  console.log("787877")
     setLoadingEvents(true);
 
     try {
@@ -653,7 +683,7 @@ const handleBalancePress = () => {
 };
 
   useEffect(() => {
-    fetchEventsAndProps();
+    fetchEventsAndProps(true, null, null);
     fetchBalance();
     fetchLeaderboard();
     fetchGroupInfo();
@@ -883,39 +913,44 @@ const handleBalancePress = () => {
       {view === "leaderboard" && <Leaderboard data={leaderboard} />}
 
       {/* ── Info ── */}
-      {view === "info" && (
+{view === "info" && (
   <ScrollView contentContainerStyle={infoStyles.container}>
 
-    <View style={infoStyles.headerTop}>
-      <Text style={infoStyles.headerTitle}>GROUP DETAILS</Text>
+    <View style={infoStyles.groupNameBlock}>
+      <Text style={infoStyles.groupNameLabel} numberOfLines={1} ellipsizeMode="tail">
+        {name}
+      </Text>
+      <Text style={infoStyles.inviteCodeValue}>
+        {groupId.toString().slice(-6).toUpperCase()}
+      </Text>
+      <Text style={infoStyles.inviteCodeCaption}>INVITE CODE</Text>
     </View>
 
-    <View style={infoStyles.columnLabels}>
-      <Text style={infoStyles.columnLabel}>VALUE</Text>
-    </View>
+    <TouchableOpacity
+      style={infoStyles.membersButton}
+      onPress={() => setShowMembersModal(true)}
+      activeOpacity={0.8}
+    >
+      <View style={infoStyles.membersButtonLeft}>
+        <Text style={infoStyles.membersButtonLabel}>MEMBERS</Text>
+        <Text style={infoStyles.membersButtonValue}>{groupInfo.stats?.members ?? 0}</Text>
+      </View>
+      <Text style={infoStyles.membersButtonChevron}>›</Text>
+    </TouchableOpacity>
 
     {[
-  { label: "INVITE CODE", value: groupId.toString().slice(-6).toUpperCase() },
-  { label: "MEMBERS", value: String([groupInfo.stats.members] ), onPress: () => setShowMembersModal(true) },
-  { label: "TOTAL WAGERED", value: groupInfo.stats.totalWagered.toLocaleString() },
-].map((row, i) => {
-  const RowWrapper = row.onPress ? TouchableOpacity : View;
-  return (
-    <RowWrapper
-      key={row.label}
-      style={[infoStyles.row, i === 0 && infoStyles.rowFirst]}
-      {...(row.onPress ? { onPress: row.onPress, activeOpacity: 0.7 } : {})}
-    >
-      <Text style={infoStyles.label}>{row.label}</Text>
-      <Text style={infoStyles.value}>{row.value}</Text>
-    </RowWrapper>
-  );
-})}
+      { label: "TOTAL WAGERED", value: groupInfo.stats.totalWagered.toLocaleString() },
+    ].map((row, i) => (
+      <View key={row.label} style={infoStyles.row}>
+        <Text style={infoStyles.membersButtonLabel}>{row.label}</Text>
+        <Text style={infoStyles.value}>{row.value}</Text>
+      </View>
+    ))}
 
     <TouchableOpacity style={infoStyles.leaveButton} onPress={handleLeaveButtonPress}>
       <Text style={infoStyles.leaveText}>LEAVE GROUP</Text>
     </TouchableOpacity>
-    {isAdmin && (
+    {isCreator && (
       <TouchableOpacity style={infoStyles.deleteButton} onPress={handleDeleteGroupPress}>
         <Text style={infoStyles.deleteText}>DELETE GROUP</Text>
       </TouchableOpacity>
@@ -1017,14 +1052,71 @@ const handleBalancePress = () => {
 >
   <View style={infoStyles.membersOverlay}>
     <View style={infoStyles.membersSheet}>
-      <Text style={infoStyles.membersTitle}>MEMBERS</Text>
-      <ScrollView style={{ maxHeight: 300 }}>
-        {(groupInfo.stats?.memberNames ?? []).map((memberName: string, index: number) => (
-          <View key={`${memberName}-${index}`} style={infoStyles.memberRow}>
-            <Text numberOfLines={1} ellipsizeMode="tail" style={infoStyles.memberName}>{memberName}</Text>
-          </View>
-        ))}
+      <View style={infoStyles.membersHeader}>
+        <Text style={infoStyles.membersTitle}>MEMBERS</Text>
+        <Text style={infoStyles.membersSubtitle}>
+          {groupInfo.stats?.members ?? 0} {groupInfo.stats?.members === 1 ? "PERSON" : "PEOPLE"}
+        </Text>
+      </View>
+
+      <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+        {(groupInfo.stats?.memberNames ?? []).map((memberName: string, index: number) => {
+          const memberUid = groupInfo.members?.[index];
+          const isMemberAdmin = groupInfo.admins?.includes(memberUid);
+          const isSelf = memberUid === currentUid;
+          const isLoading = adminActionLoading === memberUid;
+          const isLast = index === (groupInfo.stats?.memberNames ?? []).length - 1;
+
+          return (
+            <View
+              key={`${memberName}-${index}`}
+              style={[infoStyles.memberRow, isLast && infoStyles.memberRowLast]}
+            >
+              <View style={infoStyles.memberAvatar}>
+                <Text style={infoStyles.memberAvatarText}>
+                  {memberName?.charAt(0)?.toUpperCase() ?? "?"}
+                </Text>
+              </View>
+
+              <View style={infoStyles.memberInfo}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={infoStyles.memberName}>
+                  {memberName}{isSelf ? " (You)" : ""}
+                </Text>
+                {isMemberAdmin && (
+                  <View style={infoStyles.adminBadge}>
+                    <Text style={infoStyles.adminBadgeText}>ADMIN</Text>
+                  </View>
+                )}
+              </View>
+
+              {isCurrentUserAdmin && !isSelf && memberUid && (
+                <TouchableOpacity
+                  disabled={isLoading}
+                  onPress={() => handleToggleAdmin(memberUid, isMemberAdmin)}
+                  style={[
+                    infoStyles.memberAdminButton,
+                    isMemberAdmin && infoStyles.memberAdminButtonActive,
+                  ]}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color={isMemberAdmin ? "#7A8499" : "#ff496b"} />
+                  ) : (
+                    <Text
+                      style={[
+                        infoStyles.memberAdminButtonText,
+                        isMemberAdmin && infoStyles.memberAdminButtonTextActive,
+                      ]}
+                    >
+                      {isMemberAdmin ? "REMOVE" : "MAKE ADMIN"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })}
       </ScrollView>
+
       <TouchableOpacity style={infoStyles.membersCloseButton} onPress={() => setShowMembersModal(false)}>
         <Text style={infoStyles.membersCloseText}>CLOSE</Text>
       </TouchableOpacity>
@@ -1129,7 +1221,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 28,
     color: "white",
-    fontWeight: "700",
+    fontWeight: "bold",
   },
   plusButtonText: {
     color: "#fff",
@@ -1316,6 +1408,70 @@ plusButtonStyle: {
 });
 
 const infoStyles = StyleSheet.create({
+  groupNameBlock: {
+  alignItems: "center",
+  marginTop: 20,
+  marginBottom: 20,
+},
+groupNameLabel: {
+  fontSize: 20,
+  fontWeight: "700",
+  color: "#7A8499",
+  letterSpacing: 1,
+  textTransform: "uppercase",
+  maxWidth: "90%",
+},
+inviteCodeValue: {
+  fontSize: 60,
+  fontWeight: "900",
+  color: "#FFFFFF",
+  letterSpacing: 4,
+  marginTop: 6,
+},
+inviteCodeCaption: {
+  fontSize: 11,
+  fontWeight: "700",
+  color: Colors.primary,
+  letterSpacing: 2,
+  marginTop: 4,
+},
+membersButton: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  backgroundColor: "#1d1a1c",
+  borderRadius: 12,
+  marginBottom: 16,
+  paddingVertical: 16,
+  paddingHorizontal: 16,
+  borderWidth: 1,
+  borderColor: "#ff496b55",
+},
+membersButtonLeft: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+membersButtonLabel: {
+  fontSize: 13,
+  fontWeight: "800",
+  letterSpacing: 1.5,
+  color: "#FFFFFF",
+  marginRight: 10,
+},
+membersButtonValue: {
+  fontSize: 13,
+  fontWeight: "800",
+  color: Colors.primary,
+  backgroundColor: "#ff496b1f",
+  borderRadius: 6,
+  paddingHorizontal: 8,
+  paddingVertical: 2,
+},
+membersButtonChevron: {
+  fontSize: 24,
+  color: "#ff496b",
+  fontWeight: "300",
+},
   container: {
     paddingHorizontal: 16,
     paddingTop: 0,
@@ -1336,44 +1492,118 @@ const infoStyles = StyleSheet.create({
     color: "#FFFFFF",
     marginTop: 16,
   },
-  membersOverlay: {
+membersOverlay: {
   flex: 1,
-  backgroundColor: "rgba(0,0,0,0.7)",
+  backgroundColor: "rgba(0,0,0,0.75)",
   justifyContent: "center",
+  paddingHorizontal: 20,
 },
 membersSheet: {
   backgroundColor: "#121112",
-  borderRadius: 16,
-  padding: 24,
-  paddingBottom: 0,
+  borderRadius: 20,
+  paddingTop: 24,
+  paddingHorizontal: 20,
+  borderWidth: 1,
+  borderColor: "#252B38",
+},
+membersHeader: {
+  alignItems: "center",
+  marginBottom: 18,
 },
 membersTitle: {
-  fontSize: 20,
-  fontWeight: "700",
-  marginBottom: 6,
+  fontSize: 18,
+  fontWeight: "900",
   color: "#FFFFFF",
+  letterSpacing: 2.5,
+},
+membersSubtitle: {
+  fontSize: 11,
+  fontWeight: "700",
+  color: "#7A8499",
   letterSpacing: 1,
-  textAlign: 'center',
+  marginTop: 4,
 },
 memberRow: {
-  paddingTop: 12,
-  paddingBottom: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 12,
+  borderBottomWidth: 1,
+  borderBottomColor: "#1F1D1F",
+},
+memberRowLast: {
+  borderBottomWidth: 0,
+},
+memberAvatar: {
+  width: 38,
+  height: 38,
+  borderRadius: 19,
+  backgroundColor: "#1d1a1c",
+  borderWidth: 1,
+  borderColor: "#ff496b40",
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: 12,
+},
+memberAvatarText: {
+  fontSize: 15,
+  fontWeight: "800",
+  color: "#ff496b",
+},
+memberInfo: {
+  flex: 1,
+  marginRight: 8,
 },
 memberName: {
-  fontSize: 20,
+  fontSize: 15,
   color: "#FFFFFF",
   fontWeight: "600",
-  textAlign: "center",
+},
+adminBadge: {
+  alignSelf: "flex-start",
+  backgroundColor: "#ff496b1f",
+  borderRadius: 5,
+  paddingHorizontal: 6,
+  paddingVertical: 2,
+  marginTop: 4,
+},
+adminBadgeText: {
+  fontSize: 9,
+  fontWeight: "800",
+  color: "#ff496b",
+  letterSpacing: 1,
+},
+memberAdminButton: {
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: "#ff496b55",
+  minWidth: 78,
+  alignItems: "center",
+  justifyContent: "center",
+},
+memberAdminButtonActive: {
+  borderColor: "#7A849955",
+},
+memberAdminButtonText: {
+  color: "#ff496b",
+  fontSize: 10,
+  fontWeight: "800",
+  letterSpacing: 0.5,
+},
+memberAdminButtonTextActive: {
+  color: "#7A8499",
 },
 membersCloseButton: {
   alignItems: "center",
-  paddingVertical: 12,
-  marginBottom: 5,
-  marginTop: 6,
+  paddingVertical: 16,
+  marginTop: 4,
 },
 membersCloseText: {
-  fontSize: 16,
-  color: "#888",
+  fontSize: 13,
+  fontWeight: "700",
+  color: "#7A8499",
+  letterSpacing: 1.5,
 },
   headerSub: {
     fontSize: 12,

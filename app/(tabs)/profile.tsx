@@ -6,10 +6,22 @@ import Colors from "@/assets/styles/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as groups_client from "../../clients/groups-client";
 import Purchases from "react-native-purchases/dist/purchases";
+import { useEffect, useState } from "react";
 
 export default function Profile() {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [initials, setInitials] = useState("");
+
+  useEffect(() => {
+    setUsername(user?.displayName ?? "")
+    setEmail(getEmailDisplay());
+    setInitials(username
+    ? username.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : getEmailDisplay()?.[0].toUpperCase() ?? "?")
+  }, []);
 
   const handleSignOut = async () => {
     await logout();
@@ -29,10 +41,6 @@ export default function Profile() {
   return "—";
 };
 
-  const initials = user?.displayName
-    ? user.displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : user?.email?.[0].toUpperCase() ?? "?";
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
@@ -45,8 +53,8 @@ export default function Profile() {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
-          {user?.displayName && (
-            <Text style={styles.displayName}>{user.displayName}</Text>
+          {username && (
+            <Text style={styles.displayName}>{username}</Text>
           )}
         </View>
 
@@ -55,13 +63,13 @@ export default function Profile() {
 
         <View style={[styles.card, styles.cardFirst]}>
           <Text style={styles.cardLabel}>Email</Text>
-          <Text style={styles.cardValue} numberOfLines={1}>{getEmailDisplay()}</Text>
+          <Text style={styles.cardValue} numberOfLines={1}>{email}</Text>
         </View>
 
-        {user?.displayName && (
+        {username && (
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Username</Text>
-            <Text style={styles.cardValue}>{user.displayName}</Text>
+            <Text style={styles.cardValue}>{username}</Text>
           </View>
         )}
 
