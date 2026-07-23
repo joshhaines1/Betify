@@ -112,14 +112,14 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     backgroundColor: "#1d1a1c",
     borderWidth: 2,
-    borderColor: "white",
+    borderColor: "#f8f8f8",
     alignItems: "center",
     justifyContent: "center",
   },
   avatarText: {
     fontSize: 32,
     fontWeight: "800",
-    color: "white",
+    color: "#f8f8f8",
   },
   displayName: {
     marginTop: 12,
@@ -180,6 +180,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 2,
-    color: "white",
+    color: "#f8f8f8",
   },
 });

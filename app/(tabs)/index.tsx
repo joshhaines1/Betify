@@ -171,7 +171,7 @@ export default function GroupsScreen() {
       
       {loading && myGroups?.length === 0 && otherGroups?.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={"white"} />
+          <ActivityIndicator size="large" color={"#f8f8f8"} />
         </View>
       ) : view === "joined" && myGroups.length === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', marginTop: 50 }}>
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   },
   joinButton: {
 
-    backgroundColor: "white", 
+    backgroundColor: "#f8f8f8", 
     width: '75%',
     alignItems: 'center',
     justifyContent: 'center',
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
 
   },
   activeSwitchButton: {
-    borderColor: "white",
+    borderColor: "#f8f8f8",
   },
   switchText: {
     fontSize: 16,

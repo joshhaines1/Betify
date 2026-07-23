@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   }, 
   selectedOddsText: {
     fontWeight: '700',
-    color: 'white',
+    color: '#f8f8f8',
   },
   linesText: {
     fontSize: 10,

@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 2,
-    color: "white",
+    color: "#f8f8f8",
   },
   proTitle: {
     fontSize: 22,
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     color: "#7A8499",
   },
   toggleBtnTextActive: {
-    color: "white",
+    color: "#f8f8f8",
   },
   featureRow: {
     flexDirection: "row",
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   checkText: {
     fontSize: 11,
     fontWeight: "800",
-    color: "white",
+    color: "#f8f8f8",
   },
   featureText: {
     fontSize: 14,

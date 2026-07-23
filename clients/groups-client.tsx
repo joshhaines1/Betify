@@ -149,7 +149,7 @@ export const getAllGroups = async (
     const isFreshPage = !startAfter || forceRefresh;
 
     // Only use the cache for the initial page — paginated requests always hit the network
-    if (!forceRefresh && !startAfter) {
+    if (allGroupsCache.length > 0 && !forceRefresh && !startAfter) {
       console.log(`Fetching CACHED data for all groups...`);
       return { groups: allGroupsCache, lastVisible: null, cached: true };
     }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Image, TouchableOpacity, Alert, ActivityIndicator, Modal } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -80,17 +80,30 @@ export function UnifiedCard(props: UnifiedCardProps) {
 
   // ── State ──────────────────────────────────────────────────────────────────
   // basic + prop: single selection keyed by eventId
-  const [bet, selectBet] = useState('');
-  // event: three independent selections
-  const [moneylineSelection, setMoneylineSelection] = useState('');
-  const [spreadSelection, setSpreadSelection] = useState('');
-  const [overUnderSelection, setOverUnderSelection] = useState('');
+  
   const [closed, setClosed] = useState(!acceptingWagers);
   const [settling, setSettling] = useState(false); // gates settle/lock/push actions
   const isEvent = type === 'event';
   const isProp = type === 'prop';
   const isBasic = type === 'basic';
   const isSingleOutcome = type.includes("single outcome");
+  const bet = useMemo(
+  () => betSlip.find((b) => b.has(eventId))?.get(eventId) ?? '',
+  [betSlip, eventId]
+);
+
+const moneylineSelection = useMemo(
+  () => betSlip.find((b) => b.has(`${eventId}-moneyline`))?.get(`${eventId}-moneyline`) ?? '',
+  [betSlip, eventId]
+);
+const spreadSelection = useMemo(
+  () => betSlip.find((b) => b.has(`${eventId}-spread`))?.get(`${eventId}-spread`) ?? '',
+  [betSlip, eventId]
+);
+const overUnderSelection = useMemo(
+  () => betSlip.find((b) => b.has(`${eventId}-overUnder`))?.get(`${eventId}-overUnder`) ?? '',
+  [betSlip, eventId]
+);
 
   // For event cards, all three must be selected to settle
   const allEventSelected =
@@ -105,13 +118,6 @@ export function UnifiedCard(props: UnifiedCardProps) {
     setBetSlipOdds((prev) => { const n = new Map(prev); n.delete(eventId); return n; });
   };
 
-  const resetSelections = () => {
-    selectBet('');
-    setMoneylineSelection('');
-    setSpreadSelection('');
-    setOverUnderSelection('');
-  };
-
   // ── Single outcome settle/lock ──────────────────────────────────────────────
 const settleSingleOutcomeEvent = async (outcome: 'hit' | 'miss') => {
   const results = outcome === 'hit' ? ['hit'] : [];
@@ -121,7 +127,6 @@ const settleSingleOutcomeEvent = async (outcome: 'hit' | 'miss') => {
     .then(() => { 
       setClosed(true);
         onEventSettled(eventId, true);
-        resetSelections();
         clearBetSlip();
         refreshEvents?.();
     })
@@ -136,7 +141,6 @@ const lockSingleOutcomeEvent = async () => {
     .then(() => { 
       setClosed(true);
         onEventSettled(eventId, false);
-        resetSelections();
         clearBetSlip();
         refreshEvents?.();
      })
@@ -185,7 +189,6 @@ const handleSingleOptionLockPress = () => {
     .then(() => { 
       setClosed(true);
         onEventSettled(eventId, status === 'settled');
-        resetSelections();
         clearBetSlip();
         refreshEvents?.();
      })
@@ -200,7 +203,6 @@ const handleSingleOptionLockPress = () => {
     .then(() => {
       setClosed(true);
         onEventSettled(eventId, true);
-        resetSelections();
         clearBetSlip();
         refreshEvents?.();
     })
@@ -282,23 +284,26 @@ const handleSingleOptionLockPress = () => {
 
   // ── handlePress: basic + prop (single key = eventId) ──────────────────────
   const handleSimplePress = (
-    selType: string, odds: string,
-    betName: string, lineAndProp: string, header: string
-  ) => {
-    const deselected = bet === selType;
-    if (deselected) {
-      selectBet('');
-    } else {
-      selectBet(selType);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-    if (closed) return;
-    if (deselected) {
-      removeFromBetSlip(eventId, odds, true);
-    } else {
-      pushToBetSlip(eventId, selType, odds, betName, lineAndProp, header);
-    }
-  };
+  selType: string, odds: string,
+  betName: string, lineAndProp: string, header: string
+) => {
+  const deselected = bet === selType;
+
+  if (!deselected) {
+    console.log("Not deselecting bet...")
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }
+
+  if (closed) return;
+
+  if (deselected) {
+    console.log("Deselecting bet...")
+    removeFromBetSlip(eventId, odds, true);
+  } else {
+    console.log("Not deselecting bet...")
+    pushToBetSlip(eventId, selType, odds, betName, lineAndProp, header);
+  }
+};
 
   // ── handlePress: event (key = eventId-category) ───────────────────────────
   const handleEventPress = (
@@ -307,21 +312,6 @@ const handleSingleOptionLockPress = () => {
   ) => {
     const key = `${eventId}-${category}`;
     let deselected = false;
-
-    switch (category) {
-      case 'moneyline':
-        deselected = moneylineSelection === selType;
-        deselected ? setMoneylineSelection('') : setMoneylineSelection(selType);
-        break;
-      case 'spread':
-        deselected = spreadSelection === selType;
-        deselected ? setSpreadSelection('') : setSpreadSelection(selType);
-        break;
-      case 'overUnder':
-        deselected = overUnderSelection === selType;
-        deselected ? setOverUnderSelection('') : setOverUnderSelection(selType);
-        break;
-    }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (closed) return;
@@ -333,20 +323,7 @@ const handleSingleOptionLockPress = () => {
     }
   };
 
-  // ── Sync selections from betSlip ──────────────────────────────────────────
-  useEffect(() => {
-    if (isEvent) {
-      const m = betSlip.find((b) => b.has(`${eventId}-moneyline`));
-      const s = betSlip.find((b) => b.has(`${eventId}-spread`));
-      const o = betSlip.find((b) => b.has(`${eventId}-overUnder`));
-      setMoneylineSelection(m?.get(`${eventId}-moneyline`) ?? '');
-      setSpreadSelection(s?.get(`${eventId}-spread`) ?? '');
-      setOverUnderSelection(o?.get(`${eventId}-overUnder`) ?? '');
-    } else {
-      const found = betSlip.find((b) => b.has(eventId));
-      selectBet(found?.get(eventId) ?? '');
-    }
-  }, [betSlip, eventId]);
+  
 
   // ── Spread calculation (event only) ───────────────────────────────────────
   const calculateSpread = (odds: string, otherOdds: string): string => {
@@ -582,8 +559,14 @@ const handleSingleOptionLockPress = () => {
       {settlingOverlay}
       {renderTopBar(
         <View style={styles.columnHeaders}>
-          <Text style={styles.columnHeader}>OVER {overUnder}</Text>
-          <Text style={styles.columnHeader}>UNDER {overUnder}</Text>
+          <View style={styles.columnHeaderStack}>
+            <Text style={styles.columnHeader}>OVER</Text>
+            <Text style={styles.columnHeaderValue}>{overUnder}</Text>
+          </View>
+          <View style={styles.columnHeaderStack}>
+            <Text style={styles.columnHeader}>UNDER</Text>
+            <Text style={styles.columnHeaderValue}>{overUnder}</Text>
+          </View>
         </View>
       )}
       <View style={styles.propMainRow}>
@@ -676,6 +659,17 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
+  columnHeaderStack: {
+    width: 60,
+    alignItems: 'center',
+  },
+  columnHeaderValue: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
   bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -723,9 +717,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   oddsButtonSelected: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-    shadowColor: Colors.accent,
+    backgroundColor: "#ff496b",
+    borderColor: "#ff496b",
+    shadowColor: "#ff496b",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
@@ -734,11 +728,11 @@ const styles = StyleSheet.create({
   oddsText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.textSecondary,
+    color: "#f8f8f8",
     letterSpacing: 0.3,
   },
   oddsTextSelected: {
-    color: Colors.textSecondary,
+    color: "white",
     fontWeight: '900',
   },
   lineLabel: {
@@ -846,7 +840,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 2,
-    color: Colors.textPrimary,
+    color: "#f8f8f8",
   },
 
   // ── EVENT layout ───────────────────────────────────────────────────────────

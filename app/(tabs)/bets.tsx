@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Modal,
 } from "react-native";
 import { BetCard } from "@/components/BetCard";
 import {
@@ -40,6 +41,7 @@ export default function Bets() {
   const [loadingActive, setLoadingActive] = useState(false);
   const [loadingSettled, setLoadingSettled] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [lastVisibleActive, setLastVisibleActive] = useState<DocumentSnapshot | null>(null);
   const [lastVisibleSettled, setLastVisibleSettled] = useState<DocumentSnapshot | null>(null);
   const [hasMoreActiveBets, setHasMoreActiveBets] = useState(true);
@@ -154,7 +156,6 @@ const onRefresh = async () => {
     if (view === "active") {
       setLastVisibleActive(null);
       setHasMoreActiveBets(true);
-      setActiveBets([]);
       await fetchBets("active", true);
     } else {
       setLastVisibleSettled(null);
@@ -195,10 +196,13 @@ const onRefresh = async () => {
     const load = async () => {
     try {
       console.log("Fetching bets on initial load...");
+      setInitialLoading(true);
       await fetchBets("active", true);
       await fetchBets("settled", true);
     } catch (error) {
       Alert.alert("Error", "Failed to load bets. Please try again later.");
+    } finally {
+      setInitialLoading(false)
     }
   };
 
@@ -208,7 +212,13 @@ const onRefresh = async () => {
   const displayedBets = view === "active" ? activeBets : settledBets;
 
   return (
+    
     <View style={styles.container}>
+      <Modal transparent visible={initialLoading} animationType="fade">
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={"#f8f8f8"} />
+        </View>
+      </Modal>
       {/* Switch between Active and Settled */}
       <View style={styles.switchContainer}>
         <TouchableOpacity
@@ -231,16 +241,11 @@ const onRefresh = async () => {
           <Text style={styles.switchText}>Settled</Text>
         </TouchableOpacity>
 
-        {(refreshing) && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" color={Colors.primary} />
-        </View>
-      )}
       </View>
 
       {/* FlatList for Bets */}
       {(loadingActive && activeBets.length === 0) || (loadingSettled && settledBets.length === 0) ? (
-        <></>
+        <View style={styles.scrollContainer} />
       ) : (
         <>
           <FlatList
@@ -252,7 +257,7 @@ const onRefresh = async () => {
             onEndReachedThreshold={0.1}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={renderEmptyComponent}
-            refreshing={false}
+            refreshing={refreshing}
             onRefresh={onRefresh}
           />
           <FlatList
@@ -264,7 +269,7 @@ const onRefresh = async () => {
             onEndReachedThreshold={0.1}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={renderEmptyComponent}
-            refreshing={false}
+            refreshing={refreshing}
             onRefresh={onRefresh}
           />
         </>
@@ -307,7 +312,7 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   activeSwitchButton: {
-    borderColor: "white",
+    borderColor: "#f8f8f8",
   },
   switchText: {
     fontSize: 16,
@@ -328,18 +333,10 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: "600",
   },
-  loadingOverlay: {
-    marginVertical: 0,
-    backgroundColor: "",
-    justifyContent: "center",
-    alignItems: "flex-end",
-    width: '53%',
-    
-  },
   loadingContainer: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 50,
   },
 });

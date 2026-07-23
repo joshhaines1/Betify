@@ -91,12 +91,12 @@ const styles = StyleSheet.create({
   wonContainer: {
 
     backgroundColor: '#f74868',
-    borderColor: 'white',
+    borderColor: '#f8f8f8',
     borderWidth: 1,
 
   },
   wonBorder: {
-    borderColor: 'white',
+    borderColor: '#f8f8f8',
 
   },
   parlayLegContainer: {

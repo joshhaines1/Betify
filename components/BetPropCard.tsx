@@ -13,7 +13,7 @@ export function BetPropCard({lineAndProp, odds, header, name}) {
         <View style={styles.bet}>
           <Text style={styles.nameText}>{name}</Text>
           <View style={styles.propAndOddsContainer}>
-            <Text style={styles.lineText}>{lineAndProp}</Text>
+            <Text style={styles.lineText} ellipsizeMode='tail' numberOfLines={1}>{lineAndProp}</Text>
             <Text style={styles.oddsText}>{odds}</Text>
           </View>
           <Text style={styles.headerText}>{header}</Text>

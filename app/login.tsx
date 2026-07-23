@@ -38,6 +38,33 @@ import Colors from "@/assets/styles/colors";
 
 WebBrowser.maybeCompleteAuthSession();
 
+// Maps common Firebase Auth error codes to user-friendly messages instead of
+// exposing raw strings like "Firebase: Error (auth/invalid-credential)."
+const getAuthErrorMessage = (err: any): string => {
+  switch (err?.code) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Invalid username or password.";
+    case "auth/invalid-email":
+      return "Please enter a valid email address.";
+    case "auth/email-already-in-use":
+      return "An account with that email already exists.";
+    case "auth/weak-password":
+      return "Your password should be at least 6 characters.";
+    case "auth/user-disabled":
+      return "This account has been disabled.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please try again later.";
+    case "auth/network-request-failed":
+      return "Network error. Please check your connection and try again.";
+    case "auth/requires-recent-login":
+      return "Please sign in again to continue.";
+    default:
+      return "Something went wrong. Please try again.";
+  }
+};
+
 const GOOGLE_WEB_CLIENT_ID =
   process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
@@ -103,7 +130,7 @@ export default function Login() {
 
     await completeOAuthSignIn(result.user);
   } catch (err: any) {
-    Alert.alert("Google Sign-In Error", err.message);
+    Alert.alert("Google Sign-In Error", getAuthErrorMessage(err));
   } finally {
     setLoading(false);
   }
@@ -228,7 +255,7 @@ const handleAppleSignIn = async () => {
     ) {
       Alert.alert(
         "Apple Sign-In Error",
-        err.message
+        getAuthErrorMessage(err)
       );
     }
   } finally {
@@ -271,7 +298,7 @@ const handleAppleSignIn = async () => {
     } catch (err: any) {
       Alert.alert(
         "Error",
-        err.message
+        getAuthErrorMessage(err)
       );
     } finally {
       setLoading(false);
@@ -329,7 +356,7 @@ const handleAppleSignIn = async () => {
     } catch (err: any) {
       Alert.alert(
         "Authentication Error",
-        err.message
+        getAuthErrorMessage(err)
       );
     } finally {
       setLoading(false);
@@ -442,7 +469,7 @@ const handleAppleSignIn = async () => {
 
           {loading && (
             <ActivityIndicator
-              color={Colors.primary}
+              color={"#f8f8f8"}
               style={{
                 marginTop: 20,
               }}

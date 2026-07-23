@@ -364,7 +364,7 @@ useEffect(() => {
     setBetSlipModalVisible(false);
     setLoading(false);
 
-    if (adsEnabled && adLoadedRef.current && interstitialAdRef.current && success == true) {
+    if (adsEnabled && adLoadedRef.current && interstitialAdRef.current && success == true && Math.floor(Math.random() * 5) <= 1) {
       setTimeout(() => {
         interstitialAdRef.current?.show();
       }, 500);
@@ -380,6 +380,7 @@ useEffect(() => {
   const resetSlip = () => {
     setBetSlip([]);
     setBetSlipOdds(new Map());
+    setWager(0);
   };
 
   // ── Fetch helpers ──────────────────────────────────────────────────────────
@@ -419,6 +420,7 @@ useEffect(() => {
   }
 
   const refreshProps = () => {
+    console.log("HERE SHOULD NOT BE DOING THIS1")
     fetchProps(true, null);
     fetchGroupInfo();
   }
@@ -428,7 +430,7 @@ useEffect(() => {
   }
 
   const handleLoadMoreEvents = () => {
-    if (isFetchingMoreEvents || loading || !eventsLastVisible) return; // guard against duplicate/looping calls
+    if ((isFetchingMoreEvents || loading || !eventsLastVisible) || events.length <= 5) return; // guard against duplicate/looping calls
     setIsFetchingMoreEvents(true);
     loadMoreEvents();
   };
@@ -438,13 +440,13 @@ useEffect(() => {
   }
 
    const handleLoadMoreProps = () => {
-    console.log(isFetchingMoreProps, loading, propsLastVisible);
-    if (isFetchingMoreProps || loading || !propsLastVisible) return; // guard against duplicate/looping calls
+    if ((isFetchingMoreProps || loading || !propsLastVisible) || props.length <= 5) return; // guard against duplicate/looping calls
     setIsFetchingMoreProps(true);
     loadMoreProps();
   };
 
   const fetchEventsAndProps = (forceRefresh = false, propsStartAfterId = null, eventsStartAfterId = null) => {
+    console.log("HERE SHOULD NOT BE DOING THIS3")
     fetchEvents(forceRefresh, eventsStartAfterId)
     fetchProps(forceRefresh, propsStartAfterId)
   }
@@ -1296,7 +1298,9 @@ const styles = StyleSheet.create({
   borderRadius: 25,
   justifyContent: "center",
   height: 55,
-  backgroundColor: "#ff496b",
+  borderWidth: 5,
+  borderColor: '#ff496b',
+  backgroundColor: '#ff496b',
   marginHorizontal: 10,
   marginBottom: 15,
 },
@@ -1314,7 +1318,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   plusButtonText: {
-    color: "#fff",
+    color: "white",
     fontWeight: "bold",
     fontSize: 50,
     padding: 0,
@@ -1350,7 +1354,7 @@ plusButtonStyle: {
     borderColor: "transparent",
   },
   activeSwitchButton: {
-    borderColor: "white",
+    borderColor: "#f8f8f8",
   },
   switchText: {
     fontSize: 16,
@@ -1434,7 +1438,7 @@ plusButtonStyle: {
   },
   eventTypeChevron: {
     fontSize: 22,
-    color: "white",
+    color: "#f8f8f8",
   },
   eventTypeCancelButton: {
     marginTop: 16,
@@ -1747,7 +1751,7 @@ membersCloseText: {
   },
   leaveButton: {
     marginTop: 16,
-    backgroundColor: Colors.primary,
+    backgroundColor: "#f8f8f8",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#ff496b55",
@@ -1767,13 +1771,13 @@ membersCloseText: {
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 2,
-    color: "white",
+    color: "#f8f8f8",
   },
   leaveText: {
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 2,
-    color: "white",
+    color: "black",
   },
   
 });

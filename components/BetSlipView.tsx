@@ -1,297 +1,199 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
-import * as Utils from '../DataValidation'
 
 export function BetSlipView({setModalVisible, fetchGroups, numberOfPicks, odds, oddsToMultiplier, balance, placeBets, setWager, wager}) {
-  
+
     const [multiplier, setMultiplier] = useState(1);
-    
 
     useEffect(() => {
         resetFields();
         setMultiplier(oddsToMultiplier(odds));
-        
       }, []);
-    
+
       const submitBets = async () => {
-        if(wager <= 0){
+        const numericWager = Number(wager);
+        const numericBalance = Number(balance);
 
-            return; 
-
+        if (!Number.isFinite(numericWager) || numericWager <= 0) {
+            return;
         }
-        if(wager <= balance){
 
+        if (numericWager <= numericBalance) {
             placeBets();
             setModalVisible(false);
-            
-        } else{
-            console.log(wager, balance);
-            console.log(wager <= balance)
+        } else {
             Alert.alert("Insufficient Balance", "You do not have enough currency to place this bet.")
-
         }
       };
-      
-    
-    
-    
+
       const resetFields = () => {
         setWager(0);
       };
-    
-      const cancelGroupCreation = () => {
+
+      const cancelBetSlip = () => {
         setModalVisible(false);
       };
 
-
     return (
-    
-            <KeyboardAvoidingView 
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              style={styles.modalContainer}
-            >
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Bet Slip</Text>
-                <View style={{flexDirection: 'row'}}>
-                    <Text style={[styles.betSlipText, {flex: 1, marginRight: 15}]}>
-                        Picks: {numberOfPicks}
-                    </Text>
-                    <Text style={[styles.betSlipText, {flex: 1}]}>
-                        Odds: {odds}
-                    </Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalContainer}
+      >
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Bet Slip</Text>
+          <Text style={styles.modalSubtitle}>Review your picks and place your wager</Text>
 
-                </View>
-                <View style={{flexDirection: 'row'}}>
-                    <Text style={[styles.riskPayoutText, {flex: 1, marginRight: 15}]}>
-                        Risk:
-                    </Text>
-                    <Text style={[styles.riskPayoutText, {flex: 1}]}>
-                        Payout:
-                    </Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.infoLabel}>PICKS</Text>
+              <Text style={styles.statValue}>{numberOfPicks}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.infoLabel}>ODDS</Text>
+              <Text style={styles.statValue}>{odds}</Text>
+            </View>
+          </View>
 
-                </View>
+          <View style={styles.riskPayoutRow}>
+            <View style={{flex: 1, marginRight: 15}}>
+              <Text style={styles.infoLabel}>RISK</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ex: 100"
+                placeholderTextColor="#555"
+                keyboardType="numeric"
+                value={String(wager)}
+                onChangeText={setWager}
+              />
+            </View>
+            <View style={{flex: 1}}>
+              <Text style={styles.infoLabel}>PAYOUT</Text>
+              <Text style={[styles.input, styles.payoutValue]}>
+                {Math.round(Number(wager) * multiplier)}
+              </Text>
+            </View>
+          </View>
 
-                <View style={{flexDirection: 'row'}}>
-                    <TextInput
-                        style={[styles.input, {flex: 1, marginRight: 15}]}
-                        placeholder="Ex: 100"
-                        value={wager}
-                        onChangeText={setWager}
-                        placeholderTextColor={"gray"}
-                    />
-                    <Text
-                        style={[styles.input, {flex: 1}]}
-                    >{Math.round(wager * multiplier)}</Text>
-
-                </View>
-                
-                
-            
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => submitBets()}>
-                    <Text style={styles.buttonText}>PLACE BETS</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()}>
-                    <Text style={styles.cancelButtonText}>CANCEL</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </KeyboardAvoidingView>    
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.cancelButton} onPress={cancelBetSlip}>
+              <Text style={styles.cancelButtonText}>CANCEL</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.createButton} onPress={submitBets}>
+              <Text style={styles.createButtonText}>PLACE BETS</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
   );
 }
 
-
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "white",
-        padding: 10,
-      },
-      header: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#ff496b",
-        textAlign: "center",
-        marginBottom: 15,
-      },
-      buttonStyle: {
-        paddingVertical: 12,
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 120,
-        height: 50,
-      },
-      betSlipText:{
-
-        borderColor: "#ccc",
-        fontSize: 20,
-        borderRadius: 5,
-        marginBottom: 5,
-        color: Colors.primary,
-        fontWeight: '700'
-
-      },
-      createButton: {
-        backgroundColor: "#ff496b",
-      },
-      cancelButton: {
-        backgroundColor: "#ccc",
-      },
-      buttonText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 16,
-      },
-      cancelButtonText: {
-        color: "#000",
-        fontWeight: "bold",
-        fontSize: 16,
-      },
-      modalContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.75)",
-      },
-      modalContent: {
-        backgroundColor: Colors.cardBackground,
-        padding: 20,
-        width: "90%",
-        borderRadius: 10,
-        borderColor: 'gray',
-        borderWidth: 0.5,
-      },
-      modalTitle: {
-        fontSize: 20,
-        fontWeight: "bold",
-        marginBottom: 15,
-        textAlign: "center",
-        color: Colors.textColor,
-      },
-      input: {
-        borderWidth: 1,
-        borderColor: "#474747",
-        padding: 10,
-        borderRadius: 5,
-        marginBottom: 10,
-        color: Colors.textColor,
-        backgroundColor: "#181415",
-      },
-      riskPayoutText: {
-
-        borderColor: "#ccc",
-        fontSize: 15,
-        borderRadius: 5,
-        color: Colors.textColor,
-        fontWeight: '700',
-        marginBottom: 10,
-
-      },
-      label: {
-        fontSize: 16,
-        fontWeight: "bold",
-        marginBottom: 5,
-        color: Colors.textColor,
-      },
-      picker: {
-        height: 50,
-        marginBottom: 10,
-      },
-      buttonRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 10,
-      },
-      visibilityRow: {
-        flexDirection: "row",
-        justifyContent: "flex-start",
-        marginTop: 5,
-        marginBottom: 10,
-      },
-      selectedVisibilityButton: {
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 120,
-        height: 35,
-        marginRight: 10,
-        backgroundColor: "#ff496b",
-      },
-    
-      deselectedVisibilityButton: {
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 120,
-        height: 35,
-        marginRight: 10,
-        backgroundColor: "#ccc",
-      },
-    
-      visibilityButtonText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 16,
-      },
-    
-      plusButtonText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 50,
-        padding: 0,
-        lineHeight: 52.5,
-      },
-      plusButtonStyle: {
-        position: "absolute",
-        bottom: 30,
-        right: 30,
-        borderRadius: 25,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 55,
-        height: 55,
-        backgroundColor: "#ff496b",
-      },
-    
-      scrollView: {
-        maxHeight: 200,
-        marginBottom: 20,
-      },
-      visibilityButton: {
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        width: 120,
-        height: 35,
-        marginRight: 10,
-        backgroundColor: "#ccc",
-      },
-      switchContainer: {
-        flexDirection: "row",
-        justifyContent: "center",
-        marginBottom: 10,
-        backgroundColor: 'white',
-      },
-      switchButton: {
-        padding: 10,
-        marginHorizontal: 5,
-        borderBottomWidth: 2,
-        borderColor: "transparent",
-      },
-      activeSwitchButton: {
-        borderColor: "#ff496b",
-      },
-      switchText: {
-        fontSize: 16,
-        color: 'black',
-        fontWeight: "bold",
-      },
-      scrollContainer: {
-        flex: 1,
-        
-      },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.85)",
+  },
+  modalContent: {
+    backgroundColor: "#121112",
+    width: "90%",
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#252B38",
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: Colors.textColor,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+    textAlign: "center",
+    textTransform: "uppercase",
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: "#7A8499",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: "#1d1a1c",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#252B38",
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#f8f8f8",
+    marginTop: 4,
+  },
+  infoLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    color: "#7A8499",
+  },
+  riskPayoutRow: {
+    flexDirection: "row",
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#252B38",
+    backgroundColor: "#1d1a1c",
+    padding: 14,
+    borderRadius: 10,
+    color: Colors.textColor,
+    fontSize: 18,
+    marginTop: 8,
+  },
+  payoutValue: {
+    fontWeight: "800",
+    color: "#f8f8f8",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 16,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "#1d1a1c",
+    borderWidth: 1,
+    borderColor: "#252B38",
+  },
+  cancelButtonText: {
+    color: "#7A8499",
+    fontWeight: "800",
+    fontSize: 15,
+    letterSpacing: 1,
+  },
+  createButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "#f8f8f8",
+  },
+  createButtonText: {
+    color: "black",
+    fontWeight: "800",
+    fontSize: 15,
+    letterSpacing: 1,
+  },
 });
