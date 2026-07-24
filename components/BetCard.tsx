@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 2,
     borderRadius: 10,
-    borderColor: Colors.border,
+    borderColor: '#252B38',
     flexDirection: 'column',
     flex: 1,
     padding: 8,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     height: 25,
     paddingBottom: 5,
     borderBottomWidth: 1,
-    borderColor: 'gray',
+    borderColor: 'rgba(74, 71, 71, 0.35)',
     marginBottom: 10,
    
   },
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     paddingTop: 5,
     borderTopWidth: 1,
     marginTop: 10,
-    borderColor: 'gray',
+    borderColor: 'rgba(74, 71, 71, 0.35)',
 
    
   },
@@ -238,8 +238,8 @@ const styles = StyleSheet.create({
     
   },
   logo: {
-    width: '100%',
-    height: '100%',
+    width: '95%',
+    height: '95%',
     position: 'relative',
     alignSelf: 'center',
     justifyContent: 'flex-start',

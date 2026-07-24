@@ -1006,7 +1006,7 @@ const renderEvent = useCallback(({ item }: { item: Event }) => {
         {name}
       </Text>
       <Text style={infoStyles.inviteCodeValue}>
-        {groupId.toString().slice(-6).toUpperCase()}
+        {groupInfo.inviteCode}
       </Text>
       <Text style={infoStyles.inviteCodeCaption}>INVITE CODE</Text>
     </View>

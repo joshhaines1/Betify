@@ -22,16 +22,14 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
   };
 
   const handleCheckInviteCode = async () => {
-    const trimmedCode = inviteCode.trim().toLowerCase();
+    const trimmedCode = inviteCode.trim().toUpperCase();
     if (trimmedCode.length !== 6) {
       Alert.alert("Invalid Code", "Invite code must be exactly 6 characters.");
       return;
     }
 
     try {
-      const allGroupsObj = await groups_service.getAllGroups(0);
-      const allGroups = allGroupsObj.groups;
-      const foundGroup = allGroups.find((group) => group.id.slice(-6).toLowerCase() === trimmedCode);
+      const foundGroup = await groups_service.getGroupByInviteCode(trimmedCode);
 
       if (!foundGroup) {
         Alert.alert("Not Found", "No group found with that invite code.");
@@ -113,6 +111,7 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              textContentType="oneTimeCode"
             />
           </>
         )}

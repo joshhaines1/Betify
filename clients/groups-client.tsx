@@ -1,4 +1,5 @@
-import { FIREBASE_AUTH } from '@/FirebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import { FIREBASE_AUTH, FIRESTORE } from '@/FirebaseConfig';
 import { BASE_API_ENDPOINT } from '../constants/api';
 
 export const createGroup = async (groupName, visibility, startingCurrency, password) => {
@@ -205,6 +206,40 @@ export const joinGroup = async (groupId) => {
     });
 
     return await response.json();
+}
+
+const resolveGroupIdFromInviteCode = async (inviteCode: string) => {
+    const inviteCodeRef = doc(FIRESTORE, "inviteCodes", inviteCode);
+    const inviteCodeSnap = await getDoc(inviteCodeRef);
+
+    if (!inviteCodeSnap.exists()) {
+        return null;
+    }
+
+    return inviteCodeSnap.data().groupId;
+}
+
+export const getGroupByInviteCode = async (inviteCode: string) => {
+    const groupId = await resolveGroupIdFromInviteCode(inviteCode);
+    if (!groupId) {
+        return null;
+    }
+
+    return await getGroupById(groupId);
+}
+
+export const joinGroupByInviteCode = async (inviteCode: string) => {
+    const user = FIREBASE_AUTH.currentUser;
+    if (!user) {
+        throw new Error("User not authenticated");
+    }
+
+    const groupId = await resolveGroupIdFromInviteCode(inviteCode);
+    if (!groupId) {
+        throw new Error("Invalid invite code");
+    }
+
+    return await joinGroup(groupId);
 }
 
 let balanceCache = {};

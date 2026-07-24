@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
 
   userName: {
     
-    fontSize: 20,
+    fontSize: 16,
     color: Colors.textColor, 
     textTransform: 'uppercase',
     fontWeight: 'bold',

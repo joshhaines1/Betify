@@ -96,6 +96,7 @@ export function CreateGroupView({ setModalVisible, fetchGroups }) {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              textContentType="oneTimeCode"
             />
           </>
         )}
