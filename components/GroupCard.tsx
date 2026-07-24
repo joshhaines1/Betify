@@ -1,57 +1,78 @@
 import React, { useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, Alert } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal } from 'react-native';
 import { Text, View } from 'react-native';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { JoinGroupView } from './JoinGroupView';
 import Colors from '@/assets/styles/colors';
 
 const groupCard = require('@/assets/images/groupIcon.png');
+
+const formatMemberCount = (count: number) => {
+  if (count < 1000) return `${count}`;
+  if (count < 1000000) return `${(count / 1000).toFixed(1)}K`;
+  return `${(count / 1000000).toFixed(1)}M`;
+};
+
 export function GroupCard({ name, members, adminName, admins, visibility, password, startingCurrency, groupId, fetchGroups, joined}) {
   const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const isPrivate = visibility === 'Private';
 
   const handlePress = () => {
     if(joined){
       router.navigate({
         pathname: "/group",
-        params: { 
-          name, 
-          groupId, 
-          admins, 
+        params: {
+          name,
+          groupId,
+          admins,
         },
       });
     } else {
       setJoinModalVisible(true);
     }
-    
+
   };
-
-  const handleLongPress = () => {
-
-    
-  }
 
   return (
     <>
-    <TouchableOpacity style={styles.container} onLongPress={handleLongPress} onPress={handlePress}>
-      <Image
-        source={groupCard}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-      <View style={styles.groupInfoContainer}>
-        <Text style={styles.groupName} numberOfLines={1} ellipsizeMode="tail">
-          {name}
-        </Text>
-        <Text style={styles.visibilityText} numberOfLines={1} ellipsizeMode="tail">{visibility} Group</Text>
-        <Text style={styles.adminName} numberOfLines={1} ellipsizeMode="tail">
-          Created by: {adminName}
-        </Text>
+    <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.75}>
+      <View style={styles.avatarContainer}>
+        <Image
+          source={groupCard}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
-      <View style={styles.memberCountContainer}>
+
+      <View style={styles.infoContainer}>
+        <View style={styles.nameRow}>
+          <Text style={styles.groupName} numberOfLines={1} ellipsizeMode="tail">
+            {name}
+          </Text>
+        </View>
+
+        <View style={styles.metaRow}>
+          <View style={[styles.visibilityBadge, isPrivate && styles.visibilityBadgePrivate]}>
+            <Text style={[styles.visibilityBadgeText, isPrivate && styles.visibilityBadgeTextPrivate]}>
+              {visibility?.toUpperCase()}
+            </Text>
+          </View>
+          <Text style={styles.adminName} numberOfLines={1} ellipsizeMode="tail">
+            by {adminName?.toUpperCase()}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.statBlock}>
         <Text style={styles.memberCountText}>
-          {members.length < 1000 ? members.length : (members.length < 1000000 ? (members.length / 1000).toFixed(1) + 'K' : (members.length / 1000000).toFixed(1) + 'M')}
+          {formatMemberCount(members.length)}
+        </Text>
+        <Text style={styles.memberCountLabel}>
+          {members.length === 1 ? 'MEMBER' : 'MEMBERS'}
         </Text>
       </View>
+
+      <Text style={styles.chevron}>›</Text>
     </TouchableOpacity>
 
     <Modal animationType="fade" transparent={true} visible={joinModalVisible}>
@@ -65,76 +86,118 @@ export function GroupCard({ name, members, adminName, admins, visibility, passwo
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'stretch',
     width: '100%',
-    height: 90,
-    borderWidth: 2,
-    borderRadius: 20,
-    borderColor: Colors.border,
+    borderWidth: 1,
+    borderRadius: 18,
+    borderColor: '#252B38',
     flexDirection: 'row',
-    padding: 8,
-    marginBottom: 8,
-    backgroundColor: Colors.cardBackground,
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    backgroundColor: '#121112',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.textColor,
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
-  },
-  border: {
-    borderWidth: 5,
-    borderColor: 'black',
+  avatarContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 15, 15, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
   logo: {
-    width: '20%',
-    height: '70%',
-    position: 'relative',
-    alignSelf: 'center',
-    justifyContent: 'flex-start',
-    margin: 8,
-    marginLeft: 0,
-    tintColor: Colors.textColor,
+    width: 40,
+    height: 40,
   },
-  visibilityText: {
-    fontSize: 13,
-    marginTop: 3,
-    marginLeft: 3,
+  infoContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  groupName: {
+    fontSize: 18,
     color: Colors.textColor,
+    fontWeight: '800',
+    flexShrink: 1,
+    paddingLeft: 2,
+  },
+  joinBadge: {
+    backgroundColor: Colors.primary,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginLeft: 8,
+  },
+  joinBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    color: '#fff',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 7,
+  },
+  visibilityBadge: {
+    backgroundColor: '#ff496b1f',
+    borderRadius: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginRight: 8,
+  },
+  visibilityBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: Colors.primary,
+  },
+  visibilityBadgePrivate: {
+    backgroundColor: '#1d1a1c',
+    borderWidth: 1,
+    borderColor: '#252B38',
+  },
+  visibilityBadgeTextPrivate: {
+    color: '#7A8499',
   },
   adminName: {
-    fontSize: 13,
-    color: 'gray',
-    marginTop: 3,
-    marginLeft: 3,
-    fontWeight: '300',
-    fontStyle: 'italic',
+    fontSize: 12,
+    color: '#7A8499',
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  statBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 44,
+    marginRight: 6,
   },
   memberCountText: {
-    fontWeight: 'bold',
-    color: "#f8f8f8",
-    fontSize: 25,
-    textAlign: 'center',
+    fontWeight: '800',
+    color: Colors.textColor,
+    fontSize: 18,
   },
-  groupInfoContainer: {
-  flex: 1,  // takes remaining space after logo
-  marginTop: 3,
-  alignItems: 'flex-start',
-},
-groupName: {
-  fontSize: 20,
-  color: Colors.textColor,
-  fontWeight: '500',
-  // remove the fixed width: 225
-},
-memberCountContainer: {
-  padding: 8,
-  alignItems: 'flex-end',
-  justifyContent: 'center',
-  // remove flex: 1 so it only takes as much space as it needs
-},
+  memberCountLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    color: '#7A8499',
+    marginTop: 1,
+  },
+  chevron: {
+    fontSize: 22,
+    color: '#ff496b',
+    fontWeight: '300',
+  },
 });

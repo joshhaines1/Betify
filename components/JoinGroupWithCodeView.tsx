@@ -1,6 +1,7 @@
 import { FIREBASE_AUTH } from '@/FirebaseConfig';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, Modal, TextInput, View, Text } from 'react-native';
+import { StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
 import * as groups_service from '@/clients/groups-client';
@@ -23,7 +24,7 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
   const handleCheckInviteCode = async () => {
     const trimmedCode = inviteCode.trim().toLowerCase();
     if (trimmedCode.length !== 6) {
-      alert("Invite code must be exactly 6 characters.");
+      Alert.alert("Invalid Code", "Invite code must be exactly 6 characters.");
       return;
     }
 
@@ -33,7 +34,7 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
       const foundGroup = allGroups.find((group) => group.id.slice(-6).toLowerCase() === trimmedCode);
 
       if (!foundGroup) {
-        alert("No group found with that invite code.");
+        Alert.alert("Not Found", "No group found with that invite code.");
         return;
       }
 
@@ -46,7 +47,7 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
 
     } catch (error) {
       console.error("Error checking invite code:", error);
-      alert("Error checking invite code.");
+      Alert.alert("Error", "Error checking invite code.");
     }
   };
 
@@ -54,26 +55,25 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
     try {
       const user = FIREBASE_AUTH.currentUser;
       if (!user) {
-        alert("You must be logged in to join a group.");
+        Alert.alert("Error", "You must be logged in to join a group.");
         return;
       }
 
       if (matchedGroup.visibility.toLowerCase() === "private") {
         if (password !== matchedGroup.password) {
-          alert("Incorrect password!");
+          Alert.alert("Error", "Incorrect password!");
           return;
         }
       }
 
       await groups_service.joinGroup(groupId);
-      alert("Successfully joined group!");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       fetchGroups(true, "all");
       setModalVisible(false);
 
     } catch (error) {
       console.error("Error joining group:", error);
-      alert("An error occurred while joining the group.");
+      Alert.alert("Error", "An error occurred while joining the group.");
     }
   };
 
@@ -85,40 +85,54 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
   return (
     <View style={styles.modalContainer}>
       <View style={styles.modalContent}>
-        <Text style={styles.modalTitle}>Invite Code</Text>
+
+        <Text style={styles.modalTitle}>Join with Code</Text>
+        <Text style={styles.modalSubtitle}>Enter an invite code to find a group</Text>
+
+        {/* Invite Code */}
+        <Text style={styles.infoLabel}>INVITE CODE</Text>
         <TextInput
           style={styles.input}
           placeholder="ABC123"
+          placeholderTextColor="#555"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={6}
           value={inviteCode}
           onChangeText={setInviteCode}
-          placeholderTextColor="gray"
         />
 
         {/* Show password input only if the group is private */}
         {matchedGroup?.visibility?.toLowerCase() === "private" && (
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholderTextColor="gray"
-          />
+          <>
+            <Text style={styles.infoLabel}>PASSWORD</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter the group password"
+              placeholderTextColor="#555"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </>
         )}
 
+        {/* Buttons */}
         <View style={styles.buttonRow}>
-          {!matchedGroup ? (
-            <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={handleCheckInviteCode}>
-              <Text style={styles.buttonText}>NEXT</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => joinGroup(matchedGroup.id)}>
-              <Text style={styles.buttonText}>JOIN</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={cancelGroupJoin}>
+          <TouchableOpacity style={styles.cancelButton} onPress={cancelGroupJoin}>
             <Text style={styles.cancelButtonText}>CANCEL</Text>
           </TouchableOpacity>
+          {!matchedGroup ? (
+            <TouchableOpacity style={styles.createButton} onPress={handleCheckInviteCode}>
+              <Text style={styles.createButtonText}>NEXT</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.createButton} onPress={() => joinGroup(matchedGroup.id)}>
+              <Text style={styles.createButtonText}>JOIN</Text>
+            </TouchableOpacity>
+          )}
         </View>
+
       </View>
     </View>
   );
@@ -129,50 +143,76 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.75)",
+    backgroundColor: "rgba(0,0,0,0.85)",
   },
   modalContent: {
     backgroundColor: Colors.cardBackground,
-    padding: 20,
     width: "90%",
-    borderRadius: 10,
-    borderColor: "gray",
-    borderWidth: 0.5,
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#2a2a2a",
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 15,
-    textAlign: "center",
+    fontSize: 22,
+    fontWeight: "900",
     color: Colors.textColor,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 15,
+    color: "#666",
+    marginBottom: 20,
+  },
+  infoLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    color: "#666",
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
+    borderColor: "#2a2a2a",
+    backgroundColor: "#1a1a1a",
+    padding: 14,
+    borderRadius: 10,
     color: Colors.textColor,
+    fontSize: 18,
+    marginBottom: 16,
   },
   buttonRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-  buttonStyle: {
-    paddingVertical: 12,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 120,
-    height: 50,
-  },
-  createButton: {
-    backgroundColor: "#ff496b",
+    gap: 10,
+    marginTop: 4,
   },
   cancelButton: {
-    backgroundColor: "#ccc",
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#2a2a2a",
   },
-  buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
-  cancelButtonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
+  cancelButtonText: {
+    color: "#666",
+    fontWeight: "700",
+    fontSize: 16,
+    letterSpacing: 1,
+  },
+  createButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "#ff496b",
+  },
+  createButtonText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 16,
+    letterSpacing: 1,
+  },
 });

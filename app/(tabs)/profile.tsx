@@ -18,8 +18,8 @@ export default function Profile() {
   useEffect(() => {
     setUsername(user?.displayName ?? "")
     setEmail(getEmailDisplay());
-    setInitials(username
-    ? username.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    setInitials(user?.displayName
+    ? user?.displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : getEmailDisplay()?.[0].toUpperCase() ?? "?")
   }, []);
 
