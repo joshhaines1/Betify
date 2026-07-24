@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Modal, Platform, TextInput, Alert, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { StyleSheet, Image, TouchableOpacity, Modal, Platform, TextInput, Alert, KeyboardAvoidingView, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -124,9 +124,9 @@ export function CreateSingleOutcomeView({setModalVisible, fetchEvents, fetchProp
             fetchProps();
           }
           setModalVisible(false);
-          setLoading(false);
         }).catch((error) => {
           console.error("Error creating event:", error);
+          Alert.alert("Error", "Failed to create event. Please try again later.");
         }).finally(() => {
           setLoading(false);
         });
@@ -255,7 +255,11 @@ export function CreateSingleOutcomeView({setModalVisible, fetchEvents, fetchProp
                 
                 <View style={styles.buttonRow}>
                   <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => createEvent()} disabled={loading}>
-                    <Text style={styles.buttonText}>CREATE</Text>
+                    {loading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.buttonText}>CREATE</Text>
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()} disabled={loading}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>

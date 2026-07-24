@@ -1,6 +1,6 @@
 import { FIREBASE_AUTH } from '@/FirebaseConfig';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
@@ -10,6 +10,7 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
   const [inviteCode, setInviteCode] = useState("");
   const [password, setPassword] = useState("");
   const [matchedGroup, setMatchedGroup] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     resetFields();
@@ -28,6 +29,7 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
       return;
     }
 
+    setLoading(true);
     try {
       const foundGroup = await groups_service.getGroupByInviteCode(trimmedCode);
 
@@ -38,18 +40,21 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
 
       setMatchedGroup(foundGroup);
 
-      // If public, join immediately
+      // If public, join immediately. Pass foundGroup directly rather than relying on
+      // matchedGroup state, since setMatchedGroup above hasn't applied yet in this closure.
       if (foundGroup.visibility.toLowerCase() === "public") {
-        await joinGroup(foundGroup.id);
+        await joinGroup(foundGroup);
       }
 
     } catch (error) {
       console.error("Error checking invite code:", error);
       Alert.alert("Error", "Error checking invite code.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const joinGroup = async (groupId: string) => {
+  const joinGroup = async (group: any) => {
     try {
       const user = FIREBASE_AUTH.currentUser;
       if (!user) {
@@ -57,21 +62,30 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
         return;
       }
 
-      if (matchedGroup.visibility.toLowerCase() === "private") {
-        if (password !== matchedGroup.password) {
+      if (group.visibility.toLowerCase() === "private") {
+        if (password !== group.password) {
           Alert.alert("Error", "Incorrect password!");
           return;
         }
       }
 
-      await groups_service.joinGroup(groupId);
+      await groups_service.joinGroup(group.id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      fetchGroups(true, "all");
+      await fetchGroups(true, "all");
       setModalVisible(false);
 
     } catch (error) {
       console.error("Error joining group:", error);
       Alert.alert("Error", "An error occurred while joining the group.");
+    }
+  };
+
+  const handleJoinPress = async () => {
+    setLoading(true);
+    try {
+      await joinGroup(matchedGroup);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,16 +132,24 @@ export function JoinGroupWithCodeView({ setModalVisible, fetchGroups }) {
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.cancelButton} onPress={cancelGroupJoin}>
+          <TouchableOpacity style={styles.cancelButton} onPress={cancelGroupJoin} disabled={loading}>
             <Text style={styles.cancelButtonText}>CANCEL</Text>
           </TouchableOpacity>
           {!matchedGroup ? (
-            <TouchableOpacity style={styles.createButton} onPress={handleCheckInviteCode}>
-              <Text style={styles.createButtonText}>NEXT</Text>
+            <TouchableOpacity style={styles.createButton} onPress={handleCheckInviteCode} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.createButtonText}>NEXT</Text>
+              )}
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.createButton} onPress={() => joinGroup(matchedGroup.id)}>
-              <Text style={styles.createButtonText}>JOIN</Text>
+            <TouchableOpacity style={styles.createButton} onPress={handleJoinPress} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.createButtonText}>JOIN</Text>
+              )}
             </TouchableOpacity>
           )}
         </View>

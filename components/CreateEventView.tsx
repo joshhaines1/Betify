@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, Modal, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { StyleSheet, TouchableOpacity, Modal, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
@@ -116,6 +116,7 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
           setModalVisible(false);
         }).catch((error) => {
           console.error("Error creating event:", error);
+          Alert.alert("Error", "Failed to create event. Please try again later.");
         }).finally(() => {
           setLoading(false);
         });
@@ -125,6 +126,7 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
           if(!validBasicInputs()){
             return;
           }
+          setLoading(true);
           let eventToCreate = {
             groupId: groupId,
             type: type,
@@ -142,6 +144,9 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
           setModalVisible(false);
         }).catch((error) => {
           console.error("Error creating event:", error);
+          Alert.alert("Error", "Failed to create event. Please try again later.");
+        }).finally(() => {
+          setLoading(false);
         });
         }
       }
@@ -395,7 +400,11 @@ export function CreateMSOView({setModalVisible, fetchEvents, groupName, groupId,
                 
                 <View style={styles.buttonRow}>
                   <TouchableOpacity style={[styles.buttonStyle, styles.createButton]} onPress={() => handleCreateEvent()} disabled={loading}>
-                    <Text style={styles.buttonText}>CREATE</Text>
+                    {loading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.buttonText}>CREATE</Text>
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.buttonStyle, styles.cancelButton]} onPress={() => cancelGroupCreation()} disabled={loading}>
                     <Text style={styles.cancelButtonText}>CANCEL</Text>

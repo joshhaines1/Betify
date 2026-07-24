@@ -9,26 +9,22 @@ export function JoinGroupView({ setModalVisible, fetchGroups, name, visibility, 
   const [loading, setLoading] = useState(false);
 
   const addUserToGroup = async () => {
+    if (visibility === "Private" && password !== correctPassword) {
+      Alert.alert("Incorrect Password");
+      return;
+    }
+
+    setLoading(true);
     try {
-      if (visibility == "Private") {
-        if (password == correctPassword) {
-          setLoading(true);
-          await joinGroup(groupId);
-        } else {
-          Alert.alert("Incorrect Password");
-        }
-      } else {
-        setLoading(true);
-        await joinGroup(groupId);
-      }
+      await joinGroup(groupId);
+      await fetchGroups(true, "all");
+      setModalVisible(false);
     } catch (error) {
       console.error("Error joining group:", error);
+      Alert.alert("Error", "Failed to join group. Please try again later.");
     } finally {
-      setModalVisible(false);
       setLoading(false);
-
     }
-    fetchGroups(true, "all");
   };
 
   return (

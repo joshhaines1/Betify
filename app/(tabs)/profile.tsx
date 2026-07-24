@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "@/assets/styles/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as groups_client from "../../clients/groups-client";
+import * as wagers_client from "../../clients/wagers-client";
 import Purchases from "react-native-purchases/dist/purchases";
 import { useEffect, useState } from "react";
 
@@ -26,6 +27,7 @@ export default function Profile() {
   const handleSignOut = async () => {
     await logout();
     groups_client.clearGroupsCache();
+    wagers_client.clearWagersCache();
     await Purchases.logOut(); 
     router.replace("/login");
   };

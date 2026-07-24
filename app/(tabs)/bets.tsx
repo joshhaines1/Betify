@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -77,7 +77,11 @@ export default function Bets() {
     });
   };
 
-  const fetchBets = async (statusFilter: string, refresh = false) => {
+  const fetchBets = async (
+    statusFilter: string,
+    refresh = false,
+    cursorOverride?: DocumentSnapshot | null
+  ) => {
     const isActive = statusFilter === "active";
     if (isActive ? loadingActive : loadingSettled) return;
 
@@ -86,9 +90,13 @@ export default function Bets() {
       console.log(`Fetching ${statusFilter} bets...`);
 
       const lastVisible =
-        statusFilter === "active" ? lastVisibleActive : lastVisibleSettled;
+        cursorOverride !== undefined
+          ? cursorOverride
+          : statusFilter === "active"
+          ? lastVisibleActive
+          : lastVisibleSettled;
 
-      const { wagers, nextCursor } =
+      const { wagers, nextCursor, cached } =
         await wagers_service.getWagersByUser(
           statusFilter,
           lastVisible,
@@ -98,15 +106,15 @@ export default function Bets() {
       if (wagers.length > 0) {
         if (statusFilter === "active") {
           setLastVisibleActive(nextCursor);
-          setHasMoreActiveBets(wagers.length === 5);
+          setHasMoreActiveBets(cached ? false : wagers.length === 5);
           setActiveBets((prev) =>
-            refresh ? wagers : [...prev, ...wagers]
+            refresh || cached ? wagers : [...prev, ...wagers]
           );
         } else {
           setLastVisibleSettled(nextCursor);
-          setHasMoreSettledBets(wagers.length === 5);
+          setHasMoreSettledBets(cached ? false : wagers.length === 5);
           setSettledBets((prev) =>
-            refresh ? wagers : [...prev, ...wagers]
+            refresh || cached ? wagers : [...prev, ...wagers]
           );
         }
       } else {
@@ -192,22 +200,35 @@ const onRefresh = async () => {
     </View>
   );
 
-  useEffect(() => {
-    const load = async () => {
-    try {
-      console.log("Fetching bets on initial load...");
-      setInitialLoading(true);
-      await fetchBets("active", true);
-      await fetchBets("settled", true);
-    } catch (error) {
-      Alert.alert("Error", "Failed to load bets. Please try again later.");
-    } finally {
-      setInitialLoading(false)
-    }
-  };
+  const hasLoadedOnceRef = useRef(false);
 
-  load();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const load = async () => {
+        try {
+          console.log("Fetching bets on focus...");
+          if (!hasLoadedOnceRef.current) {
+            setInitialLoading(true);
+          }
+          setHasMoreActiveBets(true);
+          setHasMoreSettledBets(true);
+          // Pass an explicit null cursor so this always reloads from the top,
+          // instead of accidentally paginating off a stale cursor from a prior visit.
+          await fetchBets("active", false, null);
+          await fetchBets("settled", false, null);
+        } catch (error) {
+          Alert.alert("Error", "Failed to load bets. Please try again later.");
+        } finally {
+          if (!hasLoadedOnceRef.current) {
+            setInitialLoading(false);
+            hasLoadedOnceRef.current = true;
+          }
+        }
+      };
+
+      load();
+    }, [])
+  );
 
   const displayedBets = view === "active" ? activeBets : settledBets;
 
@@ -304,6 +325,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-start",
     marginBottom: 10,
+    marginTop: -5,
   },
   switchButton: {
     padding: 10,

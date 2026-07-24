@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/assets/styles/colors';
@@ -27,10 +27,11 @@ export function CreateGroupView({ setModalVisible, fetchGroups }) {
   const createGroup = async () => {
     if (!validInputs()) return;
     setLoading(true);
-    setModalVisible(false);
     try {
       await groups_service.createGroup(groupName, visibility, startingCurrency, password);
-      fetchGroups(true);
+      await fetchGroups(true);
+      resetFields();
+      setModalVisible(false);
     } catch (error) {
       console.error("Error creating group:", error);
       Alert.alert("Error", "Failed to create group.");
@@ -114,11 +115,15 @@ export function CreateGroupView({ setModalVisible, fetchGroups }) {
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)} disabled={loading}>
             <Text style={styles.cancelButtonText}>CANCEL</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.createButton} onPress={createGroup} disabled={loading}>
-            <Text style={styles.createButtonText}>CREATE</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.createButtonText}>CREATE</Text>
+            )}
           </TouchableOpacity>
         </View>
 

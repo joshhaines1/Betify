@@ -77,7 +77,7 @@ export default function GroupsScreen() {
 
     const [myGroups, otherGroups] = await Promise.all([
       shouldFetchMy
-        ? groups_service.getUsersGroups(6, forceRefresh, myGroupsLastVisible)
+        ? groups_service.getUsersGroups(8, forceRefresh, myGroupsLastVisible)
         : Promise.resolve(null),
       shouldFetchOther
         ? groups_service.getAllGroups(10, forceRefresh, otherGroupsLastVisible)

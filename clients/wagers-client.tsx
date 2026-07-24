@@ -38,6 +38,8 @@ export async function placeWager({ groupId, picks, eventIds, odds, multiplier, r
   return data;
 }
 
+let wagersCache: { [statusFilter: string]: any[] } = {};
+
 export async function getWagersByUser(statusFilter, lastVisible, refresh: boolean = false) {
   const user = FIREBASE_AUTH.currentUser;
   if (!user) {
@@ -47,6 +49,15 @@ export async function getWagersByUser(statusFilter, lastVisible, refresh: boolea
 
   const token = await user.getIdToken();
   if (!token) throw new Error("User not authenticated");
+
+  const cacheKey = statusFilter || "all";
+
+  if (!refresh && !lastVisible && wagersCache[cacheKey]?.length > 0) {
+    console.log(`Fetching CACHED data for ${cacheKey} wagers...`);
+    return { wagers: wagersCache[cacheKey], nextCursor: null, cached: true };
+  }
+
+  console.log(`Fetching FRESH data for ${cacheKey} wagers...`);
 
   // Build query params
   const params = new URLSearchParams();
@@ -74,6 +85,22 @@ export async function getWagersByUser(statusFilter, lastVisible, refresh: boolea
     throw new Error(data.error || data.message || "Failed to fetch wagers");
   }
 
-  console.log("Fetched wagers:", data);
-  return data;
+  const isFreshPage = !lastVisible || refresh;
+
+  if (isFreshPage) {
+    wagersCache[cacheKey] = data.wagers;
+  } else {
+    wagersCache[cacheKey] = [...(wagersCache[cacheKey] || []), ...data.wagers];
+  }
+
+  return {
+    wagers: data.wagers,
+    nextCursor: data.nextCursor ?? null,
+    cached: false,
+  };
 }
+
+export const clearWagersCache = () => {
+  console.log("Clearing wagers cache");
+  wagersCache = {};
+};

@@ -262,6 +262,10 @@ useEffect(() => {
   const invalidateBalanceCache = () => {
     groups_client.clearBalanceCache(groupId as string);
   };
+
+  const invalidateWagersCache = () => {
+    wagers_service.clearWagersCache();
+  };
  
   //Modal animations
   useEffect(() => {
@@ -356,6 +360,7 @@ useEffect(() => {
         },
       }));
       invalidateBalanceCache();
+      invalidateWagersCache();
       success = true;
     } catch (err) {
       resetSlip();
@@ -943,8 +948,8 @@ const renderEvent = useCallback(({ item }: { item: Event }) => {
                 ? (currentBalance / 1000000000).toFixed(1).replace(/\.0$/, "") + "B"
               : currentBalance >= 1000000
                 ? (currentBalance / 1000000).toFixed(1).replace(/\.0$/, "") + "M"
-                : currentBalance >= 1000
-                  ? (currentBalance / 1000).toFixed(1).replace(/\.0$/, "") + "K"
+                : 189000 >= 1000
+                  ? (189000 / 1000).toFixed(1).replace(/\.0$/, "") + "K"
                   : currentBalance}
           </Text>
         </TouchableOpacity>
