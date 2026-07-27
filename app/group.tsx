@@ -1326,8 +1326,11 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
     fontSize: 50,
-    padding: 0,
-    lineHeight: 52.5,
+    height: 57,
+    lineHeight: 57,
+    textAlign: "center",
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
     bottomContainer: {
   alignItems: "center",

@@ -6,8 +6,11 @@ import { AdsProvider } from '@/context/PurchasesContext';
 import Purchases from 'react-native-purchases';
 import { useEffect, useRef, useState } from 'react';
 import { GroupsRefreshProvider } from '@/context/GroupsRefreshContext';
+import { useFonts } from 'expo-font';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function RootLayout() {
+const [fontsLoaded, fontError] = useFonts(Ionicons.font);
 const [adsRemoved, setAdsRemoved] = useState(false);
 const [isPro, setIsPro] = useState(false);
 const [tabsAnimation, setTabsAnimation] = useState<"fade" | "slide_from_left">("fade");
@@ -43,6 +46,14 @@ const hasTransitioned = useRef(false);
 
     setup();
   }, []);
+
+  if (fontError) {
+    console.error('Failed to load Ionicons font:', fontError);
+  }
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>

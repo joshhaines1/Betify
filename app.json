@@ -4,7 +4,7 @@
     "slug": "Betify",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icons/BetifyAppLogoLight.png",
+    "icon": "./assets/icons/BetifyAppLogoDark.png",
     "scheme": "betify",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -27,7 +27,7 @@
     "android": {
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/icons/BetifyAppLogoDark.png",
         "backgroundColor": "#ffffff"
       },
       "backgroundColor": "#000000",

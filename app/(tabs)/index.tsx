@@ -197,65 +197,64 @@ export default function GroupsScreen() {
             </Text>
           </View>
         </View>
+      ) : view === "joined" ? (
+        <FlatList
+          data={myGroups}
+          keyExtractor={(item) => item.id}
+          renderItem={renderGroup}
+          refreshing={refreshing}
+          style={{ flex: 1 }}
+          onRefresh={onRefresh}
+          showsVerticalScrollIndicator={false}
+          onEndReached={handleLoadMoreMyGroups}
+          onEndReachedThreshold={0.0}
+          ListEmptyComponent={
+            <View style={{ alignItems: 'center', marginTop: 50 }}>
+              <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600' }}>
+                You haven't joined any groups yet.
+              </Text>
+              <View style={{ flexDirection: "row" }}>
+                <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
+                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>Create </Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>or </Text>
+                <TouchableOpacity onPress={() => setInviteCodeModalVisible(true)}>
+                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>join </Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>a group now!</Text>
+              </View>
+            </View>
+          }
+        />
       ) : (
-        <>
-          <FlatList
-            data={myGroups}
-            keyExtractor={(item) => item.id}
-            renderItem={renderGroup}
-            refreshing={refreshing}
-            style={[{ flex: 1 }, view !== "joined" && { display: "none" }]}
-            onRefresh={onRefresh}
-            showsVerticalScrollIndicator={false}
-            onEndReached={handleLoadMoreMyGroups}
-            onEndReachedThreshold={0.0}
-            ListEmptyComponent={
-              <View style={{ alignItems: 'center', marginTop: 50 }}>
-                <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600' }}>
-                  You haven't joined any groups yet.
-                </Text>
-                <View style={{ flexDirection: "row" }}>
-                  <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
-                    <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>Create </Text>
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>or </Text>
-                  <TouchableOpacity onPress={() => setInviteCodeModalVisible(true)}>
-                    <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>join </Text>
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>a group now!</Text>
-                </View>
+        <FlatList
+          data={otherGroups.filter((group) => !group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))}
+          keyExtractor={(item) => item.id}
+          renderItem={renderGroup}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onEndReached={handleLoadMoreOtherGroups}
+          onEndReachedThreshold={0.0}
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1 }}
+          ListEmptyComponent={
+            <View style={{ alignItems: 'center', marginTop: 50 }}>
+              <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600' }}>
+                There are no groups available.
+              </Text>
+              <View style={{ flexDirection: "row" }}>
+                <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
+                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>Create </Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>or </Text>
+                <TouchableOpacity onPress={() => setInviteCodeModalVisible(true)}>
+                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>join </Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>a group now!</Text>
               </View>
-            }
-          />
-          <FlatList
-            data={otherGroups.filter((group) => !group.members.includes(FIREBASE_AUTH.currentUser?.uid ?? ""))}
-            keyExtractor={(item) => item.id}
-            renderItem={renderGroup}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            onEndReached={handleLoadMoreOtherGroups}
-            onEndReachedThreshold={0.0}
-            showsVerticalScrollIndicator={false}
-            style={[{ flex: 1 }, view !== "explore" && { display: "none" }]}
-            ListEmptyComponent={
-              <View style={{ alignItems: 'center', marginTop: 50 }}>
-                <Text style={{ fontSize: 18, color: Colors.textColor, fontWeight: '600' }}>
-                  There are no groups available.
-                </Text>
-                <View style={{ flexDirection: "row" }}>
-                  <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
-                    <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>Create </Text>
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>or </Text>
-                  <TouchableOpacity onPress={() => setInviteCodeModalVisible(true)}>
-                    <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>join </Text>
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 18, color: Colors.primary, marginTop: 10, fontWeight: '700' }}>a group now!</Text>
-                </View>
-              </View>
-            }
-          />
-        </>
+            </View>
+          }
+        />
       )}
 
       <View style={styles.bottomContainer}>
@@ -368,8 +367,11 @@ plusButtonStyle: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 50,
-    padding: 0,
-    lineHeight: 52.5,
+    height: 57,
+    lineHeight: 57,
+    textAlign: "center",
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
   loadingContainer: {
     flex: 1,
