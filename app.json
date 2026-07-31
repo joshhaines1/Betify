@@ -27,7 +27,7 @@
     "android": {
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icons/BetifyAppLogoDark.png",
+        "foregroundImage": "./assets/icons/AdaptiveIconDark.png",
         "backgroundColor": "#ffffff"
       },
       "backgroundColor": "#000000",
@@ -58,7 +58,8 @@
       ],
       "expo-font",
       "@react-native-community/datetimepicker",
-      "expo-asset"
+      "expo-asset",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true

@@ -19,6 +19,12 @@ import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
+import {
+  GoogleSignin,
+  isSuccessResponse,
+  isErrorWithCode,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 
 import {
   GoogleAuthProvider,
@@ -113,6 +119,44 @@ export default function Login() {
       handleGoogleSignIn();
     }
   }, [response]);
+
+  // Android can't use the expo-auth-session browser-redirect flow — Google
+  // rejects custom-scheme redirects for both Android- and Web-type OAuth
+  // clients, so Android signs in via the native Google Sign-In SDK instead.
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    }
+  }, []);
+
+  const handleAndroidGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+
+      if (!isSuccessResponse(response)) return;
+
+      const { idToken } = response.data;
+      if (!idToken) throw new Error("No ID token returned from Google.");
+
+      const credential = GoogleAuthProvider.credential(idToken);
+      const result = await signInWithCredential(FIREBASE_AUTH, credential);
+
+      if (getAdditionalUserInfo(result)?.isNewUser) {
+        await updateProfile(result.user, { displayName: "" });
+      }
+
+      await completeOAuthSignIn(result.user);
+    } catch (err: any) {
+      if (!isErrorWithCode(err) || err.code !== statusCodes.IN_PROGRESS) {
+        Alert.alert("Google Sign-In Error", getAuthErrorMessage(err));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
   try {
@@ -381,11 +425,14 @@ const handleAppleSignIn = async () => {
           {/* Google */}
           <TouchableOpacity
             style={styles.socialButton}
-            onPress={() =>
-              promptAsync()
+            onPress={
+              Platform.OS === "android"
+                ? handleAndroidGoogleSignIn
+                : () => promptAsync()
             }
             disabled={
-              !request || loading
+              loading ||
+              (Platform.OS !== "android" && !request)
             }
           >
             <Text style={styles.socialIcon}>
