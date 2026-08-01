@@ -39,28 +39,36 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/icons/BetifyAppLogoDark.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#000000"
-        }
-      ],
-      [
-        "react-native-google-mobile-ads",
-        {
-          "androidAppId": "ca-app-pub-6556472355461472~2293982262",
-          "iosAppId": "ca-app-pub-6556472355461472~6447334325"
-        }
-      ],
-      "expo-font",
-      "@react-native-community/datetimepicker",
-      "expo-asset",
-      "@react-native-google-signin/google-signin"
-    ],
+  "expo-router",
+  [
+    "expo-splash-screen",
+    {
+      "image": "./assets/icons/BetifyAppLogoDark.png",
+      "imageWidth": 200,
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    }
+  ],
+  [
+    "react-native-google-mobile-ads",
+    {
+      "androidAppId": "ca-app-pub-6556472355461472~2293982262",
+      "iosAppId": "ca-app-pub-6556472355461472~6447334325"
+    }
+  ],
+  "expo-font",
+  "@react-native-community/datetimepicker",
+  "expo-asset",
+  "@react-native-google-signin/google-signin",
+  [
+    "expo-build-properties",
+    {
+      "ios": {
+        "deploymentTarget": "15.1"
+      }
+    }
+  ]
+],
     "experiments": {
       "typedRoutes": true
     },

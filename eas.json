@@ -19,12 +19,19 @@
       "distribution": "store",
       "autoIncrement": true,
       "ios": {
-        "image": "latest"
+
+        "image": "macos-sequoia-15.3-xcode-16.2"
+
       }
     },
     "production": {
       "autoIncrement": true,
-      "distribution": "store"
+      "distribution": "store",
+      "ios": {
+
+        "image": "macos-sequoia-15.3-xcode-16.2"
+
+      }
     },
     "production-apk": {
       "autoIncrement": true,
