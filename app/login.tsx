@@ -46,7 +46,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 // Maps common Firebase Auth error codes to user-friendly messages instead of
 // exposing raw strings like "Firebase: Error (auth/invalid-credential)."
-const getAuthErrorMessage = (err: any): string => {
+export const getAuthErrorMessage = (err: any): string => {
   switch (err?.code) {
     case "auth/invalid-credential":
     case "auth/wrong-password":

@@ -20,6 +20,7 @@ import { useGroupsRefresh } from "@/context/GroupsRefreshContext";
 import { RewardedAd, InterstitialAd, AdEventType, RewardedAdEventType, TestIds, BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
 import { CreateSingleOutcomeView } from "@/components/CreateSingleOutcomeView";
 import { startAfter } from "firebase/firestore";
+import { calculateParlayOdds, oddsToMultiplier } from "@/utils/odds";
 
 //Ad
 const INTERSTITIAL_AD_UNIT_ID = __DEV__
@@ -281,25 +282,11 @@ useEffect(() => {
 
   // ── Odds calculation ───────────────────────────────────────────────────────
   const calculateOdds = () => {
-    const decimalOdds = [...betSlipOdds.values()].map((o) => {
-      const american = +o;
-      return american < 0 ? 100 / Math.abs(american) + 1 : american / 100 + 1;
-    });
-
-    const parlay = decimalOdds.reduce((acc, o, i) => (i === 0 ? o : acc + o), 0);
-
-    setLiveSlipOdds(
-      parlay >= 2
-        ? `+${Math.round((parlay - 1) * 100)}`
-        : `${Math.round(-100 / (parlay - 1))}`
-    );
-    setTotalDecimalOdds(parlay);
-  };
-
-  const oddsToMultiplier = (odds: number): number => {
-    if (odds > 0) return +(odds / 100 + 1).toFixed(2);
-    if (odds < 0) return +(100 / Math.abs(odds) + 1).toFixed(2);
-    return 1;
+    const { americanOdds, decimalMultiplier } = calculateParlayOdds([
+      ...betSlipOdds.values(),
+    ]);
+    setLiveSlipOdds(americanOdds);
+    setTotalDecimalOdds(decimalMultiplier);
   };
 
   // ── Place bets ─────────────────────────────────────────────────────────────
