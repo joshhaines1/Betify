@@ -900,11 +900,11 @@ const renderEvent = useCallback(({ item }: { item: Event }) => {
   return (
     
     <SafeAreaView style={styles.container}>
-      <Modal animationType="fade" transparent visible={(loadingEvents && !isFetchingMoreEvents && !isFetchingMoreProps) || leaving}>
+      {((loadingEvents && !isFetchingMoreEvents && !isFetchingMoreProps) || leaving) && (
         <View style={styles.leavingOverlay}>
           <ActivityIndicator size="large" color="#ffffff" />
         </View>
-      </Modal>
+      )}
       {/* ── Header ── */}
         <View style={styles.header}>
            <TouchableOpacity onPress={() => router.replace("/(tabs)")} style={styles.headerBackButton}>
@@ -1271,10 +1271,12 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   leavingOverlay: {
-  flex: 1,
+  ...StyleSheet.absoluteFillObject,
   backgroundColor: "rgba(0,0,0,0.5)",
   justifyContent: "center",
   alignItems: "center",
+  zIndex: 999,
+  elevation: 999,
 },
   balance: {
     maxWidth: 75,

@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { FIREBASE_AUTH } from "@/FirebaseConfig";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
-import { View, ActivityIndicator } from "react-native";
 import Purchases from "react-native-purchases/dist/purchases";
+import { purchasesReady } from "@/context/PurchasesContext";
 
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   uid: string | null;
+  loading: boolean;
   logout: () => Promise<void>;
   setIsLoggedIn: (value: boolean) => void;
 }
@@ -23,8 +24,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, async (currentUser: User | null) => {
       if (currentUser) {
-      // Tell RevenueCat who just logged in
-      await Purchases.logIn(currentUser.uid);
+      try {
+        // Firebase can resolve a persisted session before RootLayout's
+        // Purchases.configure() finishes; wait for it so this doesn't throw.
+        await purchasesReady;
+        // Tell RevenueCat who just logged in
+        await Purchases.logIn(currentUser.uid);
+      } catch (error) {
+        // Don't let a RevenueCat hiccup block auth state (and, in turn,
+        // the native splash screen, which waits on `loading` below).
+        console.error("RevenueCat logIn error:", error);
+      }
     }
       setUser(currentUser);
       setUid(currentUser?.uid || null);
@@ -46,16 +56,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#ff496b" />
-      </View>
-    );
-  }
-
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn, uid, logout, setIsLoggedIn }}>
+    <AuthContext.Provider value={{ user, isLoggedIn, uid, loading, logout, setIsLoggedIn }}>
       {children}
     </AuthContext.Provider>
   );

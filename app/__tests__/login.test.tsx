@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   signInWithCredential,
+  sendPasswordResetEmail,
   fetchSignInMethodsForEmail,
   getAdditionalUserInfo,
 } from "firebase/auth";
@@ -61,31 +62,25 @@ describe("Login screen", () => {
     (createUserWithEmailAndPassword as jest.Mock).mockReset();
     (updateProfile as jest.Mock).mockReset();
     (signInWithCredential as jest.Mock).mockReset();
+    (sendPasswordResetEmail as jest.Mock).mockReset().mockResolvedValue(undefined);
     (fetchSignInMethodsForEmail as jest.Mock).mockReset().mockResolvedValue([]);
     (getAdditionalUserInfo as jest.Mock).mockReset().mockReturnValue({ isNewUser: false });
     (AppleAuthentication.signInAsync as jest.Mock).mockReset();
     (useAuthRequest as jest.Mock).mockReset().mockReturnValue([null, null, jest.fn()]);
   });
 
-  it("shows the sign-in options screen by default", () => {
-    const { getByText } = render(<Login />);
-    expect(getByText("Continue with Google")).toBeTruthy();
-    expect(getByText("Continue with Email")).toBeTruthy();
-  });
-
-  it("switches to the email login form", () => {
+  it("shows the login form by default", () => {
     const { getByText, getByPlaceholderText } = render(<Login />);
-    fireEvent.press(getByText("Continue with Email"));
-
-    expect(getByPlaceholderText("EMAIL")).toBeTruthy();
-    expect(getByPlaceholderText("PASSWORD")).toBeTruthy();
-    expect(getByText("LOGIN")).toBeTruthy();
+    expect(getByText("Welcome back")).toBeTruthy();
+    expect(getByText("Continue with Google")).toBeTruthy();
+    expect(getByPlaceholderText("Email")).toBeTruthy();
+    expect(getByPlaceholderText("Password")).toBeTruthy();
+    expect(getByText("Log In")).toBeTruthy();
   });
 
   it("blocks submission and alerts when email/password are empty", async () => {
     const { getByText } = render(<Login />);
-    fireEvent.press(getByText("Continue with Email"));
-    fireEvent.press(getByText("LOGIN"));
+    fireEvent.press(getByText("Log In"));
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
@@ -102,10 +97,9 @@ describe("Login screen", () => {
     });
 
     const { getByText, getByPlaceholderText } = render(<Login />);
-    fireEvent.press(getByText("Continue with Email"));
-    fireEvent.changeText(getByPlaceholderText("EMAIL"), "josh@example.com");
-    fireEvent.changeText(getByPlaceholderText("PASSWORD"), "password123");
-    fireEvent.press(getByText("LOGIN"));
+    fireEvent.changeText(getByPlaceholderText("Email"), "josh@example.com");
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+    fireEvent.press(getByText("Log In"));
 
     await waitFor(() => {
       expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
@@ -124,10 +118,9 @@ describe("Login screen", () => {
     });
 
     const { getByText, getByPlaceholderText } = render(<Login />);
-    fireEvent.press(getByText("Continue with Email"));
-    fireEvent.changeText(getByPlaceholderText("EMAIL"), "josh@example.com");
-    fireEvent.changeText(getByPlaceholderText("PASSWORD"), "wrongpass");
-    fireEvent.press(getByText("LOGIN"));
+    fireEvent.changeText(getByPlaceholderText("Email"), "josh@example.com");
+    fireEvent.changeText(getByPlaceholderText("Password"), "wrongpass");
+    fireEvent.press(getByText("Log In"));
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
@@ -141,11 +134,10 @@ describe("Login screen", () => {
 
   it("blocks signup when the username is missing", async () => {
     const { getByText, getByPlaceholderText } = render(<Login />);
-    fireEvent.press(getByText("Continue with Email"));
-    fireEvent.press(getByText("Don't have an account? Sign up"));
-    fireEvent.changeText(getByPlaceholderText("EMAIL"), "josh@example.com");
-    fireEvent.changeText(getByPlaceholderText("PASSWORD"), "password123");
-    fireEvent.press(getByText("SIGN UP"));
+    fireEvent.press(getByText("Sign up"));
+    fireEvent.changeText(getByPlaceholderText("Email"), "josh@example.com");
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+    fireEvent.press(getByText("Sign Up"));
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
@@ -163,12 +155,11 @@ describe("Login screen", () => {
     });
 
     const { getByText, getByPlaceholderText } = render(<Login />);
-    fireEvent.press(getByText("Continue with Email"));
-    fireEvent.press(getByText("Don't have an account? Sign up"));
-    fireEvent.changeText(getByPlaceholderText("USERNAME"), "  joshh  ");
-    fireEvent.changeText(getByPlaceholderText("EMAIL"), "josh@example.com");
-    fireEvent.changeText(getByPlaceholderText("PASSWORD"), "password123");
-    fireEvent.press(getByText("SIGN UP"));
+    fireEvent.press(getByText("Sign up"));
+    fireEvent.changeText(getByPlaceholderText("Username"), "  joshh  ");
+    fireEvent.changeText(getByPlaceholderText("Email"), "josh@example.com");
+    fireEvent.changeText(getByPlaceholderText("Password"), "password123");
+    fireEvent.press(getByText("Sign Up"));
 
     await waitFor(() => {
       expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
@@ -184,6 +175,36 @@ describe("Login screen", () => {
     expect(mockGetIdToken).toHaveBeenCalledWith(true);
     expect(mockSetIsLoggedIn).toHaveBeenCalledWith(true);
     expect(router.replace).toHaveBeenCalledWith("/(tabs)");
+  });
+
+  it("sends a password reset email when 'Forgot password?' is tapped with an email entered", async () => {
+    const { getByText, getByPlaceholderText } = render(<Login />);
+    fireEvent.changeText(getByPlaceholderText("Email"), "josh@example.com");
+    fireEvent.press(getByText("Forgot password?"));
+
+    await waitFor(() => {
+      expect(sendPasswordResetEmail).toHaveBeenCalledWith(
+        expect.anything(),
+        "josh@example.com"
+      );
+    });
+    expect(Alert.alert).toHaveBeenCalledWith(
+      "Check your email",
+      "We sent a password reset link to josh@example.com."
+    );
+  });
+
+  it("prompts for an email before sending a reset link", async () => {
+    const { getByText } = render(<Login />);
+    fireEvent.press(getByText("Forgot password?"));
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        "Email required",
+        expect.stringContaining("Enter your email above first")
+      );
+    });
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
   });
 });
 
@@ -235,8 +256,8 @@ describe("Apple sign-in", () => {
     await waitFor(() => expect(getByText("Choose a Username")).toBeTruthy());
     expect(mockSetIsLoggedIn).not.toHaveBeenCalled();
 
-    fireEvent.changeText(getByPlaceholderText("USERNAME"), "joshh");
-    fireEvent.press(getByText("CONTINUE"));
+    fireEvent.changeText(getByPlaceholderText("Username"), "joshh");
+    fireEvent.press(getByText("Continue"));
 
     await waitFor(() => expect(mockSetIsLoggedIn).toHaveBeenCalledWith(true));
     expect(router.replace).toHaveBeenCalledWith("/(tabs)");

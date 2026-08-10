@@ -11,9 +11,11 @@ import {
   Platform,
   Modal,
   Image,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
@@ -32,6 +34,7 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   updateProfile,
   User,
   fetchSignInMethodsForEmail,
@@ -83,13 +86,15 @@ const GOOGLE_ANDROID_CLIENT_ID =
 export default function Login() {
   const { setIsLoggedIn } = useAuth();
 
-  const [mode, setMode] = useState<
-    "options" | "emailLogin" | "emailSignup"
-  >("options");
+  // Single screen now (email/password + social all together, matching the
+  // reference layout) instead of an "options" screen that branched into a
+  // separate email screen.
+  const [mode, setMode] = useState<"login" | "signup">("login");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [userName, setUserName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -337,7 +342,7 @@ const handleAppleSignIn = async () => {
       setPendingUser(null);
       await pendingUser.getIdToken(true);
       setIsLoggedIn(true);
-      
+
       router.replace("/(tabs)");
     } catch (err: any) {
       Alert.alert(
@@ -365,7 +370,7 @@ const handleAppleSignIn = async () => {
     try {
       setLoading(true);
 
-      if (mode === "emailSignup") {
+      if (mode === "signup") {
         if (!userName.trim()) {
           Alert.alert(
             "Missing Username",
@@ -408,373 +413,426 @@ const handleAppleSignIn = async () => {
   };
 
   // ─────────────────────────────────────────────────────────────
-  // Options Screen
+  // Forgot Password
   // ─────────────────────────────────────────────────────────────
 
-  if (mode === "options") {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.inner}>
-          <Image source={require('@/assets/images/BetifyHeaderLogo.png')} style={{ width: 350, height: 100, marginLeft: 15, marginBottom: 20 }}
-              resizeMode="contain" />
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert(
+        "Email required",
+        "Enter your email above first, then tap \"Forgot password?\" again to get a reset link."
+      );
+      return;
+    }
 
-          <Text style={styles.subtitle}>
-            Sign in to continue
-          </Text>
-
-          {/* Google */}
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={
-              Platform.OS === "android"
-                ? handleAndroidGoogleSignIn
-                : () => promptAsync()
-            }
-            disabled={
-              loading ||
-              (Platform.OS !== "android" && !request)
-            }
-          >
-            <Text style={styles.socialIcon}>
-              G
-            </Text>
-
-            <Text
-              style={
-                styles.socialButtonText
-              }
-            >
-              Continue with Google
-            </Text>
-          </TouchableOpacity>
-
-          {/* Apple */}
-          {Platform.OS === "ios" && (
-            <TouchableOpacity
-              style={[
-                styles.socialButton,
-                styles.appleButton,
-              ]}
-              onPress={
-                handleAppleSignIn
-              }
-              disabled={loading}
-            >
-              <Text
-                style={[
-                  styles.socialButtonText,
-                  styles.appleButtonText,
-                ]}
-              >
-                Continue with Apple
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Divider */}
-          <View
-            style={styles.dividerRow}
-          >
-            <View
-              style={
-                styles.dividerLine
-              }
-            />
-
-            <Text
-              style={
-                styles.dividerText
-              }
-            >
-              or
-            </Text>
-
-            <View
-              style={
-                styles.dividerLine
-              }
-            />
-          </View>
-
-          {/* Email */}
-          <TouchableOpacity
-            style={styles.emailButton}
-            onPress={() =>
-              setMode(
-                "emailLogin"
-              )
-            }
-          >
-            <Text
-              style={
-                styles.emailButtonText
-              }
-            >
-              Continue with Email
-            </Text>
-          </TouchableOpacity>
-
-          {loading && (
-            <ActivityIndicator
-              color={"#f8f8f8"}
-              style={{
-                marginTop: 20,
-              }}
-            />
-          )}
-
-          <Text style={styles.credit}>
-            CREATED BY JOSH HAINES
-          </Text>
-        </View>
-
-        {/* Username Modal */}
-        <Modal
-          visible={
-            usernameModalVisible
-          }
-          transparent
-          animationType="fade"
-        >
-          <View
-            style={
-              styles.modalOverlay
-            }
-          >
-            <View
-              style={
-                styles.modalContainer
-              }
-            >
-              <Text
-                style={
-                  styles.modalTitle
-                }
-              >
-                Choose a Username
-              </Text>
-
-              <Text
-                style={
-                  styles.modalSubtitle
-                }
-              >
-                Create your Betify
-                username.
-              </Text>
-
-              <TextInput
-                style={styles.input}
-                placeholder="USERNAME"
-                placeholderTextColor="gray"
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={
-                  pendingUsername
-                }
-                onChangeText={
-                  setPendingUsername
-                }
-              />
-
-              <TouchableOpacity
-                style={
-                  styles.button
-                }
-                onPress={
-                  saveUsername
-                }
-              >
-                <Text
-                  style={
-                    styles.buttonText
-                  }
-                >
-                  CONTINUE
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      </SafeAreaView>
-    );
-  }
+    try {
+      setLoading(true);
+      await sendPasswordResetEmail(FIREBASE_AUTH, email.trim());
+      Alert.alert(
+        "Check your email",
+        `We sent a password reset link to ${email.trim()}.`
+      );
+    } catch (err: any) {
+      Alert.alert("Error", getAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ─────────────────────────────────────────────────────────────
-  // Email Login / Signup Screen
+  // Render
   // ─────────────────────────────────────────────────────────────
+
+  const isSignup = mode === "signup";
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior="padding"
-        style={{ width: "100%" }}
-      >
-        <View style={styles.inner}>
-          <Image source={require('@/assets/images/BetifyHeaderLogo.png')} style={{ width: 350, height: 100, marginLeft: 15, marginBottom: 20 }}
-              resizeMode="contain" />
-
-          <Text style={styles.subtitle}>
-            {mode ===
-            "emailSignup"
-              ? "Create an account"
-              : "Welcome back!"}
-          </Text>
-
-          {mode ===
-            "emailSignup" && (
-            <TextInput
-              style={styles.input}
-              placeholder="USERNAME"
-              placeholderTextColor="gray"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={userName}
-              onChangeText={
-                setUserName
-              }
-            />
-          )}
-
-          <TextInput
-            style={styles.input}
-            placeholder="EMAIL"
-            placeholderTextColor="gray"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-
-          <TextInput
-            style={styles.input}
-            placeholder="PASSWORD"
-            placeholderTextColor="gray"
-            secureTextEntry
-            autoCapitalize="none"
-            value={password}
-            onChangeText={
-              setPassword
-            }
-          />
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={
-              handleEmailAuth
-            }
-            disabled={loading}
+    <View style={styles.background}>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text
-                style={
-                  styles.buttonText
+            {/* Brand header */}
+            <View style={styles.header}>
+              <Image
+                source={require("@/assets/icons/BetifyAppLogoDark.png")}
+                style={styles.appIcon}
+                resizeMode="contain"
+              />
+
+              <Image
+                source={require("@/assets/images/BetifyHeaderLogo.png")}
+                style={styles.headerLogo}
+                resizeMode="contain"
+              />
+
+              <Text style={styles.tagline}>
+                Build your{" "}
+                <Text style={styles.taglineAccent}>custom sportsbook.</Text>
+              </Text>
+            </View>
+
+            {/* Form */}
+            <View style={styles.form}>
+              <Text style={styles.heading}>
+                {isSignup ? "Create an account" : "Welcome back"}
+              </Text>
+
+              <Text style={styles.subheading}>
+                {isSignup ? "Sign up to get started" : "Log in to continue"}
+              </Text>
+
+              {isSignup && (
+                <View style={styles.inputWrapper}>
+                  <Ionicons
+                    name="person-outline"
+                    size={20}
+                    color="#7A8499"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="Username"
+                    placeholderTextColor="#7A8499"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={userName}
+                    onChangeText={setUserName}
+                  />
+                </View>
+              )}
+
+              <View style={styles.inputWrapper}>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color="#7A8499"
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Email"
+                  placeholderTextColor="#7A8499"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
+
+              <View style={styles.inputWrapper}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color="#7A8499"
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Password"
+                  placeholderTextColor="#7A8499"
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword((s) => !s)}
+                  hitSlop={8}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#7A8499"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {!isSignup && (
+                <TouchableOpacity
+                  onPress={handleForgotPassword}
+                  style={styles.forgotWrap}
+                >
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={handleEmailAuth}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>
+                    {isSignup ? "Sign Up" : "Log In"}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Google */}
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={
+                  Platform.OS === "android"
+                    ? handleAndroidGoogleSignIn
+                    : () => promptAsync()
+                }
+                disabled={
+                  loading ||
+                  (Platform.OS !== "android" && !request)
                 }
               >
-                {mode ===
-                "emailSignup"
-                  ? "SIGN UP"
-                  : "LOGIN"}
-              </Text>
-            )}
-          </TouchableOpacity>
+                <Ionicons name="logo-google" size={20} color="#fff" />
+                <Text style={styles.socialButtonText}>
+                  Continue with Google
+                </Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() =>
-              setMode(
-                mode ===
-                  "emailSignup"
-                  ? "emailLogin"
-                  : "emailSignup"
-              )
-            }
-          >
-            <Text
-              style={
-                styles.toggleText
-              }
-            >
-              {mode ===
-              "emailSignup"
-                ? "Already have an account? Log in"
-                : "Don't have an account? Sign up"}
-            </Text>
-          </TouchableOpacity>
+              {/* Apple */}
+              {Platform.OS === "ios" && (
+                <TouchableOpacity
+                  style={styles.socialButton}
+                  onPress={handleAppleSignIn}
+                  disabled={loading}
+                >
+                  <Ionicons name="logo-apple" size={20} color="#fff" />
+                  <Text style={styles.socialButtonText}>
+                    Continue with Apple
+                  </Text>
+                </TouchableOpacity>
+              )}
 
-          <TouchableOpacity
-            onPress={() =>
-              setMode("options")
-            }
-            style={{
-              marginTop: 8,
-            }}
-          >
-            <Text
-              style={
-                styles.backText
-              }
-            >
-              ← Back to sign-in
-              options
+              <TouchableOpacity
+                onPress={() => setMode(isSignup ? "login" : "signup")}
+                style={styles.toggleWrap}
+              >
+                <Text style={styles.toggleText}>
+                  {isSignup
+                    ? "Already have an account? "
+                    : "Don't have an account? "}
+                  <Text style={styles.toggleAccent}>
+                    {isSignup ? "Log in" : "Sign up"}
+                  </Text>
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={styles.credit}>CREATED BY JOSH HAINES</Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      {/* Username Modal */}
+      <Modal
+        visible={usernameModalVisible}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Choose a Username</Text>
+
+            <Text style={styles.modalSubtitle}>
+              Create your Betify username.
             </Text>
-          </TouchableOpacity>
+
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color="#7A8499"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.inputField}
+                placeholder="Username"
+                placeholderTextColor="#7A8499"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={pendingUsername}
+                onChangeText={setPendingUsername}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={saveUsername}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Continue</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    backgroundColor:
-      Colors.background,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "black",
   },
 
-  inner: {
-    width: "100%",
-    alignItems: "center",
+  safeArea: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
+    paddingBottom: 32,
+    justifyContent: "center",
+  },
+
+  header: {
+    alignItems: "center",
+    marginBottom: 36,
+  },
+
+  appIcon: {
+    width: 84,
+    height: 84,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
+
+  headerLogo: {
+    width: 220,
+    height: 64,
+    marginBottom: 10,
+  },
+
+  tagline: {
+    fontSize: 14,
+    color: "#B9C0CE",
+    textAlign: "center",
+  },
+
+  taglineAccent: {
+    color: Colors.primary,
+    fontWeight: "700",
+  },
+
+  form: {
+    width: "100%",
+  },
+
+  heading: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: Colors.textColor,
+    marginBottom: 4,
+  },
+
+  subheading: {
+    fontSize: 15,
+    color: "#B9C0CE",
+    marginBottom: 24,
+  },
+
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(10,8,9,0.55)",
+    paddingHorizontal: 14,
+    marginBottom: 14,
+  },
+
+  inputIcon: {
+    marginRight: 10,
+  },
+
+  inputField: {
+    flex: 1,
+    height: "100%",
+    color: Colors.textColor,
+    fontSize: 15,
+  },
+
+  forgotWrap: {
+    alignSelf: "flex-end",
     marginBottom: 20,
   },
 
-  title: {
-    fontSize: 70,
-    fontWeight: "bold",
-    color: "#ff496b",
-    marginBottom: 6,
+  forgotText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: "600",
   },
 
-  subtitle: {
-    fontSize: 15,
+  primaryButton: {
+    width: "100%",
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    marginBottom: 8,
+  },
+
+  primaryButtonText: {
+    fontWeight: "700",
+    fontSize: 16,
+    color: "#fff",
+  },
+
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    marginVertical: 20,
+  },
+
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+
+  dividerText: {
     color: "#7A8499",
-    marginBottom: 32,
+    marginHorizontal: 10,
+    fontSize: 12,
+    letterSpacing: 1,
   },
 
   socialButton: {
     flexDirection: "row",
     alignItems: "center",
-    width: "100%",
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#252B38",
-    backgroundColor: "#1d1a1c",
-    paddingHorizontal: 16,
-    marginBottom: 12,
     justifyContent: "center",
-  },
-
-  socialIcon: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#fff",
-    width: 28,
+    width: "100%",
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    marginBottom: 12,
+    gap: 10,
   },
 
   socialButtonText: {
@@ -783,93 +841,24 @@ const styles = StyleSheet.create({
     color: Colors.textColor,
   },
 
-  appleButton: {
-    backgroundColor: "#fff",
-    borderColor: "#fff",
-  },
-
-  appleButtonText: {
-    color: "#000",
-  },
-
-  dividerRow: {
-    flexDirection: "row",
+  toggleWrap: {
     alignItems: "center",
-    width: "100%",
-    marginVertical: 16,
-  },
-
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#252B38",
-  },
-
-  dividerText: {
-    color: "#7A8499",
-    marginHorizontal: 10,
-  },
-
-  emailButton: {
-    width: "100%",
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#252B38",
-    backgroundColor: "#1d1a1c",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  emailButtonText: {
-    color: Colors.textColor,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#252B38",
-    backgroundColor: "#1d1a1c",
-    padding: 8,
-    margin: 5,
-    borderRadius: 10,
-    width: "100%",
-    height: 50,
-    color: Colors.textColor,
-    fontSize: 15,
-    paddingHorizontal: 14,
-  },
-
-  button: {
-    width: "100%",
-    height: 50,
-    marginTop: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 12,
-    backgroundColor: "#ff496b",
-  },
-
-  buttonText: {
-    fontWeight: "700",
-    fontSize: 16,
-    color: "#fff",
+    marginTop: 8,
   },
 
   toggleText: {
-    marginTop: 12,
-    color: Colors.textColor,
-    textDecorationLine: "underline",
+    color: "#B9C0CE",
+    fontSize: 14,
   },
 
-  backText: {
-    color: "#7A8499",
+  toggleAccent: {
+    color: Colors.primary,
+    fontWeight: "700",
   },
 
   credit: {
-    position: "absolute",
-    bottom: -120,
+    alignSelf: "center",
+    marginTop: 28,
     color: "#7A8499",
     fontSize: 11,
     letterSpacing: 1,
@@ -877,8 +866,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor:
-      "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
