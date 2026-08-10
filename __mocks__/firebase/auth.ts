@@ -15,6 +15,7 @@ export const onAuthStateChanged = jest.fn((auth: any, callback: (user: any) => v
 export const signOut = jest.fn(() => Promise.resolve());
 export const signInWithEmailAndPassword = jest.fn();
 export const createUserWithEmailAndPassword = jest.fn();
+export const sendPasswordResetEmail = jest.fn(() => Promise.resolve());
 export const updateProfile = jest.fn(() => Promise.resolve());
 export const signInWithCredential = jest.fn();
 export const fetchSignInMethodsForEmail = jest.fn(() => Promise.resolve([]));

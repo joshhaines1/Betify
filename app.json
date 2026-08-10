@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "backgroundColor": "#000000",
     "splash": {
-      "image": "./assets/images/GroupIcon.png",
+      "image": "./assets/images/groupIcon.png",
       "backgroundColor": "#000000"
     },
     "ios": {
@@ -65,6 +65,9 @@
     {
       "ios": {
         "deploymentTarget": "15.1"
+      },
+      "android": {
+        "kotlinVersion": "2.2.20"
       }
     }
   ]
