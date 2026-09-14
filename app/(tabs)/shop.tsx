@@ -10,14 +10,21 @@ import {
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Platform } from "react-native";
 import Purchases, {
   PurchasesStoreProduct,
   CustomerInfo,
 } from "react-native-purchases";
 import Colors from "@/assets/styles/colors";
+import { purchasesReady } from "@/context/PurchasesContext";
 
-// ─── Match these to the product IDs you create in App Store Connect ───────────
-const PRO_MONTHLY_ID = "pro_monthly";
+// ─── Match these to the product IDs you create in App Store Connect / Play Console ─
+// Android subscriptions use Play Billing Library 5+ "base plans", so RevenueCat
+// addresses them as "<productId>:<basePlanId>" instead of the bare product ID —
+// iOS has no base-plan concept, so it stays as-is. pro_lifetime/remove_ads are
+// one-time (INAPP) products, which don't have base plans, so they're unaffected.
+const PRO_MONTHLY_ID =
+  Platform.OS === "android" ? "pro_monthly:pro-monthly" : "pro_monthly";
 const PRO_LIFETIME_ID = "pro_lifetime";
 const REMOVE_ADS_ID = "remove_ads";
 
@@ -40,6 +47,12 @@ export default function Shop() {
   useEffect(() => {
   const init = async () => {
     try {
+      // RootLayout's Purchases.configure() may not have resolved yet when
+      // this tab mounts (it's release-build timing dependent) — wait for it
+      // so getCustomerInfo/getProducts don't throw "not configured" and
+      // silently leave `products` empty.
+      await purchasesReady;
+
       const info = await Purchases.getCustomerInfo();
       setCustomerInfo(info);
       setIsPro(info.entitlements.active["pro"] !== undefined);
@@ -48,13 +61,22 @@ export default function Shop() {
           info.entitlements.active["pro"] !== undefined
       );
 
-      // 👇 Fetch directly by product ID instead of offerings
-      const fetchedProducts = await Purchases.getProducts([
-        PRO_MONTHLY_ID,
-        PRO_LIFETIME_ID,
-        REMOVE_ADS_ID,
+      // 👇 Fetch directly by product ID instead of offerings.
+      // getProducts() defaults to type SUBSCRIPTION, which only resolves
+      // pro_monthly — pro_lifetime and remove_ads are one-time purchases and
+      // must be queried as NON_SUBSCRIPTION or they come back empty (and the
+      // buttons show "Unavailable").
+      const [subscriptionProducts, nonSubscriptionProducts] = await Promise.all([
+        Purchases.getProducts(
+          [PRO_MONTHLY_ID],
+          Purchases.PRODUCT_CATEGORY.SUBSCRIPTION
+        ),
+        Purchases.getProducts(
+          [PRO_LIFETIME_ID, REMOVE_ADS_ID],
+          Purchases.PRODUCT_CATEGORY.NON_SUBSCRIPTION
+        ),
       ]);
-      setProducts(fetchedProducts);
+      setProducts([...subscriptionProducts, ...nonSubscriptionProducts]);
     } catch (err) {
       console.error("RevenueCat init error:", err);
     } finally {

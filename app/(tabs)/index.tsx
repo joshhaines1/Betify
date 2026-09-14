@@ -17,6 +17,7 @@ import { JoinGroupWithCodeView } from "@/components/JoinGroupWithCodeView";
 import * as groups_service from "../../clients/groups-client";
 import { useGroupsRefresh } from "@/context/GroupsRefreshContext";
 import { useFocusEffect } from "expo-router";
+import { testGroups } from "@/constants/test-info";
 
 // ADS
 const BANNER_AD_UNIT_ID = __DEV__
@@ -109,10 +110,42 @@ export default function GroupsScreen() {
   }
 };
 
+const generateTestPassword = () => {
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!&*@#";
+  return Array.from(
+    { length: 24 },
+    () => chars[Math.floor(Math.random() * chars.length)]
+  ).join("");
+};
+
   const handleLoadMoreOtherGroups = () => {
-    if (isFetchingMore || loading || !otherGroupsLastVisible) return; // guard against duplicate/looping calls
-    setIsFetchingMore(true);
-    fetchGroups(false, "other").finally(() => setIsFetchingMore(false));
+    if (isFetchingMore || loading || !otherGroupsLastVisible){
+      // Add dummy groups
+      for (let i = 0; i < 10; i++) {
+        const testGroup = testGroups[Math.floor(Math.random() * testGroups.length)];
+        const name = testGroup.name;
+        const creator = testGroup.creator;
+        const members = testGroup.members;
+        const dummyGroup: Group = {
+          id: `test-${Date.now()}-${i}`,
+          name: name,
+          members: members,
+          creator: "test-creator",
+          creatorName: creator,
+          visibility: "private",
+          startingCurrency: 100,
+          password: generateTestPassword(),
+          admins: [],
+          creationDate: new Date(),
+        };
+        setOtherGroups(prev => [...prev, dummyGroup]);
+      }
+    } else {
+      setIsFetchingMore(true);
+      fetchGroups(false, "other").finally(() => setIsFetchingMore(false));
+    }; 
+    
   };
 
   const handleLoadMoreMyGroups = () => {

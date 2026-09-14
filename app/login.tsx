@@ -155,6 +155,7 @@ export default function Login() {
 
       await completeOAuthSignIn(result.user);
     } catch (err: any) {
+      console.error("Android Google Sign-In error:", err?.code, err?.message, err);
       if (!isErrorWithCode(err) || err.code !== statusCodes.IN_PROGRESS) {
         Alert.alert("Google Sign-In Error", getAuthErrorMessage(err));
       }
