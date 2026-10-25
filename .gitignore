@@ -16,6 +16,7 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+*.log
 
 # Metro
 .metro-health-check*
@@ -46,3 +47,4 @@ android
 GoogleService-Info.plist
 FirebaseConfig.ts
 google-services.json
+ios/
