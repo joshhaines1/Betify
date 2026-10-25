@@ -766,10 +766,10 @@ const handleBalancePress = () => {
   };
 
   const handleCreateEventButtonClick = () => {
-    if(groupInfo.stats?.activeEvents < 5 || isPro){
+    if(groupInfo.stats?.activeEvents < 3 || isPro){
       setModalState("selector")
     } else {
-      Alert.alert("PRO FEATURE", "You can only have 5 active events at a time. Upgrade to pro to be able to create UNLIMITED events.");
+      Alert.alert("PRO FEATURE", "You can only have 3 active events at a time. Upgrade to pro to be able to create UNLIMITED events.");
     }
     
   }

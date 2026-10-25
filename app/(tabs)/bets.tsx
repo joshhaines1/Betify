@@ -77,13 +77,20 @@ export default function Bets() {
     });
   };
 
+  const activeFetchInProgressRef = useRef(false);
+  const settledFetchInProgressRef = useRef(false);
+
   const fetchBets = async (
     statusFilter: string,
     refresh = false,
     cursorOverride?: DocumentSnapshot | null
   ) => {
     const isActive = statusFilter === "active";
-    if (isActive ? loadingActive : loadingSettled) return;
+    const fetchInProgressRef = isActive
+      ? activeFetchInProgressRef
+      : settledFetchInProgressRef;
+    if (fetchInProgressRef.current) return;
+    fetchInProgressRef.current = true;
 
     try {
       isActive ? setLoadingActive(true) : setLoadingSettled(true);
@@ -103,18 +110,20 @@ export default function Bets() {
           refresh
         );
 
+      const isFirstPage = lastVisible == null;
+
       if (wagers.length > 0) {
         if (statusFilter === "active") {
           setLastVisibleActive(nextCursor);
           setHasMoreActiveBets(cached ? false : wagers.length === 5);
           setActiveBets((prev) =>
-            refresh || cached ? wagers : [...prev, ...wagers]
+            refresh || cached || isFirstPage ? wagers : [...prev, ...wagers]
           );
         } else {
           setLastVisibleSettled(nextCursor);
           setHasMoreSettledBets(cached ? false : wagers.length === 5);
           setSettledBets((prev) =>
-            refresh || cached ? wagers : [...prev, ...wagers]
+            refresh || cached || isFirstPage ? wagers : [...prev, ...wagers]
           );
         }
       } else {
@@ -134,6 +143,7 @@ export default function Bets() {
       }
       throw new Error("Failed to fetch bets. Please try again later.");
     } finally {
+     fetchInProgressRef.current = false;
      isActive ? setLoadingActive(false) : setLoadingSettled(false);
     }
   };
@@ -265,35 +275,22 @@ const onRefresh = async () => {
       </View>
 
       {/* FlatList for Bets */}
-      {(loadingActive && activeBets.length === 0) || (loadingSettled && settledBets.length === 0) ? (
+      {(view === "active" ? loadingActive : loadingSettled) &&
+      displayedBets.length === 0 ? (
         <View style={styles.scrollContainer} />
       ) : (
-        <>
-          <FlatList
-            data={activeBets}
-            renderItem={renderBetItem}
-            keyExtractor={(item) => `active-${item.id}`}
-            style={[styles.scrollContainer, view !== "active" && { display: "none" }]}
-            onEndReached={handleEndScroll}
-            onEndReachedThreshold={0.1}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={renderEmptyComponent}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-          />
-          <FlatList
-            data={settledBets}
-            renderItem={renderBetItem}
-            keyExtractor={(item) => `settled-${item.id}`}
-            style={[styles.scrollContainer, view !== "settled" && { display: "none" }]}
-            onEndReached={handleEndScroll}
-            onEndReachedThreshold={0.1}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={renderEmptyComponent}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-          />
-        </>
+        <FlatList
+          data={displayedBets}
+          renderItem={renderBetItem}
+          keyExtractor={(item) => `${view}-${item.id}`}
+          style={styles.scrollContainer}
+          onEndReached={handleEndScroll}
+          onEndReachedThreshold={0.1}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyComponent}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+        />
       )}
 
       {adsEnabled && (
